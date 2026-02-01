@@ -22,7 +22,7 @@ type NewsItem struct {
 	PublishedAt    *time.Time      `json:"publishedAt"`
 	FetchedAt      time.Time       `gorm:"default:now()" json:"fetchedAt"`
 	Processed      bool            `gorm:"default:false" json:"processed"`
-	Embedding      pgvector.Vector `gorm:"type:vector(1536)" json:"-"`
+	Embedding      *pgvector.Vector `gorm:"type:vector(1536)" json:"-"`
 }
 
 func (NewsItem) TableName() string {

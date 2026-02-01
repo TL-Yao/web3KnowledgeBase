@@ -24,7 +24,7 @@ type Article struct {
 	ModelUsed        string          `gorm:"size:50" json:"modelUsed"`
 	GenerationPrompt string          `gorm:"type:text" json:"generationPrompt"`
 	ViewCount        int             `gorm:"default:0" json:"viewCount"`
-	Embedding        pgvector.Vector `gorm:"type:vector(1536)" json:"-"`
+	Embedding        *pgvector.Vector `gorm:"type:vector(1536)" json:"-"`
 	CreatedAt        time.Time       `json:"createdAt"`
 	UpdatedAt        time.Time       `json:"updatedAt"`
 }
