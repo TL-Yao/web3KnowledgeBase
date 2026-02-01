@@ -1,0 +1,38 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "web3insight"
+  password: "web3insight_dev"
+  dbname: "web3insight"
+  sslmode: "disable"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+llm:
+  default_local: "llama3:70b"
+  ollama_host: "http://localhost:11434"
+
+  claude:
+    enabled: true
+    api_key: "${ANTHROPIC_API_KEY}"
+    default_model: "claude-sonnet-4-20250514"
+
+  openai:
+    enabled: false
+    api_key: "${OPENAI_API_KEY}"
+    default_model: "gpt-4o"
+
+worker:
+  concurrency: 5
+  queues:
+    critical: 6
+    default: 3
+    low: 1
