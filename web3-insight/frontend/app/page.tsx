@@ -1,65 +1,113 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { MainLayout } from '@/components/layout/main-layout'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Search, BookOpen, Sparkles, Settings, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+export default function HomePage() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const router = useRouter()
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/knowledge?q=${encodeURIComponent(searchQuery)}`)
+    }
+  }
+
+  const quickAccess = [
+    {
+      title: '知识库',
+      description: '浏览和管理你的 Web3 知识文章',
+      icon: BookOpen,
+      href: '/knowledge',
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
+    },
+    {
+      title: '即时研究',
+      description: '输入问题，AI 帮你深入研究',
+      icon: Sparkles,
+      href: '/research',
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-500/10',
+    },
+    {
+      title: '系统设置',
+      description: '配置模型和数据源',
+      icon: Settings,
+      href: '/admin/config',
+      color: 'text-gray-500',
+      bgColor: 'bg-gray-500/10',
+    },
+  ]
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <MainLayout>
+      <div className="flex-1 flex flex-col">
+        {/* Hero Section */}
+        <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-4xl mx-auto w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold tracking-tight mb-4">
+              Web3 Insight
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl">
+              你的私人 Web3 知识管理系统，支持 AI 驱动的研究和智能问答
+            </p>
+          </div>
+
+          {/* Search Box */}
+          <form onSubmit={handleSearch} className="w-full max-w-2xl mb-12">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="搜索知识库或输入问题..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 pr-24 h-14 text-lg rounded-full border-2 focus-visible:ring-2"
+              />
+              <Button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full"
+                size="lg"
+              >
+                搜索
+              </Button>
+            </div>
+          </form>
+
+          {/* Quick Access Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+            {quickAccess.map((item) => (
+              <Link key={item.href} href={item.href}>
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
+                  <CardHeader>
+                    <div className={`w-12 h-12 rounded-lg ${item.bgColor} flex items-center justify-center mb-2`}>
+                      <item.icon className={`h-6 w-6 ${item.color}`} />
+                    </div>
+                    <CardTitle className="flex items-center gap-2">
+                      {item.title}
+                      <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                    </CardTitle>
+                    <CardDescription>{item.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Footer */}
+        <div className="text-center py-6 text-sm text-muted-foreground border-t">
+          <p>Web3 Insight - 本地部署的私人知识管理系统</p>
         </div>
-      </main>
-    </div>
-  );
+      </div>
+    </MainLayout>
+  )
 }
