@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/user/web3-insight/internal/config"
 	"github.com/user/web3-insight/internal/repository"
+	"github.com/user/web3-insight/internal/service"
 	"gorm.io/gorm"
 )
 
@@ -17,6 +18,7 @@ type Server struct {
 	configHandler   *ConfigHandler
 	taskHandler     *TaskHandler
 	searchHandler   *SearchHandler
+	chatHandler     *ChatHandler
 }
 
 func NewServer(cfg *config.Config, db *gorm.DB) *Server {
@@ -26,6 +28,9 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	configRepo := repository.NewConfigRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
 
+	// Initialize services
+	chatService := service.NewChatService(db, &cfg.LLM)
+
 	return &Server{
 		config:          cfg,
 		db:              db,
@@ -34,6 +39,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		configHandler:   NewConfigHandler(configRepo),
 		taskHandler:     NewTaskHandler(taskRepo),
 		searchHandler:   NewSearchHandler(articleRepo, categoryRepo),
+		chatHandler:     NewChatHandler(chatService),
 	}
 }
 
@@ -124,12 +130,8 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		})
 	}
 
-	// WebSocket for chat (placeholder for now)
-	router.GET("/ws/chat", func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"message": "WebSocket chat - to be implemented",
-		})
-	})
+	// WebSocket for chat
+	router.GET("/ws/chat", server.chatHandler.HandleWebSocket)
 
 	return router
 }
