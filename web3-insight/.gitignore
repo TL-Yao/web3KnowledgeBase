@@ -13,6 +13,7 @@ backend/server
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # IDE
 .idea/
@@ -35,3 +36,5 @@ logs/
 # Temp
 tmp/
 temp/
+
+CLAUDE.md
