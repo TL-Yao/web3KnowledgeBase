@@ -7,6 +7,10 @@ import (
 	"log"
 
 	"github.com/hibiken/asynq"
+	"github.com/user/web3-insight/internal/collector"
+	"github.com/user/web3-insight/internal/model"
+	"github.com/user/web3-insight/internal/repository"
+	"gorm.io/gorm"
 )
 
 // Task type constants
@@ -46,6 +50,20 @@ type ClassifyPayload struct {
 // EmbeddingPayload represents the payload for embedding generation tasks
 type EmbeddingPayload struct {
 	ArticleID string `json:"articleId"`
+}
+
+// Global variables for dependency injection
+var (
+	rssCollector *collector.RSSCollector
+	db           *gorm.DB
+)
+
+// InitWorkerDependencies initializes worker dependencies
+func InitWorkerDependencies(database *gorm.DB) {
+	db = database
+	newsRepo := repository.NewNewsRepository(db)
+	dsRepo := repository.NewDataSourceRepository(db)
+	rssCollector = collector.NewRSSCollector(newsRepo, dsRepo)
 }
 
 // NewTaskMux creates and configures the task multiplexer
@@ -133,13 +151,30 @@ func handleRSSSync(ctx context.Context, t *asynq.Task) error {
 
 	log.Printf("Processing RSS sync task: feedUrl=%s", payload.FeedURL)
 
-	// TODO: Implement in Phase 2
-	// 1. Fetch RSS feed
-	// 2. Parse entries
-	// 3. Create news items in database
-	// 4. Trigger classification for new items
+	if rssCollector == nil {
+		return fmt.Errorf("RSS collector not initialized")
+	}
 
-	return nil
+	// If specific feed URL provided, find the source by URL
+	if payload.FeedURL != "" {
+		dsRepo := repository.NewDataSourceRepository(db)
+		sources, err := dsRepo.FindByType(model.DataSourceTypeRSS)
+		if err != nil {
+			return fmt.Errorf("failed to find RSS sources: %w", err)
+		}
+
+		for _, source := range sources {
+			if source.URL == payload.FeedURL {
+				_, err := rssCollector.Collect(ctx, source.ID)
+				return err
+			}
+		}
+		return fmt.Errorf("RSS source not found for URL: %s", payload.FeedURL)
+	}
+
+	// If no specific URL, sync all enabled RSS sources
+	_, err := rssCollector.CollectAll(ctx)
+	return err
 }
 
 // handleWebCrawl handles web crawling tasks
