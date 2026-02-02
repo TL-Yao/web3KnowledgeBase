@@ -30,6 +30,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Initialize services
 	chatService := service.NewChatService(db, &cfg.LLM)
+	semanticSearchService := service.NewSemanticSearchService(articleRepo, &cfg.LLM)
 
 	return &Server{
 		config:          cfg,
@@ -38,7 +39,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		categoryHandler: NewCategoryHandler(categoryRepo),
 		configHandler:   NewConfigHandler(configRepo),
 		taskHandler:     NewTaskHandler(taskRepo),
-		searchHandler:   NewSearchHandler(articleRepo, categoryRepo),
+		searchHandler:   NewSearchHandlerWithSemantic(articleRepo, categoryRepo, semanticSearchService),
 		chatHandler:     NewChatHandler(chatService),
 	}
 }
@@ -102,6 +103,10 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 
 		// Search
 		api.GET("/search", server.searchHandler.Search)
+		api.GET("/search/semantic", server.searchHandler.SemanticSearch)
+
+		// Related articles (under articles group would be better, but registered here for simplicity)
+		articles.GET("/:id/related", server.searchHandler.RelatedArticles)
 
 		// Config
 		configGroup := api.Group("/config")
