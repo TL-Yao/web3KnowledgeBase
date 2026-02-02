@@ -35,12 +35,18 @@ export interface Article {
   title: string
   slug: string
   content: string
+  contentHtml?: string
   summary: string
-  category: string
+  categoryId?: string
+  category?: { id: string; name: string; slug: string }
   tags: string[]
-  source_url: string
-  created_at: string
-  updated_at: string
+  sourceUrls?: string[]
+  sourceLanguage?: string
+  modelUsed?: string
+  viewCount?: number
+  status?: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface ArticleListResponse {

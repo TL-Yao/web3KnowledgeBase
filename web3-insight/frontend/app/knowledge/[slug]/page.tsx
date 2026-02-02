@@ -54,11 +54,11 @@ EIP-4844 将显著降低 Optimistic Rollups 和 ZK Rollups 的运营成本，预
 Proto-Danksharding 是以太坊扩容路线图上的关键一步，为未来的完整分片做好准备。
 `,
   summary: 'EIP-4844 引入了一种新的交易类型，允许在以太坊上发布 blob 数据，为 Rollup 提供更便宜的数据可用性层。',
-  category: 'Layer 2',
+  category: { id: 'mock-cat', name: 'Layer 2', slug: 'layer-2' },
   tags: ['EIP', 'Danksharding', 'Rollup', 'Ethereum'],
-  source_url: 'https://eips.ethereum.org/EIPS/eip-4844',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
+  sourceUrls: ['https://eips.ethereum.org/EIPS/eip-4844'],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 }
 
 export default function ArticlePage() {

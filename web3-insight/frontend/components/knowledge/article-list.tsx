@@ -66,10 +66,11 @@ function transformArticle(article: APIArticle): Article {
     slug: article.slug,
     title: article.title,
     summary: article.summary,
-    category: article.category,
+    category: article.category || 'Uncategorized',
     tags: article.tags || [],
-    createdAt: article.created_at,
-    updatedAt: article.updated_at,
+    modelUsed: article.modelUsed,
+    createdAt: article.createdAt,
+    updatedAt: article.updatedAt,
   }
 }
 
