@@ -9,9 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
+    environment: 'happy-dom',
     globals: true,
-    setupFiles: ['./vitest.setup.mts'],
+    setupFiles: ['./vitest.setup.tsx'],
     include: ['**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',

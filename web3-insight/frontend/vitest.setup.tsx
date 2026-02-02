@@ -1,12 +1,20 @@
 // vitest.setup.mts
 import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterEach, beforeAll, afterAll } from 'vitest'
+import { server } from './__mocks__/server'
 
-// Cleanup after each test
+// Start MSW server before tests
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+
+// Reset handlers after each test
 afterEach(() => {
   cleanup()
+  server.resetHandlers()
 })
+
+// Close server after all tests
+afterAll(() => server.close())
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
