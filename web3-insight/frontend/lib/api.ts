@@ -268,3 +268,114 @@ export const importAPI = {
     return res.json() as Promise<ImportResult>
   },
 }
+
+// Explorer Research API
+export interface ExplorerResearch {
+  id: string
+  chainName: string
+  chainType?: string
+  explorerName: string
+  explorerUrl: string
+  explorerType?: string
+  features?: Record<string, unknown>
+  uiFeatures?: Record<string, unknown>
+  apiFeatures?: Record<string, unknown>
+  screenshots?: string[]
+  analysis?: string
+  strengths?: string[]
+  weaknesses?: string[]
+  popularityScore?: number
+  researchStatus: 'pending' | 'in_progress' | 'completed'
+  researchNotes?: string
+  lastUpdated: string
+  createdAt: string
+}
+
+export interface ExplorerFeature {
+  id: string
+  category: string
+  name: string
+  description: string
+  importance: 'high' | 'medium' | 'low'
+  sortOrder: number
+}
+
+export interface ExplorerStats {
+  total: number
+  byStatus: Record<string, number>
+  byChain: Array<{ chain: string; count: number }>
+}
+
+export interface CreateExplorerRequest {
+  chainName: string
+  chainType?: string
+  explorerName: string
+  explorerUrl: string
+  explorerType?: string
+  features?: Record<string, unknown>
+  uiFeatures?: Record<string, unknown>
+  apiFeatures?: Record<string, unknown>
+  screenshots?: string[]
+  analysis?: string
+  strengths?: string[]
+  weaknesses?: string[]
+  popularityScore?: number
+  researchStatus?: string
+  researchNotes?: string
+}
+
+export const explorerAPI = {
+  list: (chain?: string, status?: string) => {
+    const params = new URLSearchParams()
+    if (chain) params.set('chain', chain)
+    if (status) params.set('status', status)
+    const query = params.toString()
+    return fetchAPI<{ data: ExplorerResearch[]; count: number }>(`/api/explorers${query ? `?${query}` : ''}`)
+  },
+
+  get: (id: string) => fetchAPI<ExplorerResearch>(`/api/explorers/${id}`),
+
+  create: (data: CreateExplorerRequest) =>
+    fetchAPI<ExplorerResearch>('/api/explorers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: CreateExplorerRequest) =>
+    fetchAPI<ExplorerResearch>(`/api/explorers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    fetchAPI<void>(`/api/explorers/${id}`, { method: 'DELETE' }),
+
+  getChains: () => fetchAPI<{ chains: string[]; count: number }>('/api/explorers/chains'),
+
+  getStats: () => fetchAPI<ExplorerStats>('/api/explorers/stats'),
+
+  getFeatures: (category?: string) => {
+    const query = category ? `?category=${category}` : ''
+    return fetchAPI<{
+      features: ExplorerFeature[]
+      byCategory: Record<string, ExplorerFeature[]>
+      categories: string[]
+    }>(`/api/explorers/features${query}`)
+  },
+
+  compare: (ids: string[]) =>
+    fetchAPI<{
+      explorers: ExplorerResearch[]
+      features: ExplorerFeature[]
+      count: number
+    }>(`/api/explorers/compare?ids=${ids.join(',')}`),
+
+  updateStatus: (id: string, status: string) =>
+    fetchAPI<{ message: string; status: string }>(`/api/explorers/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    }),
+
+  seedFeatures: () =>
+    fetchAPI<{ message: string }>('/api/explorers/features/seed', { method: 'POST' }),
+}
