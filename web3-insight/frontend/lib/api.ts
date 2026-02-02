@@ -107,3 +107,74 @@ export interface Category {
 export const categoryAPI = {
   list: () => fetchAPI<Category[]>('/api/categories'),
 }
+
+// Data Sources API
+export interface DataSource {
+  id: string
+  name: string
+  type: 'rss' | 'api' | 'crawl'
+  url: string
+  config?: Record<string, unknown>
+  enabled: boolean
+  fetchInterval: number
+  lastFetchedAt?: string
+  lastError?: string
+  createdAt: string
+}
+
+export interface CreateDataSourceRequest {
+  name: string
+  type: 'rss' | 'api' | 'crawl'
+  url: string
+  config?: Record<string, unknown>
+  enabled?: boolean
+  fetchInterval?: number
+}
+
+export interface ValidateURLResponse {
+  valid: boolean
+  error?: string
+  title?: string
+  description?: string
+  itemCount?: number
+}
+
+export interface SyncResult {
+  message: string
+  itemsFound: number
+  itemsNew: number
+}
+
+export const dataSourceAPI = {
+  list: () => fetchAPI<DataSource[]>('/api/sources'),
+
+  get: (id: string) => fetchAPI<DataSource>(`/api/sources/${id}`),
+
+  create: (data: CreateDataSourceRequest) =>
+    fetchAPI<DataSource>('/api/sources', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: CreateDataSourceRequest) =>
+    fetchAPI<DataSource>(`/api/sources/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    fetchAPI<void>(`/api/sources/${id}`, {
+      method: 'DELETE',
+    }),
+
+  sync: (id: string) =>
+    fetchAPI<SyncResult>(`/api/sources/${id}/sync`, {
+      method: 'POST',
+    }),
+
+  validate: (url: string, type: string) =>
+    fetchAPI<ValidateURLResponse>('/api/sources/validate', {
+      method: 'POST',
+      body: JSON.stringify({ url, type }),
+    }),
+}

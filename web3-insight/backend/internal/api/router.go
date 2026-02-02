@@ -128,6 +128,19 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 				"message": "research endpoint - to be implemented with LLM integration",
 			})
 		})
+
+		// Data Sources
+		dsHandler := NewDataSourceHandler(db)
+		sources := api.Group("/sources")
+		{
+			sources.GET("", dsHandler.List)
+			sources.GET("/:id", dsHandler.Get)
+			sources.POST("", dsHandler.Create)
+			sources.PUT("/:id", dsHandler.Update)
+			sources.DELETE("/:id", dsHandler.Delete)
+			sources.POST("/:id/sync", dsHandler.TriggerSync)
+		}
+		api.POST("/sources/validate", dsHandler.ValidateURL)
 	}
 
 	// WebSocket for chat
