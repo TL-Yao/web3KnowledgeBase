@@ -119,3 +119,10 @@ func (r *ArticleRepository) Search(query string, limit int) ([]model.Article, er
 		Find(&articles).Error
 	return articles, err
 }
+
+// CountBySlugPrefix counts articles with slugs starting with prefix
+func (r *ArticleRepository) CountBySlugPrefix(prefix string) int64 {
+	var count int64
+	r.db.Model(&model.Article{}).Where("slug LIKE ?", prefix+"%").Count(&count)
+	return count
+}

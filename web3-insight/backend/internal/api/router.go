@@ -141,6 +141,17 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			sources.POST("/:id/sync", dsHandler.TriggerSync)
 		}
 		api.POST("/sources/validate", dsHandler.ValidateURL)
+
+		// News Items
+		newsHandler := NewNewsHandler(db)
+		news := api.Group("/news")
+		{
+			news.GET("", newsHandler.List)
+			news.GET("/unprocessed", newsHandler.GetUnprocessed)
+			news.GET("/:id", newsHandler.Get)
+			news.DELETE("/:id", newsHandler.Delete)
+			news.POST("/:id/processed", newsHandler.MarkProcessed)
+		}
 	}
 
 	// WebSocket for chat
