@@ -55,6 +55,7 @@ type EmbeddingPayload struct {
 // Global variables for dependency injection
 var (
 	rssCollector *collector.RSSCollector
+	webCrawler   *collector.WebCrawler
 	db           *gorm.DB
 )
 
@@ -64,6 +65,7 @@ func InitWorkerDependencies(database *gorm.DB) {
 	newsRepo := repository.NewNewsRepository(db)
 	dsRepo := repository.NewDataSourceRepository(db)
 	rssCollector = collector.NewRSSCollector(newsRepo, dsRepo)
+	webCrawler = collector.NewWebCrawler(newsRepo)
 }
 
 // NewTaskMux creates and configures the task multiplexer
@@ -186,11 +188,15 @@ func handleWebCrawl(ctx context.Context, t *asynq.Task) error {
 
 	log.Printf("Processing web crawl task: url=%s, depth=%d", payload.URL, payload.Depth)
 
-	// TODO: Implement in Phase 2
-	// 1. Fetch web page
-	// 2. Extract content
-	// 3. Save to database
-	// 4. Trigger classification and embedding
+	if webCrawler == nil {
+		return fmt.Errorf("web crawler not initialized")
+	}
+
+	// Crawl and save
+	_, err := webCrawler.CrawlAndSave(ctx, payload.URL, "manual")
+	if err != nil {
+		return fmt.Errorf("crawl failed: %w", err)
+	}
 
 	return nil
 }
