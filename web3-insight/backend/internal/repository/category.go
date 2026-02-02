@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/user/web3-insight/internal/model"
 	"gorm.io/gorm"
@@ -119,4 +122,48 @@ func (r *CategoryRepository) UpdateArticleCount(id uuid.UUID) error {
 		return err
 	}
 	return r.db.Model(&model.Category{}).Where("id = ?", id).Update("article_count", count).Error
+}
+
+// FindAll returns all categories
+func (r *CategoryRepository) FindAll() ([]model.Category, error) {
+	var categories []model.Category
+	if err := r.db.Find(&categories).Error; err != nil {
+		return nil, err
+	}
+	return categories, nil
+}
+
+// FindByPath finds a category by its full path (e.g., "基础技术/区块链原理/共识机制")
+func (r *CategoryRepository) FindByPath(path string) (*model.Category, error) {
+	parts := strings.Split(path, "/")
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("empty path")
+	}
+
+	var current *model.Category
+	var parentID *uuid.UUID
+
+	for _, name := range parts {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+
+		var cat model.Category
+		query := r.db.Where("name = ?", name)
+		if parentID == nil {
+			query = query.Where("parent_id IS NULL")
+		} else {
+			query = query.Where("parent_id = ?", *parentID)
+		}
+
+		if err := query.First(&cat).Error; err != nil {
+			return nil, fmt.Errorf("category not found: %s", name)
+		}
+
+		current = &cat
+		parentID = &cat.ID
+	}
+
+	return current, nil
 }
