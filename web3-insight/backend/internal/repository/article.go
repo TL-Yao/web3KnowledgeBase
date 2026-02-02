@@ -2,6 +2,7 @@ package repository
 
 import (
 	"github.com/google/uuid"
+	"github.com/pgvector/pgvector-go"
 	"github.com/user/web3-insight/internal/model"
 	"gorm.io/gorm"
 )
@@ -125,4 +126,109 @@ func (r *ArticleRepository) CountBySlugPrefix(prefix string) int64 {
 	var count int64
 	r.db.Model(&model.Article{}).Where("slug LIKE ?", prefix+"%").Count(&count)
 	return count
+}
+
+// ListSimple returns paginated articles with optional filters
+func (r *ArticleRepository) ListSimple(page, pageSize int, status string, categoryID *uuid.UUID, search string) ([]model.Article, int64, error) {
+	query := r.db.Model(&model.Article{}).Preload("Category")
+
+	if categoryID != nil {
+		query = query.Where("category_id = ?", categoryID)
+	}
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+	if search != "" {
+		query = query.Where("title ILIKE ? OR summary ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	offset := (page - 1) * pageSize
+
+	var articles []model.Article
+	if err := query.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&articles).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return articles, total, nil
+}
+
+// UpdateEmbedding updates the embedding vector for an article
+func (r *ArticleRepository) UpdateEmbedding(id uuid.UUID, embedding *pgvector.Vector) error {
+	return r.db.Model(&model.Article{}).Where("id = ?", id).Update("embedding", embedding).Error
+}
+
+// FindWithoutEmbeddings returns articles that don't have embeddings
+func (r *ArticleRepository) FindWithoutEmbeddings(limit int) ([]model.Article, error) {
+	var articles []model.Article
+	err := r.db.Where("embedding IS NULL").
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&articles).Error
+	return articles, err
+}
+
+// FindSimilarByEmbedding finds articles similar to the given embedding using cosine distance
+func (r *ArticleRepository) FindSimilarByEmbedding(embedding *pgvector.Vector, limit int, excludeID *uuid.UUID) ([]model.Article, error) {
+	var articles []model.Article
+
+	query := r.db.Preload("Category").
+		Where("embedding IS NOT NULL")
+
+	if excludeID != nil {
+		query = query.Where("id != ?", excludeID)
+	}
+
+	// Use raw SQL for vector ordering since GORM doesn't support parameterized ORDER BY
+	err := query.Order(gorm.Expr("embedding <=> ?", embedding)).
+		Limit(limit).
+		Find(&articles).Error
+	return articles, err
+}
+
+// FindRelatedArticles finds articles related to a given article using vector similarity
+func (r *ArticleRepository) FindRelatedArticles(articleID uuid.UUID, limit int) ([]model.Article, error) {
+	// First get the article's embedding
+	var article model.Article
+	if err := r.db.Select("embedding").First(&article, "id = ?", articleID).Error; err != nil {
+		return nil, err
+	}
+
+	if article.Embedding == nil {
+		return nil, nil // No embedding, return empty
+	}
+
+	return r.FindSimilarByEmbedding(article.Embedding, limit, &articleID)
+}
+
+// SemanticSearch performs semantic search using vector similarity
+func (r *ArticleRepository) SemanticSearch(embedding *pgvector.Vector, limit int, categoryID *uuid.UUID, status string) ([]model.Article, error) {
+	var articles []model.Article
+
+	query := r.db.Preload("Category").
+		Where("embedding IS NOT NULL")
+
+	if categoryID != nil {
+		query = query.Where("category_id = ?", categoryID)
+	}
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	// Use gorm.Expr for vector ordering
+	err := query.Order(gorm.Expr("embedding <=> ?", embedding)).
+		Limit(limit).
+		Find(&articles).Error
+	return articles, err
 }
