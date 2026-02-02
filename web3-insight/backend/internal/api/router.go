@@ -157,6 +157,17 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			news.DELETE("/:id", newsHandler.Delete)
 			news.POST("/:id/processed", newsHandler.MarkProcessed)
 		}
+
+		// Import/Export
+		importHandler := NewImportHandler(db)
+		importGroup := api.Group("/import")
+		{
+			importGroup.POST("", importHandler.Import)
+			importGroup.POST("/validate", importHandler.Validate)
+			importGroup.GET("/template", importHandler.GetTemplate)
+			importGroup.GET("/export", importHandler.Export)
+			importGroup.POST("/upload", importHandler.UploadFile)
+		}
 	}
 
 	// WebSocket for chat
