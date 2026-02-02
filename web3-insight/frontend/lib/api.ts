@@ -178,3 +178,93 @@ export const dataSourceAPI = {
       body: JSON.stringify({ url, type }),
     }),
 }
+
+// Import/Export API
+export interface ImportArticle {
+  title: string
+  content: string
+  contentHtml?: string
+  summary?: string
+  categoryPath?: string
+  categoryId?: string
+  tags?: string[]
+  status?: 'draft' | 'published'
+  sourceUrls?: string[]
+  slug?: string
+}
+
+export interface ImportBatch {
+  articles: ImportArticle[]
+  options?: {
+    skipDuplicates?: boolean
+    updateExisting?: boolean
+    generateSummary?: boolean
+    defaultStatus?: string
+  }
+}
+
+export interface ImportError {
+  index: number
+  title: string
+  message: string
+}
+
+export interface ImportResult {
+  totalCount: number
+  importedCount: number
+  skippedCount: number
+  updatedCount: number
+  errorCount: number
+  errors?: ImportError[]
+  importedIds?: string[]
+}
+
+export interface ValidationResult {
+  valid: boolean
+  errors: ImportError[]
+  errorCount: number
+  totalCount: number
+}
+
+export const importAPI = {
+  import: (batch: ImportBatch) =>
+    fetchAPI<ImportResult>('/api/import', {
+      method: 'POST',
+      body: JSON.stringify(batch),
+    }),
+
+  validate: (batch: ImportBatch) =>
+    fetchAPI<ValidationResult>('/api/import/validate', {
+      method: 'POST',
+      body: JSON.stringify(batch),
+    }),
+
+  getTemplate: () => `/api/import/template`,
+
+  export: (categoryId?: string, status?: string) => {
+    const params = new URLSearchParams()
+    if (categoryId) params.set('categoryId', categoryId)
+    if (status) params.set('status', status)
+    const query = params.toString()
+    return `/api/import/export${query ? `?${query}` : ''}`
+  },
+
+  uploadFile: async (file: File, options?: { skipDuplicates?: boolean; updateExisting?: boolean }) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (options?.skipDuplicates) formData.append('skipDuplicates', 'true')
+    if (options?.updateExisting) formData.append('updateExisting', 'true')
+
+    const res = await fetch('/api/import/upload', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => 'Unknown error')
+      throw new APIError(res.status, errorText)
+    }
+
+    return res.json() as Promise<ImportResult>
+  },
+}
