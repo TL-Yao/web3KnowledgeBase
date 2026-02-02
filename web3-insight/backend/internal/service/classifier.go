@@ -32,15 +32,21 @@ func NewClassifier(router *llm.Router, articleRepo *repository.ArticleRepository
 
 // ClassificationResult represents the LLM classification response
 type ClassificationResult struct {
-	PrimaryCategory     string   `json:"primaryCategory"`
-	SecondaryCategories []string `json:"secondaryCategories"`
-	SuggestedTags       []string `json:"suggestedTags"`
-	Confidence          float64  `json:"confidence"`
-	Reasoning           string   `json:"reasoning"`
-	NewCategorySuggestion *struct {
-		Name   string `json:"name"`
-		Parent string `json:"parent"`
-	} `json:"newCategorySuggestion,omitempty"`
+	Decision      string           `json:"decision"` // "use_existing" or "create_new"
+	CategoryPath  string           `json:"categoryPath"`
+	NewCategory   *NewCategoryInfo `json:"newCategory,omitempty"`
+	SuggestedTags []string         `json:"suggestedTags"`
+	Confidence    float64          `json:"confidence"`
+	Reasoning     string           `json:"reasoning"`
+}
+
+// NewCategoryInfo contains info for creating a new category
+type NewCategoryInfo struct {
+	Name        string  `json:"name"`
+	NameEn      string  `json:"nameEn"`
+	ParentPath  *string `json:"parentPath"` // nil means root category
+	Icon        string  `json:"icon"`
+	Description string  `json:"description"`
 }
 
 // ClassifyArticle classifies an article and returns the suggested category
@@ -153,21 +159,70 @@ func (c *Classifier) ClassifyAndUpdate(ctx context.Context, articleID uuid.UUID)
 		return err
 	}
 
-	log.Printf("Classification result for '%s': %s (confidence: %.2f, model: %s)",
-		article.Title, result.PrimaryCategory, result.Confidence, modelUsed)
+	log.Printf("Classification result for '%s': decision=%s, path=%s (confidence: %.2f, model: %s)",
+		article.Title, result.Decision, result.CategoryPath, result.Confidence, modelUsed)
 
-	// Find the category by path
-	category, err := c.categoryRepo.FindByPath(result.PrimaryCategory)
-	if err != nil {
-		log.Printf("Category not found: %s, keeping current category", result.PrimaryCategory)
-		// Don't fail, just log and continue
-	} else {
+	var category *model.Category
+
+	// Handle autonomous decision
+	if result.Decision == "create_new" && result.NewCategory != nil {
+		// LLM decided to create a new category
+		log.Printf("LLM decided to create new category: %s (parent: %v)",
+			result.NewCategory.Name, result.NewCategory.ParentPath)
+
+		// Convert service.NewCategoryInfo to repository.LLMCategoryInfo
+		llmInfo := &repository.LLMCategoryInfo{
+			Name:        result.NewCategory.Name,
+			NameEn:      result.NewCategory.NameEn,
+			ParentPath:  result.NewCategory.ParentPath,
+			Icon:        result.NewCategory.Icon,
+			Description: result.NewCategory.Description,
+		}
+
+		newCat, created, err := c.categoryRepo.CreateCategoryFromLLM(llmInfo)
+		if err != nil {
+			log.Printf("Failed to create new category: %v, falling back to path lookup", err)
+			// Fall through to try finding by path
+		} else {
+			if created {
+				log.Printf("Created new category: %s (ID: %s)", newCat.Name, newCat.ID)
+			} else {
+				log.Printf("Category already existed: %s (ID: %s)", newCat.Name, newCat.ID)
+			}
+			category = newCat
+		}
+	}
+
+	// If no category yet, try to find existing by path
+	if category == nil && result.CategoryPath != "" {
+		cat, err := c.categoryRepo.FindByPath(result.CategoryPath)
+		if err != nil {
+			log.Printf("Category not found by path: %s, trying fallback", result.CategoryPath)
+			// Fallback: create categories along the path
+			cat, _, err = c.categoryRepo.FindOrCreateByPath(result.CategoryPath)
+			if err != nil {
+				log.Printf("Failed to create category path: %v, keeping current category", err)
+			} else {
+				category = cat
+			}
+		} else {
+			category = cat
+		}
+	}
+
+	// Update article with category if found
+	if category != nil {
 		article.CategoryID = &category.ID
 	}
 
 	// Update tags
 	if len(result.SuggestedTags) > 0 {
 		article.Tags = result.SuggestedTags
+	}
+
+	// Log reasoning if provided
+	if result.Reasoning != "" {
+		log.Printf("Classification reasoning: %s", result.Reasoning)
 	}
 
 	return c.articleRepo.Update(article)
