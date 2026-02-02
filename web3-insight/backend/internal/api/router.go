@@ -168,6 +168,23 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			importGroup.GET("/export", importHandler.Export)
 			importGroup.POST("/upload", importHandler.UploadFile)
 		}
+
+		// Explorer Research
+		explorerHandler := NewExplorerHandler(db)
+		explorers := api.Group("/explorers")
+		{
+			explorers.GET("", explorerHandler.List)
+			explorers.GET("/chains", explorerHandler.GetChains)
+			explorers.GET("/stats", explorerHandler.GetStats)
+			explorers.GET("/features", explorerHandler.GetFeatures)
+			explorers.POST("/features/seed", explorerHandler.SeedFeatures)
+			explorers.GET("/compare", explorerHandler.Compare)
+			explorers.GET("/:id", explorerHandler.Get)
+			explorers.POST("", explorerHandler.Create)
+			explorers.PUT("/:id", explorerHandler.Update)
+			explorers.DELETE("/:id", explorerHandler.Delete)
+			explorers.POST("/:id/status", explorerHandler.UpdateStatus)
+		}
 	}
 
 	// WebSocket for chat
