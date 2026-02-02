@@ -12,6 +12,7 @@ type Config struct {
 	Redis    RedisConfig    `mapstructure:"redis"`
 	LLM      LLMConfig      `mapstructure:"llm"`
 	Worker   WorkerConfig   `mapstructure:"worker"`
+	Search   SearchConfig   `mapstructure:"search"`
 }
 
 type ServerConfig struct {
@@ -57,6 +58,21 @@ type OpenAIConfig struct {
 type WorkerConfig struct {
 	Concurrency int            `mapstructure:"concurrency"`
 	Queues      map[string]int `mapstructure:"queues"`
+}
+
+type SearchConfig struct {
+	Tavily  TavilyConfig  `mapstructure:"tavily"`
+	SerpAPI SerpAPIConfig `mapstructure:"serpapi"`
+}
+
+type TavilyConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	APIKey  string `mapstructure:"api_key"`
+}
+
+type SerpAPIConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	APIKey  string `mapstructure:"api_key"`
 }
 
 func Load() (*Config, error) {
