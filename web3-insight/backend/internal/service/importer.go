@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
@@ -152,9 +153,13 @@ func (i *ArticleImporter) importSingle(importArticle ImportArticle, opts ImportO
 			categoryID = &parsed
 		}
 	} else if importArticle.CategoryPath != "" {
-		category, err := i.categoryRepo.FindByPath(importArticle.CategoryPath)
+		// Use FindOrCreateByPath to auto-create missing categories
+		category, created, err := i.categoryRepo.FindOrCreateByPath(importArticle.CategoryPath)
 		if err == nil && category != nil {
 			categoryID = &category.ID
+			if created {
+				log.Printf("Auto-created category path: %s", importArticle.CategoryPath)
+			}
 		}
 	}
 
