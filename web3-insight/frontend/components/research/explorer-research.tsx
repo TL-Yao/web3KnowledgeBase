@@ -313,8 +313,8 @@ export function ExplorerResearchPanel() {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        {explorer.popularityScore > 0 && (
-                          <span>{explorer.popularityScore.toFixed(1)}</span>
+                        {(explorer.popularityScore ?? 0) > 0 && (
+                          <span>{explorer.popularityScore?.toFixed(1)}</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">

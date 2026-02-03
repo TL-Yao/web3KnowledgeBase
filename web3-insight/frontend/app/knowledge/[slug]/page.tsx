@@ -24,16 +24,21 @@ export default function ArticlePage() {
   // Transform API response to match ArticleView's expected format
   const displayArticle = article ? {
     id: article.id,
+    slug: article.slug,
     title: article.title,
     content: article.content,
-    contentHtml: '', // API doesn't provide HTML, component will fall back to content
+    contentHtml: article.contentHtml || '', // API doesn't provide HTML, component will fall back to content
     summary: article.summary,
-    category: { name: article.category || '未分类', slug: (article.category || 'uncategorized').toLowerCase() },
+    category: {
+      id: article.category?.id || 'uncategorized',
+      name: article.category?.name || '未分类',
+      slug: article.category?.slug || 'uncategorized'
+    },
     tags: article.tags,
-    sourceUrls: article.source_url ? [article.source_url] : [],
-    modelUsed: '',
-    createdAt: article.created_at,
-    updatedAt: article.updated_at,
+    sourceUrls: article.sourceUrls || [],
+    modelUsed: article.modelUsed || '',
+    createdAt: article.createdAt,
+    updatedAt: article.updatedAt,
   } : null
 
   if (isLoading) {
