@@ -57,9 +57,10 @@ func (mc *ModelsConfig) GetEnabledModels() []Model {
 
 // GetModelByID finds a model by its ID
 func (mc *ModelsConfig) GetModelByID(id string) (*Model, error) {
-	for _, model := range mc.GetAllModels() {
-		if model.ID == id {
-			return &model, nil
+	allModels := mc.GetAllModels()
+	for i := range allModels {
+		if allModels[i].ID == id {
+			return &allModels[i], nil
 		}
 	}
 	return nil, fmt.Errorf("model not found: %s", id)
@@ -76,8 +77,9 @@ func (mc *ModelsConfig) IsModelAvailable(id string) bool {
 
 // GetModelsByCapability returns models with specific capability
 func (mc *ModelsConfig) GetModelsByCapability(capability string) []Model {
-	var matching []Model
-	for _, model := range mc.GetEnabledModels() {
+	enabledModels := mc.GetEnabledModels()
+	matching := make([]Model, 0, len(enabledModels))
+	for _, model := range enabledModels {
 		for _, cap := range model.Capabilities {
 			if cap == capability {
 				matching = append(matching, model)

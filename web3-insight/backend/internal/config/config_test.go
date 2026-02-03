@@ -145,10 +145,123 @@ cloud_models:
 	}
 
 	// Verify cross-validation works (no warnings since models are valid)
-	warnings := cfg.Routing.ValidateTaskModels(cfg.Models)
-	if len(warnings) != 0 {
-		t.Errorf("expected no warnings, got: %v", warnings)
+	if len(cfg.Warnings) != 0 {
+		t.Errorf("expected no warnings, got: %v", cfg.Warnings)
 	}
+}
+
+func TestLoadAll_WithWarnings(t *testing.T) {
+	// Create temporary directory structure
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, "config")
+	if err := os.Mkdir(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+
+	// Create config.yaml
+	configYAML := `server:
+  host: localhost
+  port: 8080
+database:
+  host: localhost
+  port: 5432
+  user: test
+  password: test
+  dbname: test
+  sslmode: disable
+redis:
+  host: localhost
+  port: 6379
+llm:
+  default_local: "llama3:70b"
+  ollama_host: "http://localhost:11434"
+worker:
+  concurrency: 10
+search:
+  tavily:
+    enabled: false
+  serpapi:
+    enabled: false
+`
+
+	// Create models.yaml with only one model
+	modelsYAML := `local_models:
+  - id: "llama3:70b"
+    name: "Llama 3 70B"
+    provider: "ollama"
+    enabled: true
+    capabilities: ["chat"]
+    context_window: 8192
+    cost_per_1k_tokens: 0.0
+cloud_models: []
+`
+
+	// Create routing.yaml with reference to nonexistent model
+	routingYAML := `task_types:
+  - id: "chat"
+    name: "问答对话"
+    description: "实时问答交互"
+    default_primary: "llama3:70b"
+    default_fallback: "nonexistent-model"
+    required_capability: "chat"
+`
+
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(configYAML), 0644); err != nil {
+		t.Fatalf("failed to write config.yaml: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "models.yaml"), []byte(modelsYAML), 0644); err != nil {
+		t.Fatalf("failed to write models.yaml: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "routing.yaml"), []byte(routingYAML), 0644); err != nil {
+		t.Fatalf("failed to write routing.yaml: %v", err)
+	}
+
+	// Change to temp directory
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	defer os.Chdir(origDir)
+
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("failed to change to temp directory: %v", err)
+	}
+
+	// Test LoadAll should succeed but return warnings
+	cfg, err := LoadAll()
+	if err != nil {
+		t.Fatalf("LoadAll() unexpected error: %v", err)
+	}
+
+	// Verify warnings are stored in config
+	if len(cfg.Warnings) == 0 {
+		t.Error("expected warnings about missing fallback model, got none")
+	}
+
+	// Verify warning content
+	foundWarning := false
+	for _, w := range cfg.Warnings {
+		if contains(w, "nonexistent-model") && contains(w, "not available") {
+			foundWarning = true
+			break
+		}
+	}
+	if !foundWarning {
+		t.Errorf("expected warning about nonexistent-model, got: %v", cfg.Warnings)
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || containsMiddle(s, substr)))
+}
+
+func containsMiddle(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 
 func TestLoadAll_MissingModelsYAML(t *testing.T) {

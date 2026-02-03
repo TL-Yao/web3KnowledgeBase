@@ -39,9 +39,9 @@ func LoadRouting(path string) (*RoutingConfig, error) {
 
 // GetTaskByID finds a task type by its ID
 func (rc *RoutingConfig) GetTaskByID(id string) (*TaskType, error) {
-	for _, task := range rc.TaskTypes {
-		if task.ID == id {
-			return &task, nil
+	for i := range rc.TaskTypes {
+		if rc.TaskTypes[i].ID == id {
+			return &rc.TaskTypes[i], nil
 		}
 	}
 	return nil, fmt.Errorf("task type not found: %s", id)

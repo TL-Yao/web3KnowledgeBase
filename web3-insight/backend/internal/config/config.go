@@ -19,6 +19,9 @@ type Config struct {
 	// Model registry and routing configs (loaded separately from YAML files)
 	Models  *ModelsConfig
 	Routing *RoutingConfig
+
+	// Warnings collected during configuration loading
+	Warnings []string
 }
 
 type ServerConfig struct {
@@ -104,7 +107,20 @@ func Load() (*Config, error) {
 	return &cfg, nil
 }
 
+// findConfigFile searches for a config file in standard paths
+func findConfigFile(filename string) (string, error) {
+	configPaths := []string{"./config", "../config", "../../config"}
+	for _, basePath := range configPaths {
+		testPath := basePath + "/" + filename
+		if _, err := os.Stat(testPath); err == nil {
+			return testPath, nil
+		}
+	}
+	return "", fmt.Errorf("%s not found in config paths", filename)
+}
+
 // LoadAll loads all configuration files (config.yaml, models.yaml, routing.yaml)
+// Returns the loaded config with any validation warnings stored in cfg.Warnings
 func LoadAll() (*Config, error) {
 	// Load main config.yaml
 	cfg, err := Load()
@@ -112,56 +128,32 @@ func LoadAll() (*Config, error) {
 		return nil, fmt.Errorf("failed to load config.yaml: %w", err)
 	}
 
-	// Try multiple config paths to find models.yaml
-	configPaths := []string{"./config", "../config", "../../config"}
-	var modelsPath string
-	for _, basePath := range configPaths {
-		testPath := basePath + "/models.yaml"
-		if _, err := os.Stat(testPath); err == nil {
-			modelsPath = testPath
-			break
-		}
+	// Find and load models.yaml
+	modelsPath, err := findConfigFile("models.yaml")
+	if err != nil {
+		return nil, err
 	}
 
-	if modelsPath == "" {
-		return nil, fmt.Errorf("models.yaml not found in config paths")
-	}
-
-	// Load models.yaml
 	models, err := LoadModels(modelsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load models.yaml: %w", err)
 	}
 	cfg.Models = models
 
-	// Try multiple config paths to find routing.yaml
-	var routingPath string
-	for _, basePath := range configPaths {
-		testPath := basePath + "/routing.yaml"
-		if _, err := os.Stat(testPath); err == nil {
-			routingPath = testPath
-			break
-		}
+	// Find and load routing.yaml
+	routingPath, err := findConfigFile("routing.yaml")
+	if err != nil {
+		return nil, err
 	}
 
-	if routingPath == "" {
-		return nil, fmt.Errorf("routing.yaml not found in config paths")
-	}
-
-	// Load routing.yaml
 	routing, err := LoadRouting(routingPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load routing.yaml: %w", err)
 	}
 	cfg.Routing = routing
 
-	// Validate task models against model registry
-	if warnings := cfg.Routing.ValidateTaskModels(cfg.Models); len(warnings) > 0 {
-		fmt.Println("⚠️  Configuration warnings detected:")
-		for _, warning := range warnings {
-			fmt.Printf("   - %s\n", warning)
-		}
-	}
+	// Validate task models against model registry and store warnings
+	cfg.Warnings = cfg.Routing.ValidateTaskModels(cfg.Models)
 
 	return cfg, nil
 }
