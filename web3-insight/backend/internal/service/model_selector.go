@@ -98,7 +98,7 @@ func (ms *ModelSelector) SelectModelForTask(taskID string) (*ModelSelectionResul
 func (ms *ModelSelector) getUserSelection(taskID string) (primary, fallback string, err error) {
 	configData, err := ms.configRepo.Get("model_selections")
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to retrieve model selections from config: %w", err)
 	}
 
 	var selections []TaskSelection
