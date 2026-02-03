@@ -112,8 +112,7 @@ docker-compose -f /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/
 **Backend API Only:**
 ```bash
 # Development mode (from web3-insight directory)
-cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend
-/usr/local/go/bin/go run cmd/server/main.go
+/usr/local/go/bin/go run -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend cmd/server/main.go
 
 # Or using Makefile
 cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight
@@ -123,8 +122,7 @@ make dev-backend
 **Worker Only:**
 ```bash
 # Development mode (from web3-insight directory)
-cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend
-/usr/local/go/bin/go run cmd/worker/main.go
+/usr/local/go/bin/go run -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend cmd/worker/main.go
 
 # Or using Makefile
 cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight
@@ -135,7 +133,7 @@ make worker
 ```bash
 # Development mode (from web3-insight directory)
 cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/frontend
-pnpm dev
+npm run dev
 
 # Or using Makefile
 cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight
@@ -150,8 +148,7 @@ make dev-frontend
 make migrate
 
 # Or directly
-cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend
-/usr/local/go/bin/go run cmd/migrate/main.go
+/usr/local/go/bin/go run -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend cmd/migrate/main.go
 ```
 
 **Clear all data (preserves schema):**
@@ -160,7 +157,7 @@ cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend
 docker exec -it web3-insight-db psql -U web3insight -d web3insight
 
 # Run the clear script
-\i /path/to/backend/scripts/clear_data.sql
+\i /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend/scripts/clear_data.sql
 
 # Or copy-paste SQL from backend/scripts/clear_data.sql
 ```
