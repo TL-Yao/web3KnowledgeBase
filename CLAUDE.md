@@ -308,3 +308,29 @@ If the implementation changed:
 - Use absolute paths in documentation for copy-paste reliability
 - Verify functionality before documenting it
 - Keep test infrastructure but remove default test data
+
+### 2026-02-03 - Remove Hardcoded UI Data (Follow-up)
+
+**What was completed:**
+- Removed hardcoded admin page stats (12 articles, 847 API calls, $0.32 cost)
+- Removed hardcoded task monitor mock data (3 sample tasks)
+- Replaced with proper API queries returning empty defaults
+- Added empty state UI to task monitor component
+- Added TypeScript interfaces, error handling, and loading states
+
+**Important takeaways:**
+- **Frontend mock data locations**: Mock data can hide in multiple places:
+  1. `__mocks__/` directory (MSW handlers) - covered in previous cleanup
+  2. Component-level hardcoded values (admin page stats)
+  3. Query function return values (task-monitor.tsx)
+- Always check both page files and component files for hardcoded data
+- Empty states should be explicit and user-friendly, not just blank screens
+- Use `?? 0` pattern for safe default values in stats display
+- Follow codebase patterns: add TypeScript types, loading/error states, TODO comments
+- Currency should use `.toFixed(2)` for consistent formatting
+
+**Related commits:** 5d5cfb3, c065a70, 44834fb, cbb0cf7
+
+**Files modified:**
+- app/admin/page.tsx (converted to 'use client', added useQuery for stats, added error/loading states)
+- components/admin/task-monitor.tsx (removed mock tasks, added empty state, added loading state)
