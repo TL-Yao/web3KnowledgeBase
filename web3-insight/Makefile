@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend db-up db-down migrate seed test build clean
+.PHONY: dev dev-backend dev-frontend db-up db-down migrate test build clean
 
 # Development
 dev: db-up
@@ -21,9 +21,6 @@ db-down:
 
 migrate:
 	cd backend && go run cmd/migrate/main.go
-
-seed:
-	cd backend && go run cmd/seed/main.go
 
 # Worker
 worker:
