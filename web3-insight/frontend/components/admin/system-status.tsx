@@ -17,7 +17,8 @@ export function SystemStatus() {
     queryFn: async () => {
       try {
         // Check backend health status
-        const healthRes = await fetch('/health')
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+        const healthRes = await fetch(`${API_BASE}/health`)
         const backendOnline = healthRes.ok
 
         const statuses: Status[] = [
