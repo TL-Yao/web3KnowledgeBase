@@ -42,7 +42,7 @@ export function ArticleList() {
     queryKey: ['articles'],
     queryFn: async () => {
       const response = await articleAPI.list({ limit: 20 })
-      return response.data.map(transformArticle)
+      return response.articles.map(transformArticle)
     },
     retry: 1,
     staleTime: 30000,

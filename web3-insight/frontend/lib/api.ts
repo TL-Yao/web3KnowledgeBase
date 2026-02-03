@@ -50,10 +50,10 @@ export interface Article {
 }
 
 export interface ArticleListResponse {
-  data: Article[]
+  articles: Article[]
   total: number
   page: number
-  limit: number
+  pageSize: number
 }
 
 export interface ArticleListParams {
