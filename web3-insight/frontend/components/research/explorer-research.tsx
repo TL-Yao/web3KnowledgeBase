@@ -209,12 +209,11 @@ export function ExplorerResearchPanel() {
                 />
               </div>
             </div>
-            <Select value={chainFilter} onValueChange={setChainFilter}>
+            <Select value={chainFilter || undefined} onValueChange={setChainFilter}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="All chains" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All chains</SelectItem>
                 {chainsData?.chains.map((chain) => (
                   <SelectItem key={chain} value={chain}>
                     {chain}
@@ -222,12 +221,11 @@ export function ExplorerResearchPanel() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter || undefined} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All statuses</SelectItem>
                 {Object.entries(STATUS_CONFIG).map(([value, config]) => (
                   <SelectItem key={value} value={value}>
                     {config.label}
