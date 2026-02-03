@@ -1,6 +1,5 @@
 // __mocks__/handlers.ts
 import { http, HttpResponse } from 'msw'
-import { mockArticles, mockCategories, mockDataSources } from './data'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
