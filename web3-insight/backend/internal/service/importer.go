@@ -348,7 +348,7 @@ func (i *ArticleImporter) ImportFromMarkdown(title, markdown string, categoryPat
 	}
 
 	if result.ErrorCount > 0 {
-		return nil, fmt.Errorf(result.Errors[0].Message)
+		return nil, fmt.Errorf("import failed: %s", result.Errors[0].Message)
 	}
 
 	if len(result.ImportedIDs) == 0 {
