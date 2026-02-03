@@ -11,14 +11,15 @@ import (
 )
 
 type Server struct {
-	config          *config.Config
-	db              *gorm.DB
-	articleHandler  *ArticleHandler
-	categoryHandler *CategoryHandler
-	configHandler   *ConfigHandler
-	taskHandler     *TaskHandler
-	searchHandler   *SearchHandler
-	chatHandler     *ChatHandler
+	config             *config.Config
+	db                 *gorm.DB
+	articleHandler     *ArticleHandler
+	categoryHandler    *CategoryHandler
+	configHandler      *ConfigHandler
+	taskHandler        *TaskHandler
+	searchHandler      *SearchHandler
+	chatHandler        *ChatHandler
+	modelConfigHandler *ModelConfigHandler
 }
 
 func NewServer(cfg *config.Config, db *gorm.DB) *Server {
@@ -33,14 +34,15 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	semanticSearchService := service.NewSemanticSearchService(articleRepo, &cfg.LLM)
 
 	return &Server{
-		config:          cfg,
-		db:              db,
-		articleHandler:  NewArticleHandler(articleRepo),
-		categoryHandler: NewCategoryHandler(categoryRepo),
-		configHandler:   NewConfigHandler(configRepo),
-		taskHandler:     NewTaskHandler(taskRepo),
-		searchHandler:   NewSearchHandlerWithSemantic(articleRepo, categoryRepo, semanticSearchService),
-		chatHandler:     NewChatHandler(chatService),
+		config:             cfg,
+		db:                 db,
+		articleHandler:     NewArticleHandler(articleRepo),
+		categoryHandler:    NewCategoryHandler(categoryRepo),
+		configHandler:      NewConfigHandler(configRepo),
+		taskHandler:        NewTaskHandler(taskRepo),
+		searchHandler:      NewSearchHandlerWithSemantic(articleRepo, categoryRepo, semanticSearchService),
+		chatHandler:        NewChatHandler(chatService),
+		modelConfigHandler: NewModelConfigHandler(configRepo, cfg.Models, cfg.Routing),
 	}
 }
 
@@ -184,6 +186,15 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			explorers.PUT("/:id", explorerHandler.Update)
 			explorers.DELETE("/:id", explorerHandler.Delete)
 			explorers.POST("/:id/status", explorerHandler.UpdateStatus)
+		}
+
+		// Model Configuration
+		models := api.Group("/models")
+		{
+			models.GET("/registry", server.modelConfigHandler.GetModelsRegistry)
+			models.GET("/tasks", server.modelConfigHandler.GetTaskTypes)
+			models.GET("/selections", server.modelConfigHandler.GetUserSelections)
+			models.PUT("/selections", server.modelConfigHandler.UpdateUserSelections)
 		}
 	}
 

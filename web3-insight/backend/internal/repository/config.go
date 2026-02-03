@@ -115,3 +115,28 @@ func (r *ConfigRepository) SetMultiple(configs map[string]string) error {
 		return nil
 	})
 }
+
+// SetJSON sets a configuration value directly as JSON without double-encoding
+func (r *ConfigRepository) SetJSON(key string, jsonValue []byte, description string) error {
+	var config model.Config
+	result := r.db.First(&config, "key = ?", key)
+
+	if result.Error == gorm.ErrRecordNotFound {
+		config = model.Config{
+			Key:         key,
+			Value:       datatypes.JSON(jsonValue),
+			Description: description,
+		}
+		return r.db.Create(&config).Error
+	}
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	config.Value = datatypes.JSON(jsonValue)
+	if description != "" {
+		config.Description = description
+	}
+	return r.db.Save(&config).Error
+}

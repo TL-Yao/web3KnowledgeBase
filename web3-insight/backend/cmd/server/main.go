@@ -10,9 +10,18 @@ import (
 )
 
 func main() {
-	cfg, err := config.Load()
+	// Load all configuration (config.yaml, models.yaml, routing.yaml)
+	cfg, err := config.LoadAll()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Log any configuration warnings
+	if len(cfg.Warnings) > 0 {
+		fmt.Println("⚠️  Configuration warnings detected:")
+		for _, warning := range cfg.Warnings {
+			fmt.Printf("   - %s\n", warning)
+		}
 	}
 
 	// Connect to database
