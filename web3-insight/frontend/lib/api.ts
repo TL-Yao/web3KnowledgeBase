@@ -69,7 +69,7 @@ export const articleAPI = {
     const searchParams = new URLSearchParams()
     if (params?.category) searchParams.set('category', params.category)
     if (params?.page) searchParams.set('page', String(params.page))
-    if (params?.limit) searchParams.set('limit', String(params.limit))
+    if (params?.limit) searchParams.set('page_size', String(params.limit))
     if (params?.q) searchParams.set('q', params.q)
 
     const query = searchParams.toString()
