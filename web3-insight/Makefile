@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend db-up db-down migrate test build clean
+.PHONY: dev dev-backend dev-frontend db-up db-down test build clean
 
 # Development
 dev: db-up
@@ -18,9 +18,6 @@ db-up:
 
 db-down:
 	docker-compose down
-
-migrate:
-	cd backend && go run cmd/migrate/main.go
 
 # Worker
 worker:

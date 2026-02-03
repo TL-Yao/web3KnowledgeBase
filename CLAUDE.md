@@ -57,7 +57,6 @@ docker ps | grep web3-insight
 - `make dev` - Start full dev environment (db + backend + frontend)
 - `make dev-backend` - Start backend only
 - `make dev-frontend` - Start frontend only
-- `make migrate` - Run database migrations
 - `make worker` - Start async task worker
 
 **Note**: Due to GVM shell issues, use absolute paths for running Go commands directly (see Go Build Commands section above).
@@ -141,14 +140,14 @@ make dev-frontend
 
 ### Database Management
 
-**Run migrations:**
-```bash
-# From web3-insight directory
-make migrate
+**Migrations:**
+Migrations run automatically when the backend server starts. There is no separate migration command.
 
-# Or directly
-/usr/local/go/bin/go run -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend cmd/migrate/main.go
-```
+The backend automatically:
+1. Connects to the database
+2. Runs all pending migrations via GORM AutoMigrate
+3. Creates/updates tables as needed
+4. Then starts the API server
 
 **Clear all data (preserves schema):**
 ```bash
