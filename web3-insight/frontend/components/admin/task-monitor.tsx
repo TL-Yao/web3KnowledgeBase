@@ -17,34 +17,12 @@ interface Task {
 }
 
 export function TaskMonitor() {
-  const { data: tasks } = useQuery({
+  const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ['tasks'],
     queryFn: async () => {
-      // TODO: Fetch from API
-      return [
-        {
-          id: '1842',
-          type: 'content:generate',
-          status: 'running' as const,
-          description: '生成文章: "EIP-4844详解"',
-          model: 'llama3:70b',
-          progress: 67,
-          startedAt: new Date().toISOString()
-        },
-        {
-          id: '1843',
-          type: 'web:crawl',
-          status: 'pending' as const,
-          description: '爬取 etherscan.io',
-        },
-        {
-          id: '1841',
-          type: 'rss:sync',
-          status: 'completed' as const,
-          description: 'RSS 同步 (zkSync)',
-          completedAt: new Date().toISOString()
-        }
-      ]
+      // TODO: Replace with actual API call when task queue backend is implemented
+      // Return empty array - backend endpoint not yet implemented
+      return []
     },
     refetchInterval: 5000
   })
@@ -59,36 +37,48 @@ export function TaskMonitor() {
   return (
     <ScrollArea className="h-[300px]">
       <div className="space-y-3">
-        {tasks?.map((task) => (
-          <div
-            key={task.id}
-            className="flex items-start justify-between p-3 rounded-lg border border-border"
-          >
-            <div className="flex items-start gap-3">
-              {statusIcons[task.status]}
-              <div>
-                <div className="text-sm font-medium">{task.description}</div>
-                {task.model && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    模型: {task.model}
-                    {task.progress && ` | 进度: ${task.progress}%`}
-                  </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            <div className="animate-pulse">加载中...</div>
+          </div>
+        ) : tasks && tasks.length > 0 ? (
+          tasks.map((task) => (
+            <div
+              key={task.id}
+              className="flex items-start justify-between p-3 rounded-lg border border-border"
+            >
+              <div className="flex items-start gap-3">
+                {statusIcons[task.status]}
+                <div>
+                  <div className="text-sm font-medium">{task.description}</div>
+                  {task.model && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      模型: {task.model}
+                      {task.progress && ` | 进度: ${task.progress}%`}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="w-7 h-7">
+                  <Eye className="w-4 h-4" />
+                </Button>
+                {task.status === 'running' && (
+                  <Button variant="ghost" size="icon" className="w-7 h-7 text-red-500">
+                    <XCircle className="w-4 h-4" />
+                  </Button>
                 )}
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="w-7 h-7">
-                <Eye className="w-4 h-4" />
-              </Button>
-              {task.status === 'running' && (
-                <Button variant="ghost" size="icon" className="w-7 h-7 text-red-500">
-                  <XCircle className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Clock className="w-12 h-12 mb-4 opacity-50" />
+            <p className="text-lg font-medium">暂无运行中的任务</p>
+            <p className="text-sm">当前队列为空</p>
           </div>
-        ))}
+        )}
       </div>
     </ScrollArea>
   )
