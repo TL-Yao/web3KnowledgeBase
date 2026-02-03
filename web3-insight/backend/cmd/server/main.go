@@ -28,12 +28,6 @@ func main() {
 	}
 	log.Println("Migrations completed")
 
-	// Seed initial data
-	if err := database.Seed(db); err != nil {
-		log.Fatalf("Failed to seed data: %v", err)
-	}
-	log.Println("Seed data loaded")
-
 	router := api.NewRouterWithDB(cfg, db)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
