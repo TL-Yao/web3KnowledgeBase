@@ -6,6 +6,10 @@ import { ChevronRight, Folder, FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { categoryAPI, Category } from '@/lib/api'
 
+// Constants for tree indentation
+const INDENT_PER_LEVEL = 12
+const BASE_PADDING = 8
+
 interface CategoryNodeProps {
   category: Category
   level: number
@@ -22,7 +26,7 @@ function CategoryNode({ category, level }: CategoryNodeProps) {
           "flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-accent/10 cursor-pointer text-sm",
           "transition-colors"
         )}
-        style={{ paddingLeft: `${level * 12 + 8}px` }}
+        style={{ paddingLeft: `${level * INDENT_PER_LEVEL + BASE_PADDING}px` }}
         onClick={() => {
           if (hasChildren) {
             setIsExpanded(!isExpanded)
@@ -54,7 +58,7 @@ function CategoryNode({ category, level }: CategoryNodeProps) {
       </div>
       {hasChildren && isExpanded && (
         <div>
-          {category.children!.map((child) => (
+          {(category.children || []).map((child) => (
             <CategoryNode key={child.id} category={child} level={level + 1} />
           ))}
         </div>
@@ -67,6 +71,8 @@ export function CategoryTree() {
   const { data: categories, isLoading, error } = useQuery({
     queryKey: ['categories', 'tree'],
     queryFn: categoryAPI.getTree,
+    retry: 1,
+    staleTime: 30000,
   })
 
   if (isLoading) {
