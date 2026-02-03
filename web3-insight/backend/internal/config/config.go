@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -13,6 +15,10 @@ type Config struct {
 	LLM      LLMConfig      `mapstructure:"llm"`
 	Worker   WorkerConfig   `mapstructure:"worker"`
 	Search   SearchConfig   `mapstructure:"search"`
+
+	// Model registry and routing configs (loaded separately from YAML files)
+	Models  *ModelsConfig
+	Routing *RoutingConfig
 }
 
 type ServerConfig struct {
@@ -96,4 +102,66 @@ func Load() (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// LoadAll loads all configuration files (config.yaml, models.yaml, routing.yaml)
+func LoadAll() (*Config, error) {
+	// Load main config.yaml
+	cfg, err := Load()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config.yaml: %w", err)
+	}
+
+	// Try multiple config paths to find models.yaml
+	configPaths := []string{"./config", "../config", "../../config"}
+	var modelsPath string
+	for _, basePath := range configPaths {
+		testPath := basePath + "/models.yaml"
+		if _, err := os.Stat(testPath); err == nil {
+			modelsPath = testPath
+			break
+		}
+	}
+
+	if modelsPath == "" {
+		return nil, fmt.Errorf("models.yaml not found in config paths")
+	}
+
+	// Load models.yaml
+	models, err := LoadModels(modelsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load models.yaml: %w", err)
+	}
+	cfg.Models = models
+
+	// Try multiple config paths to find routing.yaml
+	var routingPath string
+	for _, basePath := range configPaths {
+		testPath := basePath + "/routing.yaml"
+		if _, err := os.Stat(testPath); err == nil {
+			routingPath = testPath
+			break
+		}
+	}
+
+	if routingPath == "" {
+		return nil, fmt.Errorf("routing.yaml not found in config paths")
+	}
+
+	// Load routing.yaml
+	routing, err := LoadRouting(routingPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load routing.yaml: %w", err)
+	}
+	cfg.Routing = routing
+
+	// Validate task models against model registry
+	if warnings := cfg.Routing.ValidateTaskModels(cfg.Models); len(warnings) > 0 {
+		fmt.Println("⚠️  Configuration warnings detected:")
+		for _, warning := range warnings {
+			fmt.Printf("   - %s\n", warning)
+		}
+	}
+
+	return cfg, nil
 }

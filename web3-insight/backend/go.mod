@@ -9,12 +9,14 @@ require (
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/gosimple/slug v1.15.0
 	github.com/hibiken/asynq v0.25.1
 	github.com/lib/pq v1.11.1
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/pgvector/pgvector-go v0.3.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.21.0
+	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/datatypes v1.2.7
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
@@ -45,7 +47,6 @@ require (
 	github.com/goccy/go-yaml v1.18.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/gosimple/slug v1.15.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
