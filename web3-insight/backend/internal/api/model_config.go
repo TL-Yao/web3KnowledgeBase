@@ -83,10 +83,10 @@ func (h *ModelConfigHandler) GetUserSelections(c *gin.Context) {
 		return
 	}
 
-	// Validate selections against current model registry
-	validatedSelections := h.validateSelections(selections)
+	// Merge saved selections with defaults (in case new tasks were added)
+	mergedSelections := h.mergeSelections(selections)
 
-	c.JSON(http.StatusOK, validatedSelections)
+	c.JSON(http.StatusOK, mergedSelections)
 }
 
 // UpdateUserSelections godoc
@@ -101,8 +101,35 @@ func (h *ModelConfigHandler) GetUserSelections(c *gin.Context) {
 func (h *ModelConfigHandler) UpdateUserSelections(c *gin.Context) {
 	var selections []TaskSelection
 	if err := c.ShouldBindJSON(&selections); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
 		return
+	}
+
+	// Input validation
+	if len(selections) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "selections cannot be empty"})
+		return
+	}
+
+	if len(selections) > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "too many selections (max 100)"})
+		return
+	}
+
+	// Validate required fields
+	for i, sel := range selections {
+		if sel.TaskID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "taskId is required for all selections"})
+			return
+		}
+		if sel.Primary == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "primary model is required for all selections"})
+			return
+		}
+		// Fallback is optional, but set empty string if not provided
+		if sel.Fallback == "" {
+			selections[i].Fallback = ""
+		}
 	}
 
 	// Validate selections
@@ -111,13 +138,13 @@ func (h *ModelConfigHandler) UpdateUserSelections(c *gin.Context) {
 	// Save to database as JSON (using SetJSON to avoid double-encoding)
 	jsonData, err := json.Marshal(validatedSelections)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to serialize"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save selections"})
 		return
 	}
 
 	err = h.configRepo.SetJSON("model_selections", jsonData, "User's model selection preferences")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save selections"})
 		return
 	}
 
@@ -149,10 +176,6 @@ func (h *ModelConfigHandler) validateSelections(selections []TaskSelection) []Ta
 			continue
 		}
 
-		// Check if primary model is available
-		_ = h.models.IsModelAvailable(sel.Primary)
-		_ = h.models.IsModelAvailable(sel.Fallback)
-
 		// Keep the selection as-is, validation happens at runtime
 		// Frontend will handle UI display for unavailable models
 		validated = append(validated, TaskSelection{
@@ -163,4 +186,32 @@ func (h *ModelConfigHandler) validateSelections(selections []TaskSelection) []Ta
 	}
 
 	return validated
+}
+
+// mergeSelections combines saved selections with defaults from routing.yaml
+// This ensures that new tasks added to routing.yaml appear in the user's selections
+func (h *ModelConfigHandler) mergeSelections(savedSelections []TaskSelection) []TaskSelection {
+	// Create map of saved selections for fast lookup
+	savedMap := make(map[string]TaskSelection)
+	for _, sel := range savedSelections {
+		savedMap[sel.TaskID] = sel
+	}
+
+	// Start with all current tasks from routing.yaml
+	var merged []TaskSelection
+	for _, task := range h.routing.TaskTypes {
+		if saved, exists := savedMap[task.ID]; exists {
+			// Use saved selection
+			merged = append(merged, saved)
+		} else {
+			// Use default for new task
+			merged = append(merged, TaskSelection{
+				TaskID:   task.ID,
+				Primary:  task.DefaultPrimary,
+				Fallback: task.DefaultFallback,
+			})
+		}
+	}
+
+	return merged
 }
