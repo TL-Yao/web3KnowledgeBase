@@ -1,6 +1,8 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useFeatureFlag } from '@/hooks/use-feature-flag'
+import { DisabledFeature } from '@/components/ui/disabled-feature'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,50 +21,18 @@ interface Source {
 }
 
 export function SourceConfig() {
+  const { isDisabled } = useFeatureFlag('dataSourceManagement')
   const queryClient = useQueryClient()
 
-  const { data: sources, isLoading } = useQuery({
+  // All hooks must be called before any conditional returns
+  const { data: sources, isLoading } = useQuery<Source[]>({
     queryKey: ['sources'],
     queryFn: async () => {
-      // TODO: Fetch from API
-      return [
-        {
-          id: '1',
-          name: 'Ethereum Foundation Blog',
-          type: 'rss' as const,
-          url: 'https://blog.ethereum.org/feed.xml',
-          enabled: true,
-          lastSync: '2小时前',
-          status: 'active' as const
-        },
-        {
-          id: '2',
-          name: 'Vitalik\'s Blog',
-          type: 'rss' as const,
-          url: 'https://vitalik.eth.limo/feed.xml',
-          enabled: true,
-          lastSync: '3小时前',
-          status: 'active' as const
-        },
-        {
-          id: '3',
-          name: 'zkSync Documentation',
-          type: 'crawler' as const,
-          url: 'https://docs.zksync.io',
-          enabled: true,
-          lastSync: '1天前',
-          status: 'active' as const
-        },
-        {
-          id: '4',
-          name: 'Arbitrum Blog',
-          type: 'rss' as const,
-          url: 'https://arbitrum.io/blog/rss.xml',
-          enabled: false,
-          status: 'pending' as const
-        }
-      ] as Source[]
-    }
+      const response = await fetch('/api/datasources')
+      if (!response.ok) throw new Error('Failed to fetch')
+      return response.json()
+    },
+    enabled: !isDisabled,
   })
 
   const syncMutation = useMutation({
@@ -84,6 +54,17 @@ export function SourceConfig() {
       queryClient.invalidateQueries({ queryKey: ['sources'] })
     }
   })
+
+  // Feature flag check AFTER all hooks
+  if (isDisabled) {
+    return (
+      <DisabledFeature
+        featureName="数据源管理"
+        description="后端 API 正在开发中"
+        variant="card"
+      />
+    )
+  }
 
   if (isLoading) return <div>加载中...</div>
 

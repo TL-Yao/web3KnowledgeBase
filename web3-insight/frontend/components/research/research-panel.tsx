@@ -14,48 +14,46 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Search, Save, Loader2 } from 'lucide-react'
+import { useFeatureFlag } from '@/hooks/use-feature-flag'
+import { DisabledFeature } from '@/components/ui/disabled-feature'
 
 export function ResearchPanel() {
+  const { isDisabled } = useFeatureFlag('instantResearch')
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<any>(null)
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined)
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      // TODO: Fetch from API
-      return [
-        { id: '1', name: 'Layer 1' },
-        { id: '2', name: 'Layer 2' },
-        { id: '3', name: 'DeFi' },
-        { id: '4', name: 'NFT' },
-        { id: '5', name: '共识机制' },
-      ]
-    }
+      const response = await fetch('/api/categories')
+      if (!response.ok) return []
+      const data = await response.json()
+      return data.data || data
+    },
+    enabled: !isDisabled,
   })
 
   const researchMutation = useMutation({
     mutationFn: async (topic: string) => {
-      // TODO: Call actual API
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      // Mock response
-      return {
-        title: `${topic} 技术详解`,
-        content: `这是关于 ${topic} 的详细技术分析...`,
-        contentHtml: `<h2>${topic} 简介</h2><p>这是关于 ${topic} 的详细技术分析，包括其核心原理、实现机制和应用场景。</p><h2>核心原理</h2><p>${topic} 的核心原理基于...</p><h2>应用场景</h2><p>${topic} 在 Web3 生态中有广泛的应用...</p>`,
-        suggestedTags: [topic, 'Web3', '区块链'],
-        suggestedCategory: { id: '2', name: 'Layer 2' },
-        sources: ['https://ethereum.org/docs', 'https://docs.arbitrum.io'],
-        suggestedNewCategory: null
+      const response = await fetch('/api/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic })
+      })
+      if (!response.ok) {
+        throw new Error('Research API not available')
       }
+      return response.json()
     },
     onSuccess: (data) => {
       setResult(data)
       if (data.suggestedCategory) {
         setSelectedCategory(data.suggestedCategory.id)
       }
+    },
+    onError: (error) => {
+      console.error('Research failed:', error)
     }
   })
 
@@ -79,6 +77,19 @@ export function ResearchPanel() {
   const handleSearch = () => {
     if (!query.trim()) return
     researchMutation.mutate(query)
+  }
+
+  // Feature flag check AFTER all hooks
+  if (isDisabled) {
+    return (
+      <div className="space-y-6">
+        <DisabledFeature
+          featureName="即时研究"
+          description="LLM 集成正在开发中"
+          variant="card"
+        />
+      </div>
+    )
   }
 
   return (

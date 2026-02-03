@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useFeatureFlag } from '@/hooks/use-feature-flag'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -33,6 +34,7 @@ interface ArticleViewProps {
 
 export function ArticleView({ article }: ArticleViewProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const { isDisabled: regenerateDisabled } = useFeatureFlag('articleRegenerate')
 
   if (!article) {
     return (
@@ -73,9 +75,12 @@ export function ArticleView({ article }: ArticleViewProps) {
                 <Edit className="w-4 h-4 mr-2" />
                 编辑
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem disabled={regenerateDisabled}>
                 <RefreshCw className="w-4 h-4 mr-2" />
                 重新生成
+                {regenerateDisabled && (
+                  <span className="ml-auto text-xs text-muted-foreground">开发中</span>
+                )}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

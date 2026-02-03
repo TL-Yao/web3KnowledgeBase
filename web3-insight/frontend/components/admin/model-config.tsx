@@ -21,11 +21,24 @@ export function ModelConfig() {
   const { data: config, isLoading } = useQuery({
     queryKey: ['model-config'],
     queryFn: async () => {
-      // TODO: Fetch from API
-      return {
-        defaultLocal: 'llama3:70b',
-        claudeEnabled: true,
-        openaiEnabled: false
+      try {
+        const response = await fetch('/api/config/models')
+        if (!response.ok) {
+          // Fallback to defaults if not configured
+          return {
+            defaultLocal: 'llama3:70b',
+            claudeEnabled: false,
+            openaiEnabled: false
+          }
+        }
+        return response.json()
+      } catch {
+        // Return defaults on error
+        return {
+          defaultLocal: 'llama3:70b',
+          claudeEnabled: false,
+          openaiEnabled: false
+        }
       }
     }
   })

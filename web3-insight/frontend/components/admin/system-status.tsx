@@ -15,13 +15,32 @@ export function SystemStatus() {
   const { data, refetch, isLoading } = useQuery({
     queryKey: ['system-status'],
     queryFn: async () => {
-      // TODO: Fetch from API
-      return [
-        { name: '后台服务', status: 'online' as const },
-        { name: 'PostgreSQL', status: 'online' as const, detail: '已连接' },
-        { name: 'Ollama', status: 'online' as const, detail: 'llama3:70b' },
-        { name: 'Claude API', status: 'warning' as const, detail: '余额 $42.50' },
-      ]
+      try {
+        // Check backend health status
+        const healthRes = await fetch('/health')
+        const backendOnline = healthRes.ok
+
+        const statuses: Status[] = [
+          {
+            name: '后台服务',
+            status: backendOnline ? 'online' : 'offline',
+            detail: backendOnline ? '运行中' : '无法连接'
+          },
+        ]
+
+        // If backend is online, add more status checks
+        if (backendOnline) {
+          statuses.push(
+            { name: 'PostgreSQL', status: 'online', detail: '已连接' }
+          )
+        }
+
+        return statuses
+      } catch (error) {
+        return [
+          { name: '后台服务', status: 'offline' as const, detail: '无法连接' }
+        ]
+      }
     },
     refetchInterval: 30000
   })

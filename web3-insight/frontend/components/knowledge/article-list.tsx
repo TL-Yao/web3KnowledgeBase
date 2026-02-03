@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Clock, FileText, AlertCircle, Inbox } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { articleAPI, Article as APIArticle, APIError } from '@/lib/api'
+import { articleAPI, Article as APIArticle } from '@/lib/api'
 
 interface Article {
   id: string
@@ -21,43 +21,6 @@ interface Article {
   createdAt: string
   updatedAt: string
 }
-
-// Mock data for fallback when API is unavailable
-const mockArticles: Article[] = [
-  {
-    id: '1',
-    slug: 'eip-4844-proto-danksharding',
-    title: 'EIP-4844: Proto-Danksharding 详解',
-    summary: 'EIP-4844 引入了一种新的交易类型，允许在以太坊上发布 blob 数据，为 Rollup 提供更便宜的数据可用性层。',
-    category: { name: 'Layer 2', slug: 'layer-2' },
-    tags: ['EIP', 'Danksharding', 'Rollup'],
-    modelUsed: 'llama3:70b',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    slug: 'zk-rollup-technology',
-    title: 'ZK Rollup 技术原理与应用',
-    summary: '深入理解零知识证明在 Rollup 扩容方案中的应用，包括 zkSync、StarkNet 等主流项目的技术架构。',
-    category: { name: 'Layer 2', slug: 'layer-2' },
-    tags: ['ZK Proof', 'zkSync', 'StarkNet'],
-    modelUsed: 'claude-sonnet-4-20250514',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: '3',
-    slug: 'defi-lending-protocols',
-    title: 'DeFi 借贷协议深度分析',
-    summary: '分析 Aave、Compound 等主流借贷协议的机制设计、风险模型和治理架构。',
-    category: { name: 'DeFi', slug: 'defi' },
-    tags: ['Aave', 'Compound', 'Lending'],
-    modelUsed: 'llama3:70b',
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    updatedAt: new Date(Date.now() - 172800000).toISOString()
-  }
-]
 
 // Transform API article to component article format
 function transformArticle(article: APIArticle): Article {
@@ -74,7 +37,7 @@ function transformArticle(article: APIArticle): Article {
 }
 
 export function ArticleList() {
-  const { data, isLoading, error, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['articles'],
     queryFn: async () => {
       const response = await articleAPI.list({ limit: 20 })
@@ -84,9 +47,7 @@ export function ArticleList() {
     staleTime: 30000,
   })
 
-  // Use mock data when API fails or returns empty
-  const articles = (data && data.length > 0) ? data : (isError ? mockArticles : data)
-  const showingMockData = isError || (data && data.length === 0)
+  const articles = data || []
 
   if (isLoading) {
     return (
@@ -96,7 +57,18 @@ export function ArticleList() {
     )
   }
 
-  if (!articles || articles.length === 0) {
+  // Show error state when no cached data available
+  if (isError && articles.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <AlertCircle className="w-12 h-12 mb-4 text-red-400" />
+        <p className="text-lg font-medium text-red-600">无法连接后端服务</p>
+        <p className="text-sm">请检查服务状态后重试</p>
+      </div>
+    )
+  }
+
+  if (articles.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Inbox className="w-12 h-12 mb-4 opacity-50" />
@@ -113,10 +85,10 @@ export function ArticleList() {
 
   return (
     <div>
-      {showingMockData && (
-        <div className="flex items-center gap-2 p-3 mb-4 text-sm text-amber-600 bg-amber-50 rounded-lg border border-amber-200">
+      {isError && (
+        <div className="flex items-center gap-2 p-3 mb-4 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
           <AlertCircle className="w-4 h-4" />
-          <span>后端服务未连接，显示示例数据</span>
+          <span>部分数据可能已过时，后端服务连接异常</span>
         </div>
       )}
       <ScrollArea className="h-[calc(100vh-200px)]">
