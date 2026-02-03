@@ -1,0 +1,52 @@
+# Model Registry - defines all available models
+# Maintained by developers, version controlled in Git
+
+local_models:
+  - id: "llama3:70b"
+    name: "Llama 3 70B"
+    provider: "ollama"
+    enabled: true
+    capabilities: ["chat", "generation", "summarization"]
+    context_window: 8192
+    cost_per_1k_tokens: 0.0
+
+  - id: "qwen2.5:32b"
+    name: "Qwen 2.5 32B"
+    provider: "ollama"
+    enabled: true
+    capabilities: ["chat", "generation", "translation", "summarization"]
+    context_window: 32768
+    cost_per_1k_tokens: 0.0
+
+  - id: "mistral:7b"
+    name: "Mistral 7B"
+    provider: "ollama"
+    enabled: false  # Example of disabled model
+    capabilities: ["chat", "generation"]
+    context_window: 8192
+    cost_per_1k_tokens: 0.0
+
+cloud_models:
+  - id: "claude-sonnet-4-20250514"
+    name: "Claude Sonnet 4"
+    provider: "anthropic"
+    enabled: true
+    capabilities: ["chat", "generation", "summarization", "analysis"]
+    context_window: 200000
+    cost_per_1k_tokens: 0.003
+
+  - id: "claude-haiku-3-20240307"
+    name: "Claude Haiku 3"
+    provider: "anthropic"
+    enabled: true
+    capabilities: ["chat", "summarization", "translation"]
+    context_window: 200000
+    cost_per_1k_tokens: 0.00025
+
+  - id: "gpt-4o"
+    name: "GPT-4o"
+    provider: "openai"
+    enabled: false  # Disabled by default
+    capabilities: ["chat", "generation", "analysis"]
+    context_window: 128000
+    cost_per_1k_tokens: 0.005

@@ -1,0 +1,38 @@
+# Task Routing Strategy - defines task types and default model assignments
+# Maintained by developers, version controlled in Git
+
+task_types:
+  - id: "simple_generation"
+    name: "内容生成（简单）"
+    description: "生成简单的文章内容"
+    default_primary: "llama3:70b"
+    default_fallback: "claude-haiku-3-20240307"
+    required_capability: "generation"
+
+  - id: "complex_generation"
+    name: "内容生成（复杂）"
+    description: "生成复杂的深度分析文章"
+    default_primary: "claude-sonnet-4-20250514"
+    default_fallback: "llama3:70b"
+    required_capability: "generation"
+
+  - id: "summarization"
+    name: "摘要/分类"
+    description: "生成文章摘要和自动分类"
+    default_primary: "qwen2.5:32b"
+    default_fallback: "claude-haiku-3-20240307"
+    required_capability: "summarization"
+
+  - id: "chat"
+    name: "问答对话"
+    description: "实时问答交互"
+    default_primary: "llama3:70b"
+    default_fallback: "claude-sonnet-4-20250514"
+    required_capability: "chat"
+
+  - id: "translation"
+    name: "翻译"
+    description: "内容翻译"
+    default_primary: "qwen2.5:32b"
+    default_fallback: "claude-haiku-3-20240307"
+    required_capability: "translation"
