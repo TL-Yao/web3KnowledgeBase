@@ -9,6 +9,7 @@ import {
   Activity,
   DollarSign,
   FileText,
+  Upload,
   ArrowLeft
 } from 'lucide-react'
 
@@ -16,6 +17,7 @@ const navItems = [
   { href: '/admin', label: '概览', icon: LayoutDashboard },
   { href: '/admin/config', label: '配置', icon: Settings },
   { href: '/admin/tasks', label: '任务', icon: Activity },
+  { href: '/admin/import', label: '导入', icon: Upload },
   { href: '/admin/costs', label: '成本', icon: DollarSign },
   { href: '/admin/content', label: '内容', icon: FileText },
 ]

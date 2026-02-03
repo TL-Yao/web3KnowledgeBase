@@ -13,20 +13,7 @@ import {
 import { Edit, RefreshCw, MoreHorizontal, ExternalLink, Clock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-
-interface Article {
-  id: string
-  title: string
-  content: string
-  contentHtml: string
-  summary: string
-  category: { name: string; slug: string }
-  tags: string[]
-  sourceUrls: string[]
-  modelUsed: string
-  createdAt: string
-  updatedAt: string
-}
+import { Article } from '@/lib/api'
 
 interface ArticleViewProps {
   article: Article
@@ -107,7 +94,7 @@ export function ArticleView({ article }: ArticleViewProps) {
       )}
 
       {/* Sources */}
-      {article.sourceUrls?.length > 0 && (
+      {article.sourceUrls && article.sourceUrls.length > 0 && (
         <div className="mt-12 pt-6 border-t border-border">
           <h3 className="text-sm font-medium text-muted-foreground mb-3">原始来源</h3>
           <ul className="space-y-1">

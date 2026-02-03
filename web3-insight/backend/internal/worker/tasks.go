@@ -6,7 +6,15 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
+	"github.com/user/web3-insight/internal/collector"
+	"github.com/user/web3-insight/internal/config"
+	"github.com/user/web3-insight/internal/llm"
+	"github.com/user/web3-insight/internal/model"
+	"github.com/user/web3-insight/internal/repository"
+	"github.com/user/web3-insight/internal/service"
+	"gorm.io/gorm"
 )
 
 // Task type constants
@@ -46,6 +54,35 @@ type ClassifyPayload struct {
 // EmbeddingPayload represents the payload for embedding generation tasks
 type EmbeddingPayload struct {
 	ArticleID string `json:"articleId"`
+}
+
+// Global variables for dependency injection
+var (
+	rssCollector     *collector.RSSCollector
+	webCrawler       *collector.WebCrawler
+	embeddingService *service.EmbeddingService
+	classifier       *service.Classifier
+	db               *gorm.DB
+	llmConfig        *config.LLMConfig
+)
+
+// InitWorkerDependencies initializes worker dependencies
+func InitWorkerDependencies(database *gorm.DB, cfg *config.LLMConfig) {
+	db = database
+	llmConfig = cfg
+
+	newsRepo := repository.NewNewsRepository(db)
+	dsRepo := repository.NewDataSourceRepository(db)
+	articleRepo := repository.NewArticleRepository(db)
+	categoryRepo := repository.NewCategoryRepository(db)
+
+	// Initialize LLM router for services that need it
+	llmRouter := llm.NewRouterFromConfig(cfg)
+
+	rssCollector = collector.NewRSSCollector(newsRepo, dsRepo)
+	webCrawler = collector.NewWebCrawler(newsRepo)
+	embeddingService = service.NewEmbeddingService(articleRepo, cfg)
+	classifier = service.NewClassifier(llmRouter, articleRepo, categoryRepo)
 }
 
 // NewTaskMux creates and configures the task multiplexer
@@ -133,13 +170,30 @@ func handleRSSSync(ctx context.Context, t *asynq.Task) error {
 
 	log.Printf("Processing RSS sync task: feedUrl=%s", payload.FeedURL)
 
-	// TODO: Implement in Phase 2
-	// 1. Fetch RSS feed
-	// 2. Parse entries
-	// 3. Create news items in database
-	// 4. Trigger classification for new items
+	if rssCollector == nil {
+		return fmt.Errorf("RSS collector not initialized")
+	}
 
-	return nil
+	// If specific feed URL provided, find the source by URL
+	if payload.FeedURL != "" {
+		dsRepo := repository.NewDataSourceRepository(db)
+		sources, err := dsRepo.FindByType(model.DataSourceTypeRSS)
+		if err != nil {
+			return fmt.Errorf("failed to find RSS sources: %w", err)
+		}
+
+		for _, source := range sources {
+			if source.URL == payload.FeedURL {
+				_, err := rssCollector.Collect(ctx, source.ID)
+				return err
+			}
+		}
+		return fmt.Errorf("RSS source not found for URL: %s", payload.FeedURL)
+	}
+
+	// If no specific URL, sync all enabled RSS sources
+	_, err := rssCollector.CollectAll(ctx)
+	return err
 }
 
 // handleWebCrawl handles web crawling tasks
@@ -151,11 +205,15 @@ func handleWebCrawl(ctx context.Context, t *asynq.Task) error {
 
 	log.Printf("Processing web crawl task: url=%s, depth=%d", payload.URL, payload.Depth)
 
-	// TODO: Implement in Phase 2
-	// 1. Fetch web page
-	// 2. Extract content
-	// 3. Save to database
-	// 4. Trigger classification and embedding
+	if webCrawler == nil {
+		return fmt.Errorf("web crawler not initialized")
+	}
+
+	// Crawl and save
+	_, err := webCrawler.CrawlAndSave(ctx, payload.URL, "manual")
+	if err != nil {
+		return fmt.Errorf("crawl failed: %w", err)
+	}
 
 	return nil
 }
@@ -169,11 +227,20 @@ func handleClassify(ctx context.Context, t *asynq.Task) error {
 
 	log.Printf("Processing classification task: articleId=%s", payload.ArticleID)
 
-	// TODO: Implement in Phase 2
-	// 1. Fetch article content
-	// 2. Use LLM to classify
-	// 3. Update article with category
+	if classifier == nil {
+		return fmt.Errorf("classifier not initialized")
+	}
 
+	articleID, err := uuid.Parse(payload.ArticleID)
+	if err != nil {
+		return fmt.Errorf("invalid article ID: %w", err)
+	}
+
+	if err := classifier.ClassifyAndUpdate(ctx, articleID); err != nil {
+		return fmt.Errorf("classification failed: %w", err)
+	}
+
+	log.Printf("Classification completed for article: %s", payload.ArticleID)
 	return nil
 }
 
@@ -186,10 +253,19 @@ func handleEmbedding(ctx context.Context, t *asynq.Task) error {
 
 	log.Printf("Processing embedding task: articleId=%s", payload.ArticleID)
 
-	// TODO: Implement in Phase 2
-	// 1. Fetch article content
-	// 2. Generate embedding using LLM
-	// 3. Update article with embedding vector
+	if embeddingService == nil {
+		return fmt.Errorf("embedding service not initialized")
+	}
 
+	articleID, err := uuid.Parse(payload.ArticleID)
+	if err != nil {
+		return fmt.Errorf("invalid article ID: %w", err)
+	}
+
+	if err := embeddingService.GenerateForArticle(ctx, articleID); err != nil {
+		return fmt.Errorf("embedding generation failed: %w", err)
+	}
+
+	log.Printf("Embedding generated for article: %s", payload.ArticleID)
 	return nil
 }

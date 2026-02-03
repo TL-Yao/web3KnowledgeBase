@@ -30,6 +30,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 
 	// Initialize services
 	chatService := service.NewChatService(db, &cfg.LLM)
+	semanticSearchService := service.NewSemanticSearchService(articleRepo, &cfg.LLM)
 
 	return &Server{
 		config:          cfg,
@@ -38,7 +39,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		categoryHandler: NewCategoryHandler(categoryRepo),
 		configHandler:   NewConfigHandler(configRepo),
 		taskHandler:     NewTaskHandler(taskRepo),
-		searchHandler:   NewSearchHandler(articleRepo, categoryRepo),
+		searchHandler:   NewSearchHandlerWithSemantic(articleRepo, categoryRepo, semanticSearchService),
 		chatHandler:     NewChatHandler(chatService),
 	}
 }
@@ -102,6 +103,10 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 
 		// Search
 		api.GET("/search", server.searchHandler.Search)
+		api.GET("/search/semantic", server.searchHandler.SemanticSearch)
+
+		// Related articles (under articles group would be better, but registered here for simplicity)
+		articles.GET("/:id/related", server.searchHandler.RelatedArticles)
 
 		// Config
 		configGroup := api.Group("/config")
@@ -128,6 +133,58 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 				"message": "research endpoint - to be implemented with LLM integration",
 			})
 		})
+
+		// Data Sources
+		dsHandler := NewDataSourceHandler(db)
+		sources := api.Group("/sources")
+		{
+			sources.GET("", dsHandler.List)
+			sources.GET("/:id", dsHandler.Get)
+			sources.POST("", dsHandler.Create)
+			sources.PUT("/:id", dsHandler.Update)
+			sources.DELETE("/:id", dsHandler.Delete)
+			sources.POST("/:id/sync", dsHandler.TriggerSync)
+		}
+		api.POST("/sources/validate", dsHandler.ValidateURL)
+
+		// News Items
+		newsHandler := NewNewsHandler(db)
+		news := api.Group("/news")
+		{
+			news.GET("", newsHandler.List)
+			news.GET("/unprocessed", newsHandler.GetUnprocessed)
+			news.GET("/:id", newsHandler.Get)
+			news.DELETE("/:id", newsHandler.Delete)
+			news.POST("/:id/processed", newsHandler.MarkProcessed)
+		}
+
+		// Import/Export
+		importHandler := NewImportHandler(db)
+		importGroup := api.Group("/import")
+		{
+			importGroup.POST("", importHandler.Import)
+			importGroup.POST("/validate", importHandler.Validate)
+			importGroup.GET("/template", importHandler.GetTemplate)
+			importGroup.GET("/export", importHandler.Export)
+			importGroup.POST("/upload", importHandler.UploadFile)
+		}
+
+		// Explorer Research
+		explorerHandler := NewExplorerHandler(db)
+		explorers := api.Group("/explorers")
+		{
+			explorers.GET("", explorerHandler.List)
+			explorers.GET("/chains", explorerHandler.GetChains)
+			explorers.GET("/stats", explorerHandler.GetStats)
+			explorers.GET("/features", explorerHandler.GetFeatures)
+			explorers.POST("/features/seed", explorerHandler.SeedFeatures)
+			explorers.GET("/compare", explorerHandler.Compare)
+			explorers.GET("/:id", explorerHandler.Get)
+			explorers.POST("", explorerHandler.Create)
+			explorers.PUT("/:id", explorerHandler.Update)
+			explorers.DELETE("/:id", explorerHandler.Delete)
+			explorers.POST("/:id/status", explorerHandler.UpdateStatus)
+		}
 	}
 
 	// WebSocket for chat
