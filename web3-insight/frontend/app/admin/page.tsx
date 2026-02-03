@@ -54,7 +54,7 @@ export default function AdminPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${(stats?.todayCost ?? 0).toFixed(2)}</div>
+            <div className="text-3xl font-bold">${stats?.todayCost ?? 0}</div>
           </CardContent>
         </Card>
       </div>
