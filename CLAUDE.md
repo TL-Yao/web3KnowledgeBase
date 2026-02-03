@@ -12,7 +12,7 @@ ERROR: GVM_ROOT not set. Please source $GVM_ROOT/scripts/gvm
 
 ```bash
 # WRONG - do not use cd
-cd /path/to/backend && go build ./...
+cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend && go build ./...
 
 # CORRECT - use absolute Go path with -C flag
 /usr/local/go/bin/go build -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend ./...
@@ -192,18 +192,18 @@ make build
 **Run backend tests:**
 ```bash
 make test-backend
-# Or: cd backend && /usr/local/go/bin/go test ./...
+# Or: /usr/local/go/bin/go test -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend ./...
 ```
 
 **Run frontend tests:**
 ```bash
 make test-frontend
-# Or: cd frontend && pnpm test
+# Or: cd frontend && npm test
 ```
 
 **Run E2E tests:**
 ```bash
-cd frontend && pnpm test:e2e
+cd frontend && npm run test:e2e
 ```
 
 ### Log Files
