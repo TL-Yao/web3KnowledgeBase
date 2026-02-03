@@ -32,3 +32,13 @@ build/
 # Logs
 *.log
 npm-debug.log*
+
+# Claude Code local settings
+.claude/
+
+# Test results cache
+test-results/
+
+# Compiled binaries
+web3-insight/backend/cleardata
+web3-insight/backend/bin/
