@@ -138,6 +138,130 @@ open -a "Google Chrome" http://localhost:3000/research
 - Screenshots and console logs provide definitive evidence
 - GIF recordings are excellent for documenting complex interactions
 
+## Model Fallback Pattern
+
+**CRITICAL:** All features that use AI models MUST implement the model fallback pattern to handle unavailable models gracefully.
+
+### Core Pattern
+
+When any feature needs to use an AI model:
+
+1. **Use ModelSelector service** to get the appropriate model
+2. **Handle three possible outcomes**:
+   - ✅ Primary model available → Use it
+   - ⚠️ Primary unavailable, fallback available → Use fallback, log warning, notify user
+   - ❌ Both unavailable → Stop task, return error to user
+
+### Implementation Requirements
+
+**Backend (Go):**
+
+```go
+// In any service that uses AI models
+modelSelector := service.NewModelSelector(cfg.Models, cfg.Routing, configRepo)
+
+// Select model for task
+result, err := modelSelector.SelectModelForTask("simple_generation")
+if err != nil {
+    // Both primary and fallback unavailable
+    return nil, fmt.Errorf("cannot execute task: %w", err)
+}
+
+// Log if using fallback
+if result.IsFallback {
+    log.Printf("⚠️  Using fallback model: %s", result.Reason)
+}
+
+// Use the selected model
+modelID := result.ModelID
+// ... proceed with LLM call
+```
+
+**Frontend (TypeScript):**
+
+```typescript
+// When displaying task status or executing AI operations
+const { data: selections } = useQuery({
+  queryKey: ['model-selections'],
+  queryFn: modelConfigAPI.getUserSelections,
+})
+
+const { data: modelsRegistry } = useQuery({
+  queryKey: ['models-registry'],
+  queryFn: modelConfigAPI.getModelsRegistry,
+})
+
+// Check model availability
+const isModelAvailable = (modelId: string) => {
+  const allModels = [
+    ...(modelsRegistry?.localModels ?? []),
+    ...(modelsRegistry?.cloudModels ?? [])
+  ]
+  const model = allModels.find(m => m.id === modelId)
+  return model?.enabled ?? false
+}
+
+// Show warning if primary model unavailable
+{!isModelAvailable(selection.primary) && (
+  <Alert variant="warning">
+    首选模型不可用，当前使用备用模型: {selection.fallback}
+  </Alert>
+)}
+```
+
+### Error Messages
+
+**User-facing error messages:**
+- ⚠️ Primary unavailable: "首选模型不可用，当前使用备用模型"
+- ❌ Both unavailable: "无可用模型，请在管理面板中配置模型"
+
+**Log messages (backend):**
+- `⚠️  Using fallback model for task '%s': primary '%s' unavailable`
+- `❌ No available models for task '%s': both primary and fallback unavailable`
+
+### Features That MUST Use This Pattern
+
+All AI-dependent features must implement this pattern:
+
+1. **Content Generation** (`generator.go`)
+   - Simple generation tasks
+   - Complex generation tasks
+
+2. **Summarization** (`summarizer.go`)
+   - Article summarization
+   - Chat history summarization
+
+3. **Classification** (`classifier.go`)
+   - Automatic categorization
+   - Tag generation
+
+4. **Chat/Q&A** (`chat.go`)
+   - Real-time chat
+   - Article-based Q&A
+
+5. **Translation** (future feature)
+   - Content translation
+
+6. **Research** (`research.go`)
+   - Instant research queries
+
+### Configuration Files
+
+Model availability is defined in:
+- `backend/config/models.yaml` - Model registry (what models exist and their status)
+- `backend/config/routing.yaml` - Task routing (default model assignments)
+- Database `configs` table - User selections (which models user chose)
+
+### Testing Checklist
+
+When implementing AI features, verify:
+- [ ] Uses `ModelSelector` service
+- [ ] Handles primary model available case
+- [ ] Handles fallback model case (logs warning)
+- [ ] Handles both unavailable case (returns error)
+- [ ] Frontend shows appropriate status/warning
+- [ ] User receives clear error message if task fails
+
 ## Docker Services (Start/Stop)
 
 The project uses Docker for PostgreSQL and Redis services:
