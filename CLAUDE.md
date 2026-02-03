@@ -58,6 +58,86 @@ open -a "Google Chrome" http://localhost:3000/research
 
 **Note:** This supplements (not replaces) automated testing. Use for visual verification and UX validation.
 
+### Chrome Automation Capabilities
+
+**IMPORTANT:** Claude Code has full Chrome browser automation capabilities through the `claude-in-chrome` extension. This is a powerful tool that should be used proactively during development.
+
+**Available capabilities:**
+
+1. **Navigation and Page Control**
+   - Navigate to URLs
+   - Go forward/back in browser history
+   - Refresh pages
+   - Create new tabs
+   - Resize browser windows
+
+2. **Page Interaction**
+   - Click elements (buttons, links, etc.)
+   - Fill form inputs
+   - Type text
+   - Scroll pages
+   - Drag and drop
+   - Hover over elements
+
+3. **Content Reading and Analysis**
+   - Read page accessibility tree
+   - Extract page text content
+   - Find elements using natural language queries
+   - Take screenshots (full page or specific regions)
+   - Read console messages (logs, errors, warnings)
+   - Read network requests (XHR, Fetch, API calls)
+
+4. **Advanced Automation**
+   - Execute JavaScript code in page context
+   - Upload images to forms or drag-drop targets
+   - Record GIF animations of browser interactions
+   - Execute shortcuts and workflows
+
+**When to use Chrome automation:**
+- Verify frontend changes visually after implementation
+- Debug UI issues by inspecting actual rendered elements
+- Test user interaction flows (form submissions, navigation, etc.)
+- Capture console errors or network issues
+- Validate API responses in browser DevTools
+- Create visual documentation (screenshots, GIFs) of features
+- Test responsive design by resizing windows
+- Verify empty states, loading states, and error states
+- Check that JavaScript executes correctly
+- Monitor performance and network activity
+
+**Best practices:**
+- Always start by calling `tabs_context_mcp` to get current browser state
+- Create new tabs for each testing session to avoid conflicts
+- Use natural language queries with `find` tool to locate elements
+- Take screenshots before and after interactions to document changes
+- Read console messages with pattern filters to avoid noise
+- Record GIFs when demonstrating multi-step interactions
+- Clean up tabs after testing to maintain organized workspace
+
+**Example workflows:**
+
+```bash
+# 1. Start services
+./web3-insight/scripts/start-all.sh
+
+# 2. Use Chrome automation to:
+#    - Open http://localhost:3000 in new tab
+#    - Navigate through pages
+#    - Fill forms and submit
+#    - Take screenshots of results
+#    - Read console for errors
+#    - Inspect network requests
+#    - Verify API responses
+```
+
+**Important notes:**
+- Chrome automation is available in ALL Claude Code sessions
+- This is NOT just opening Chrome - it's full programmatic control
+- Use this proactively without waiting for user requests
+- Prefer automated verification over manual "please check" requests
+- Screenshots and console logs provide definitive evidence
+- GIF recordings are excellent for documenting complex interactions
+
 ## Docker Services (Start/Stop)
 
 The project uses Docker for PostgreSQL and Redis services:
@@ -390,3 +470,64 @@ If the implementation changed:
 - web3-insight/frontend/components/knowledge/article-list.tsx (response field access)
 - web3-insight/frontend/components/admin/system-status.tsx (health check endpoint)
 - CLAUDE.md (this documentation)
+
+### 2026-02-04 - Fix Explorer Research Tab Error
+
+**What was completed:**
+- Fixed CSS compatibility issue in Textarea component (removed unsupported field-sizing-content property)
+- Added ErrorBoundary component for graceful error handling
+- Verified null reference safety in explorer stats display
+- Tested Add Explorer dialog functionality (successfully created 2 test explorers)
+- Frontend restarted with clean cache to clear Next.js compilation errors
+- Verified both "知识库" and "浏览器调研" tabs load correctly with no errors
+
+**Important takeaways:**
+- **CSS compatibility**: The `field-sizing: content` CSS property is not widely supported (only in Safari 17.4+). Caused console warnings and potential layout issues. Must remove or use feature detection.
+- **Error boundaries**: Critical for production apps. React error boundaries catch rendering errors and prevent white screens. Should be added to all major feature sections.
+- **Next.js cache issues**: Turbopack cache can cause persistent errors even after fixes. Use `rm -rf .next` to force clean rebuild.
+- **Stats null safety**: Always check for null/undefined when displaying counts. Use `?? 0` pattern or optional chaining.
+- **API response structure**: Explorer API returns `{"count": N, "data": [...]}` format. Stats API returns `{"total": N, "byChain": [...], "byStatus": {...}}`.
+- **Frontend logs location**: When services are started with scripts, check `/Users/tongleyao/claudeProjects/explorerResearch/web3-insight/logs/frontend.log` for errors.
+
+**Verification results:**
+- ✅ "浏览器调研" tab loads with 200 OK response
+- ✅ No CSS warnings in console (field-sizing-content removed)
+- ✅ Explorer stats display correctly (total: 2, by chain, by status)
+- ✅ Add Explorer dialog works (created 2 test explorers)
+- ✅ Error boundary catches and displays errors gracefully
+- ✅ No null reference errors
+
+**Related commits:** f429a17, 9ef3d3d
+
+**Files modified:**
+- web3-insight/frontend/components/ui/textarea.tsx (removed field-sizing-content)
+- web3-insight/frontend/components/research/error-boundary.tsx (new component)
+- web3-insight/frontend/app/research/page.tsx (wrapped with ErrorBoundary)
+
+### 2026-02-04 - Fetch Categories from Backend
+
+**What was completed:**
+- Removed hardcoded mockCategories array from frontend
+- Added Category interface matching backend model to lib/api.ts
+- Added categoryAPI.getTree() method to fetch hierarchical categories
+- Updated CategoryTree component to use useQuery for data fetching
+- Added loading, error, and empty states to CategoryTree
+- Added test coverage for loading state
+- Verified end-to-end integration with backend API
+
+**Important takeaways:**
+- **React Query pattern**: Frontend uses TanStack Query (React Query) for data fetching throughout the app. Always use useQuery/useMutation instead of useEffect + fetch.
+- **Empty state UX**: Always show user-friendly empty states ("暂无分类") rather than blank screens when no data exists.
+- **Backend category API**: The backend provides two endpoints:
+  - `GET /api/categories` - flat list of all categories
+  - `GET /api/categories/tree` - hierarchical tree structure
+  - Tree endpoint recursively loads children for building nested category UI
+- **TypeScript interfaces**: Frontend Category interface must match backend model.Category struct fields
+- **Testing approach**: Write tests first to verify loading states, then implement the component
+
+**Related commits:** [commit hash to be added]
+
+**Files modified:**
+- web3-insight/frontend/lib/api.ts (Category interface, categoryAPI.getTree)
+- web3-insight/frontend/components/knowledge/category-tree.tsx (replaced mock with useQuery)
+- web3-insight/frontend/components/knowledge/__tests__/category-tree.test.tsx (new test)
