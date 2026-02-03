@@ -1,8 +1,22 @@
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
 import { SystemStatus } from '@/components/admin/system-status'
 import { TaskMonitor } from '@/components/admin/task-monitor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function AdminPage() {
+  const { data: stats } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: async () => {
+      return {
+        todayArticles: 0,
+        apiCalls: 0,
+        todayCost: 0
+      }
+    }
+  })
+
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-semibold">系统概览</h1>
@@ -18,7 +32,7 @@ export default function AdminPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">12</div>
+            <div className="text-3xl font-bold">{stats?.todayArticles ?? 0}</div>
           </CardContent>
         </Card>
 
@@ -29,7 +43,7 @@ export default function AdminPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">847</div>
+            <div className="text-3xl font-bold">{stats?.apiCalls ?? 0}</div>
           </CardContent>
         </Card>
 
@@ -40,7 +54,7 @@ export default function AdminPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">$0.32</div>
+            <div className="text-3xl font-bold">${(stats?.todayCost ?? 0).toFixed(2)}</div>
           </CardContent>
         </Card>
       </div>
