@@ -388,3 +388,67 @@ export const explorerAPI = {
   seedFeatures: () =>
     fetchAPI<{ message: string }>('/api/explorers/features/seed', { method: 'POST' }),
 }
+
+// Model Configuration Types
+export interface Model {
+  id: string
+  name: string
+  provider: string
+  enabled: boolean
+  capabilities: string[]
+  contextWindow: number
+  costPer1kTokens: number
+}
+
+export interface ModelsConfig {
+  localModels: Model[]
+  cloudModels: Model[]
+}
+
+export interface TaskType {
+  id: string
+  name: string
+  description: string
+  defaultPrimary: string
+  defaultFallback: string
+  requiredCapability: string
+}
+
+export interface RoutingConfig {
+  taskTypes: TaskType[]
+}
+
+export interface TaskSelection {
+  taskId: string
+  primary: string
+  fallback: string
+}
+
+export interface ModelSelectionResult {
+  modelId: string
+  isFallback: boolean
+  primaryFailed: boolean
+  reason?: string
+}
+
+// Model Configuration API
+export const modelConfigAPI = {
+  // Get available models from registry
+  getModelsRegistry: () =>
+    fetchAPI<ModelsConfig>('/api/models/registry'),
+
+  // Get task types
+  getTaskTypes: () =>
+    fetchAPI<RoutingConfig>('/api/models/tasks'),
+
+  // Get user's model selections
+  getUserSelections: () =>
+    fetchAPI<TaskSelection[]>('/api/models/selections'),
+
+  // Update user's model selections
+  updateUserSelections: (selections: TaskSelection[]) =>
+    fetchAPI<TaskSelection[]>('/api/models/selections', {
+      method: 'PUT',
+      body: JSON.stringify(selections),
+    }),
+}
