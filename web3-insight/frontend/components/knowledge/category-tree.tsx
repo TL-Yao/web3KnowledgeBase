@@ -71,8 +71,7 @@ export function CategoryTree() {
 
   if (isLoading) {
     return (
-      <div className="py-4 px-2 text-sm text-muted-foreground flex items-center gap-2">
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+      <div className="py-4 px-2 text-sm text-muted-foreground">
         加载分类中...
       </div>
     )
