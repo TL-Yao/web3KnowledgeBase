@@ -6,14 +6,73 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/__mocks__/server'
 import { CategoryTree } from '../category-tree'
-import { mockCategories } from '@/__mocks__/data'
+import type { Category } from '@/lib/api'
+
+// Test fixture data - defines categories for testing
+const testCategories: Category[] = [
+  {
+    id: 'cat-1',
+    name: 'Layer 1',
+    nameEn: 'Layer 1',
+    slug: 'layer-1',
+    sortOrder: 1,
+    articleCount: 3,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+    children: [
+      {
+        id: 'cat-1-1',
+        name: 'Ethereum',
+        nameEn: 'Ethereum',
+        slug: 'ethereum',
+        parentId: 'cat-1',
+        sortOrder: 1,
+        articleCount: 1,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'cat-1-2',
+        name: 'Solana',
+        nameEn: 'Solana',
+        slug: 'solana',
+        parentId: 'cat-1',
+        sortOrder: 2,
+        articleCount: 1,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'cat-1-3',
+        name: 'Cosmos',
+        nameEn: 'Cosmos',
+        slug: 'cosmos',
+        parentId: 'cat-1',
+        sortOrder: 3,
+        articleCount: 1,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+    ],
+  },
+  {
+    id: 'cat-2',
+    name: 'DeFi',
+    nameEn: 'DeFi',
+    slug: 'defi',
+    sortOrder: 2,
+    articleCount: 0,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+]
 
 // Add handler for categories tree endpoint (without base URL since NEXT_PUBLIC_API_URL is empty in tests)
 // Use beforeEach because vitest.setup.tsx resets handlers afterEach
 beforeEach(() => {
   server.use(
     http.get('/api/categories/tree', () => {
-      return HttpResponse.json(mockCategories)
+      return HttpResponse.json(testCategories)
     })
   )
 })

@@ -1,52 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { ChevronRight, Folder, FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-interface Category {
-  id: string
-  name: string
-  children?: Category[]
-}
-
-// Mock data - will be replaced with API call
-const mockCategories: Category[] = [
-  {
-    id: '1',
-    name: 'Layer 1',
-    children: [
-      { id: '1-1', name: 'Ethereum' },
-      { id: '1-2', name: 'Solana' },
-      { id: '1-3', name: 'Cosmos' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Layer 2',
-    children: [
-      { id: '2-1', name: 'ZK Rollup' },
-      { id: '2-2', name: 'Optimistic Rollup' },
-    ],
-  },
-  {
-    id: '3',
-    name: 'DeFi',
-    children: [
-      { id: '3-1', name: 'DEX' },
-      { id: '3-2', name: 'Lending' },
-      { id: '3-3', name: 'Staking' },
-    ],
-  },
-  {
-    id: '4',
-    name: 'NFT',
-  },
-  {
-    id: '5',
-    name: '钱包与安全',
-  },
-]
+import { categoryAPI, Category } from '@/lib/api'
 
 interface CategoryNodeProps {
   category: Category
@@ -106,9 +64,39 @@ function CategoryNode({ category, level }: CategoryNodeProps) {
 }
 
 export function CategoryTree() {
+  const { data: categories, isLoading, error } = useQuery({
+    queryKey: ['categories', 'tree'],
+    queryFn: categoryAPI.getTree,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="py-4 px-2 text-sm text-muted-foreground flex items-center gap-2">
+        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        加载分类中...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="py-4 px-2 text-sm text-destructive">
+        加载分类失败，请稍后重试
+      </div>
+    )
+  }
+
+  if (!categories || categories.length === 0) {
+    return (
+      <div className="py-4 px-2 text-sm text-muted-foreground">
+        暂无分类
+      </div>
+    )
+  }
+
   return (
     <div className="py-1">
-      {mockCategories.map((category) => (
+      {categories.map((category) => (
         <CategoryNode key={category.id} category={category} level={0} />
       ))}
     </div>
