@@ -58,7 +58,6 @@ docker ps | grep web3-insight
 - `make dev-backend` - Start backend only
 - `make dev-frontend` - Start frontend only
 - `make migrate` - Run database migrations
-- `make seed` - Seed database with initial data
 - `make worker` - Start async task worker
 
 **Note**: Due to GVM shell issues, use absolute paths for running Go commands directly (see Go Build Commands section above).
