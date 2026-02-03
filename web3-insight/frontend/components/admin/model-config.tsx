@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,8 @@ import { toast } from 'sonner'
 export function ModelConfig() {
   const queryClient = useQueryClient()
   const [selections, setSelections] = useState<TaskSelection[]>([])
+  // Track initial selections for proper reset functionality
+  const [initialSelections, setInitialSelections] = useState<TaskSelection[]>([])
 
   // Fetch model registry
   const { data: modelsRegistry, isLoading: loadingModels } = useQuery({
@@ -38,10 +40,11 @@ export function ModelConfig() {
     queryFn: modelConfigAPI.getUserSelections,
   })
 
-  // Set selections when data loads
+  // Set selections when data loads or updates (after save)
   useEffect(() => {
     if (userSelections) {
       setSelections(userSelections)
+      setInitialSelections(userSelections)
     }
   }, [userSelections])
 
@@ -71,16 +74,19 @@ export function ModelConfig() {
     )
   }
 
+  // Memoize allModels array to prevent recreation on every render
+  const allModels = useMemo(() => {
+    if (!modelsRegistry) return []
+    return [...modelsRegistry.localModels, ...modelsRegistry.cloudModels]
+  }, [modelsRegistry])
+
   const isModelAvailable = (modelId: string): boolean => {
-    if (!modelsRegistry) return false
-    const allModels = [...modelsRegistry.localModels, ...modelsRegistry.cloudModels]
     const model = allModels.find(m => m.id === modelId)
     return model ? model.enabled : false
   }
 
   const getModelDisplayName = (modelId: string): string => {
-    if (!modelsRegistry) return modelId
-    const allModels = [...modelsRegistry.localModels, ...modelsRegistry.cloudModels]
+    if (allModels.length === 0) return modelId
     const model = allModels.find(m => m.id === modelId)
     return model ? model.name : modelId
   }
@@ -91,9 +97,8 @@ export function ModelConfig() {
     field: 'primary' | 'fallback',
     capability: string
   ) => {
-    if (!modelsRegistry) return null
+    if (allModels.length === 0) return null
 
-    const allModels = [...modelsRegistry.localModels, ...modelsRegistry.cloudModels]
     const availableModels = allModels.filter(m =>
       m.capabilities.includes(capability)
     )
@@ -264,7 +269,7 @@ export function ModelConfig() {
       <div className="flex justify-end gap-2">
         <Button
           variant="outline"
-          onClick={() => setSelections(userSelections || [])}
+          onClick={() => setSelections(initialSelections)}
         >
           <RefreshCw className="w-4 h-4 mr-2" />
           重置
