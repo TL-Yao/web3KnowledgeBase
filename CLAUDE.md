@@ -224,3 +224,87 @@ tail -f /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/logs/backe
 2. Update scripts in `web3-insight/scripts/` if needed
 3. Update Makefile if adding new commands
 4. Commit changes so documentation stays current
+
+## Plan Completion Protocol
+
+**IMPORTANT:** After completing any implementation plan, follow this protocol to maintain clean documentation and capture learnings.
+
+### Step 1: Clean Up Plan Files
+
+After a plan in `docs/plans/` is fully implemented and verified:
+
+1. **Review the plan file** - Read through to identify what was completed
+2. **Archive or remove** - Decide whether to:
+   - Delete the plan file if it's no longer needed
+   - Move it to `docs/plans/archive/` if it has historical value
+   - Keep it if it documents ongoing work
+
+### Step 2: Document Completion Summary
+
+Add a brief summary to this CLAUDE.md file under the appropriate section:
+
+**Location:** Add summaries to a new "Implementation History" section below
+
+**Format:**
+```markdown
+### [Date] - [Feature/Task Name]
+
+**What was completed:**
+- Brief bullet points of main changes
+- Key files modified
+- New functionality added
+
+**Important takeaways:**
+- Lessons learned
+- Patterns established
+- Things to remember for future development
+- Gotchas or issues encountered and solved
+
+**Related commits:** [commit range or key commits]
+```
+
+### Step 3: Update Project Structure (if needed)
+
+If the implementation changed:
+- Project structure or organization
+- Service configurations
+- Startup/shutdown procedures
+- Environment requirements
+
+→ Update the relevant sections of this CLAUDE.md file
+
+---
+
+## Implementation History
+
+### 2026-02-03 - Mock Data Removal and Startup Documentation
+
+**What was completed:**
+- Added comprehensive startup/shutdown procedures to CLAUDE.md
+- Removed all backend seed data (categories, articles)
+- Removed all frontend mock data from MSW handlers
+- Verified system works with empty state
+- Full integration test passed
+
+**Important takeaways:**
+- **Migrations are automatic**: No separate migration command exists. The backend runs `database.Migrate(db)` automatically on startup via `cmd/server/main.go`. This was incorrectly documented initially and had to be corrected.
+- **GVM issues**: The environment has GVM configured which causes `cd` commands to fail. Always use `/usr/local/go/bin/go run -C /path/to/directory` instead of `cd /path && go run`.
+- **Package manager**: The frontend uses `npm` (not `pnpm`). Check `package.json` scripts when documenting commands.
+- **Test fixtures**: After removing default mock data, tests that relied on it failed (expected). Tests should provide their own fixtures rather than depending on global mocks.
+- **Docker service detection**: The `status.sh` script has a bug where it incorrectly reports PostgreSQL and Redis as "not running" even when they are. Services are confirmed via `docker ps` and port checks.
+
+**Related commits:** `1d7d98f` through `1b8a8b1` (9 commits total)
+
+**Files modified:**
+- CLAUDE.md (documentation)
+- backend/cmd/server/main.go (removed seed call)
+- backend/internal/database/seed.go (emptied function)
+- frontend/__mocks__/data.ts (emptied mock data)
+- frontend/__mocks__/handlers.ts (return empty data)
+- Makefile (removed seed and migrate targets)
+
+**Key patterns established:**
+- All documentation goes in CLAUDE.md for easy reference
+- Use absolute paths in documentation for copy-paste reliability
+- Verify functionality before documenting it
+- Keep test infrastructure but remove default test data
