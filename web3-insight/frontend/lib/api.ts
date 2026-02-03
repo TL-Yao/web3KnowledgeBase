@@ -100,12 +100,21 @@ export const articleAPI = {
 export interface Category {
   id: string
   name: string
+  nameEn: string
   slug: string
-  count: number
+  parentId?: string
+  description?: string
+  icon?: string
+  sortOrder: number
+  children?: Category[]
+  articleCount: number
+  createdAt: string
+  updatedAt: string
 }
 
 export const categoryAPI = {
   list: () => fetchAPI<Category[]>('/api/categories'),
+  getTree: () => fetchAPI<Category[]>('/api/categories/tree'),
 }
 
 // Data Sources API
