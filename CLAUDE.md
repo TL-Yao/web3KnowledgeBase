@@ -363,3 +363,30 @@ If the implementation changed:
 **Files modified:**
 - app/admin/page.tsx (converted to 'use client', added useQuery for stats, added error/loading states)
 - components/admin/task-monitor.tsx (removed mock tasks, added empty state, added loading state)
+
+### 2026-02-04 - Fix Frontend-Backend API Response Mismatch
+
+**What was completed:**
+- Fixed ArticleListResponse interface to match backend response format
+- Changed 'data' field to 'articles' to match backend's actual response
+- Changed 'limit' field to 'pageSize' to match backend's actual response
+- Fixed request parameter mapping: frontend 'limit' now maps to backend 'page_size'
+- Fixed system status component to check backend health endpoint directly
+- Verified all other API endpoints have correct interfaces
+
+**Important takeaways:**
+- **API contract alignment**: Frontend TypeScript interfaces must exactly match backend JSON responses
+- **Response field naming**: Backend returns `{"articles": [...]}` not `{"data": [...]}`
+- **Pagination field naming**: Backend uses `pageSize` not `limit` in response
+- **Request parameter mapping**: Backend expects `page_size` query parameter, not `limit`
+- **Health check endpoint**: System status must fetch from backend URL directly (localhost:8080/health)
+- **Error manifestation**: Mismatched field names cause "无法连接后端服务" error even when backend is running fine
+- **Testing approach**: Use curl to verify actual backend responses before writing frontend interfaces
+
+**Related commits:** cac15b6, 6aa95af, 667c450
+
+**Files modified:**
+- web3-insight/frontend/lib/api.ts (ArticleListResponse interface, parameter mapping)
+- web3-insight/frontend/components/knowledge/article-list.tsx (response field access)
+- web3-insight/frontend/components/admin/system-status.tsx (health check endpoint)
+- CLAUDE.md (this documentation)
