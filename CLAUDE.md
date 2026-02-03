@@ -29,6 +29,35 @@ The `-C` flag changes to the specified directory before executing the command, a
   - `frontend/` - Next.js frontend with shadcn/ui
   - `docs/plans/` - Implementation plans
 
+## Browser Testing
+
+Claude Code has Chrome plugin capability enabled for visual verification of frontend changes.
+
+**When to use:**
+- After implementing UI changes to verify actual browser appearance
+- When debugging layout or styling issues
+- To confirm empty states display correctly
+- To validate user interactions and component behavior
+
+**How to use:**
+```bash
+# Open frontend in Chrome (home page)
+open -a "Google Chrome" http://localhost:3000
+
+# Open specific pages
+open -a "Google Chrome" http://localhost:3000/admin
+open -a "Google Chrome" http://localhost:3000/knowledge
+open -a "Google Chrome" http://localhost:3000/research
+```
+
+**Best practices:**
+- Use this capability when implementing or reviewing UI changes
+- Verify both desktop and responsive views if needed
+- Check console for JavaScript errors after opening
+- Confirm loading states, empty states, and error states display properly
+
+**Note:** This supplements (not replaces) automated testing. Use for visual verification and UX validation.
+
 ## Docker Services (Start/Stop)
 
 The project uses Docker for PostgreSQL and Redis services:
