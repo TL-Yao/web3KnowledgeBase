@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { MainLayout } from '@/components/layout/main-layout'
 import { ResearchPanel } from '@/components/research/research-panel'
 import { ExplorerResearchPanel } from '@/components/research/explorer-research'
+import { ExplorerErrorBoundary } from '@/components/research/explorer-error-boundary'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Search, Globe2 } from 'lucide-react'
 
@@ -40,7 +41,9 @@ export default function ResearchPage() {
           </TabsContent>
 
           <TabsContent value="explorers">
-            <ExplorerResearchPanel />
+            <ExplorerErrorBoundary>
+              <ExplorerResearchPanel />
+            </ExplorerErrorBoundary>
           </TabsContent>
         </Tabs>
       </div>
