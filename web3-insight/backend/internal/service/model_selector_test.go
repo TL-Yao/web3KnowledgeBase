@@ -31,6 +31,9 @@ func (m *MockConfigRepository) Set(key, value, description string) error {
 
 func (m *MockConfigRepository) GetAll() ([]model.Config, error) {
 	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).([]model.Config), args.Error(1)
 }
 
@@ -41,6 +44,9 @@ func (m *MockConfigRepository) Delete(key string) error {
 
 func (m *MockConfigRepository) GetMap() (map[string]string, error) {
 	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(map[string]string), args.Error(1)
 }
 

@@ -103,7 +103,7 @@ func (ms *ModelSelector) getUserSelection(taskID string) (primary, fallback stri
 
 	var selections []TaskSelection
 	if err := json.Unmarshal([]byte(configData.Value), &selections); err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to parse model selections from database: %w", err)
 	}
 
 	for _, sel := range selections {
