@@ -220,6 +220,7 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 ## Plan Completion Protocol
 
 After completing any implementation plan:
-1. Delete the plan file from `docs/plans/`
-2. Update relevant CLAUDE.md sections if project structure/features changed
-3. Commit changes
+1. **整理文档**: 检查 `docs/` 和 `web3-insight/backend/docs/` 目录，将有价值的经验教训提取到 CLAUDE.md，将新功能描述更新到 README.md，然后删除这些文档文件
+2. Delete the plan file from `docs/plans/`
+3. Update relevant CLAUDE.md sections if project structure/features changed
+4. **提交代码**: 将所有改动（代码 + 文档更新 + 文件清理）commit 到 git
