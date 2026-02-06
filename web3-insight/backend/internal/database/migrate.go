@@ -21,5 +21,7 @@ func Migrate(db *gorm.DB) error {
 		&model.Task{},
 		&model.Config{},
 		&model.DataSource{},
+		&model.Keyword{},
+		&model.KBUpdateJob{},
 	)
 }

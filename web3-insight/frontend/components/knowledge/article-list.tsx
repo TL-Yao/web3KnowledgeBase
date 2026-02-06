@@ -37,11 +37,20 @@ function transformArticle(article: APIArticle): Article {
   }
 }
 
-export function ArticleList() {
+interface ArticleListProps {
+  categoryId?: string
+  searchQuery?: string
+}
+
+export function ArticleList({ categoryId, searchQuery }: ArticleListProps) {
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['articles'],
+    queryKey: ['articles', categoryId, searchQuery],
     queryFn: async () => {
-      const response = await articleAPI.list({ limit: 20 })
+      const response = await articleAPI.list({
+        category: categoryId,
+        q: searchQuery,
+        limit: 20,
+      })
       return response.articles.map(transformArticle)
     },
     retry: 1,

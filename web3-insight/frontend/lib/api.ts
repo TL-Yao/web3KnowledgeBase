@@ -452,3 +452,81 @@ export const modelConfigAPI = {
       body: JSON.stringify(selections),
     }),
 }
+
+// Knowledge Base Update Types
+export interface KBUpdateJob {
+  id: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  triggerType: 'manual' | 'scheduled'
+  keywordsGenerated: number
+  articlesGenerated: number
+  articlesPublished: number
+  startTime?: string
+  endTime?: string
+  duration?: number
+  errorMessage?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface KBUpdateJobListResponse {
+  total: number
+  page: number
+  pageSize: number
+  items: KBUpdateJob[]
+}
+
+export interface KBKeywordStats {
+  pending: number
+  used: number
+  total: number
+}
+
+export interface TriggerUpdateRequest {
+  triggerType?: 'manual' | 'scheduled'
+}
+
+export interface TriggerUpdateResponse {
+  status: string
+  message: string
+  jobId?: string
+}
+
+export interface InitKeywordsRequest {
+  count?: number
+}
+
+export interface InitKeywordsResponse {
+  status: string
+  message: string
+  count: number
+}
+
+// Knowledge Base Update API
+export const kbUpdateAPI = {
+  // Trigger update
+  trigger: (data?: TriggerUpdateRequest) =>
+    fetchAPI<TriggerUpdateResponse>('/api/kb/update/trigger', {
+      method: 'POST',
+      body: JSON.stringify(data || { triggerType: 'manual' }),
+    }),
+
+  // Get job status
+  getJob: (jobId: string) =>
+    fetchAPI<KBUpdateJob>(`/api/kb/update/jobs/${jobId}`),
+
+  // Get job history
+  getJobs: (page: number = 1, pageSize: number = 20) =>
+    fetchAPI<KBUpdateJobListResponse>(`/api/kb/update/jobs?page=${page}&page_size=${pageSize}`),
+
+  // Initialize keywords
+  initKeywords: (data?: InitKeywordsRequest) =>
+    fetchAPI<InitKeywordsResponse>('/api/kb/keywords/init', {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+
+  // Get keyword stats
+  getKeywordStats: () =>
+    fetchAPI<KBKeywordStats>('/api/kb/keywords/stats'),
+}

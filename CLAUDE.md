@@ -1,3 +1,21 @@
+# CRITICAL SAFETY RESTRICTION
+
+> **MANDATORY:** This rule takes precedence over all other instructions.
+
+**Scope Boundary:** `/Users/tongleyao/claudeProjects/explorerResearch`
+
+All file operations (create, delete, modify, read, execute) MUST be confined to this directory and its subdirectories. Any operation that would affect files **outside** this scope requires **explicit user confirmation** before proceeding.
+
+**Before any file operation, verify:**
+1. The target path starts with `/Users/tongleyao/claudeProjects/explorerResearch/`
+2. The operation will not affect parent directories or sibling projects
+3. Commands will not have side effects outside the allowed scope
+
+**If an operation would affect files outside this scope:**
+- STOP immediately
+- Explain what operation was requested and why it's out of scope
+- Ask for explicit user confirmation before proceeding
+
 # Project Guidelines
 
 ## Go Build Commands
@@ -117,6 +135,7 @@ web3-insight/
 | 管理 | 新闻管理 | - | /api/news |
 | 基础 | Feature Flags | DisabledFeature | - |
 | 基础 | 错误边界 | ExplorerErrorBoundary | - |
+| 管理 | 知识库自动更新 | KBUpdatePage | /api/kb-update (trigger, status, history), /api/kb (keywords, scheduler) |
 | 基础 | CORS 中间件 | - | middleware.go |
 
 ## Model Fallback Pattern
@@ -181,6 +200,22 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 - **Stats null safety**: Use `?? 0` pattern for safe defaults
 - **Next.js cache**: Use `rm -rf .next` to force clean rebuild when encountering persistent errors
 - **CSS compatibility**: Avoid `field-sizing: content` (limited browser support)
+
+### KB Auto-Update Lessons (2026-02-07)
+
+- **Claude CLI Session ID**: Every call MUST use a fresh `uuid.UUID`. Reuse causes "Session ID already in use" error. Retry loops also need new IDs per attempt. Stale session files at `~/.claude/projects/*/session-*` can also cause this — clean up on startup.
+- **Process Group Killing**: When killing a timed-out Claude CLI process, use `syscall.SysProcAttr{Setpgid: true}` + `syscall.Kill(-pid, SIGKILL)` to kill the entire process group. Simple `cmd.Process.Kill()` leaves zombie child processes.
+- **Orphaned Job Cleanup**: Backend restarts leave jobs stuck in "running". On startup, mark any job running > 30 min as "failed". Without this, job locking prevents new updates.
+- **LLM Output Parsing**: JSON output from LLMs is ~75% reliable even with strong prompts. Use two-layer defense: prompt constraints + `extractJSON()` code extraction. For complex content (markdown, Chinese), use delimiter format (`===TITLE_START===`/`===TITLE_END===`) for 100% success.
+- **Article Generation Timeout**: Simple articles: 2-4 min. Research-heavy articles (WebFetch): 60-90 min. Default timeout: 60 min. Initial 5-10 min timeouts failed all articles.
+- **goroutines Must Use context.Background()**: HTTP handler goroutines must NOT reuse `c.Request.Context()` — it's canceled when the response is sent. Always create fresh `context.Background()` for long-running background tasks.
+- **Async HTTP Pattern for Long Tasks**: Return HTTP 202 immediately, run work in goroutine with `context.Background()`. Use `sync.Mutex.TryLock()` or DB checks for 409 Conflict on duplicate requests.
+- **Nil struct vs nil field**: Passing a struct with nil internal fields causes deep nil pointer panics. Pass `nil` for the whole struct and nil-check before use: `if classifier != nil { ... }`.
+- **GORM Updates**: Use `Updates(map[string]interface{}{...})` for partial updates, not full struct (which zeros out unset fields).
+- **pq.StringArray**: PostgreSQL `TEXT[]` fields need explicit `pq.StringArray(slice)` conversion. Array append: `gorm.Expr("array_append(field, ?)", value)`.
+- **Next.js useSearchParams**: Requires `<Suspense>` boundary wrapper in App Router, otherwise build fails.
+- **Repository Testing**: PostgreSQL-specific features (UUID, pq.StringArray, array_append) make SQLite-based tests impossible. Use integration tests against real PostgreSQL.
+- **LLM Prompt Specificity**: Concrete keywords ("Gas optimization tips") produce reliable structured output. Abstract keywords ("Byzantine fault tolerance") cause LLMs to output free-form text instead.
 
 ## Plan Completion Protocol
 

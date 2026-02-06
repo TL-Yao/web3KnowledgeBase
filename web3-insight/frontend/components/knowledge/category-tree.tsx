@@ -13,21 +13,26 @@ const BASE_PADDING = 8
 interface CategoryNodeProps {
   category: Category
   level: number
+  selectedId?: string
+  onSelect?: (categoryId: string) => void
 }
 
-function CategoryNode({ category, level }: CategoryNodeProps) {
+function CategoryNode({ category, level, selectedId, onSelect }: CategoryNodeProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const hasChildren = category.children && category.children.length > 0
+  const isSelected = selectedId === category.id
 
   return (
     <div>
       <div
         className={cn(
           "flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-accent/10 cursor-pointer text-sm",
-          "transition-colors"
+          "transition-colors",
+          isSelected && "bg-accent/20 font-medium"
         )}
         style={{ paddingLeft: `${level * INDENT_PER_LEVEL + BASE_PADDING}px` }}
         onClick={() => {
+          onSelect?.(category.id)
           if (hasChildren) {
             setIsExpanded(!isExpanded)
           }
@@ -54,12 +59,23 @@ function CategoryNode({ category, level }: CategoryNodeProps) {
             &bull;
           </span>
         )}
-        <span className="truncate">{category.name}</span>
+        <span className="truncate flex-1">{category.name}</span>
+        {category.articleCount > 0 && (
+          <span className="text-xs text-muted-foreground ml-auto">
+            {category.articleCount}
+          </span>
+        )}
       </div>
       {hasChildren && isExpanded && (
         <div>
           {(category.children || []).map((child) => (
-            <CategoryNode key={child.id} category={child} level={level + 1} />
+            <CategoryNode
+              key={child.id}
+              category={child}
+              level={level + 1}
+              selectedId={selectedId}
+              onSelect={onSelect}
+            />
           ))}
         </div>
       )}
@@ -67,7 +83,12 @@ function CategoryNode({ category, level }: CategoryNodeProps) {
   )
 }
 
-export function CategoryTree() {
+interface CategoryTreeProps {
+  selectedId?: string
+  onSelect?: (categoryId: string) => void
+}
+
+export function CategoryTree({ selectedId, onSelect }: CategoryTreeProps) {
   const { data: categories, isLoading, error } = useQuery({
     queryKey: ['categories', 'tree'],
     queryFn: categoryAPI.getTree,
@@ -101,8 +122,29 @@ export function CategoryTree() {
 
   return (
     <div className="py-1">
+      {/* All categories option */}
+      <div
+        className={cn(
+          "flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-accent/10 cursor-pointer text-sm mb-1",
+          "transition-colors",
+          !selectedId && "bg-accent/20 font-medium"
+        )}
+        style={{ paddingLeft: `${BASE_PADDING}px` }}
+        onClick={() => onSelect?.('')}
+      >
+        <span className="w-4" />
+        <Folder className="w-4 h-4 text-muted-foreground" />
+        <span className="truncate">全部分类</span>
+      </div>
+
       {categories.map((category) => (
-        <CategoryNode key={category.id} category={category} level={0} />
+        <CategoryNode
+          key={category.id}
+          category={category}
+          level={0}
+          selectedId={selectedId}
+          onSelect={onSelect}
+        />
       ))}
     </div>
   )

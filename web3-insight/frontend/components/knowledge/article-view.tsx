@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useFeatureFlag } from '@/hooks/use-feature-flag'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -82,16 +84,15 @@ export function ArticleView({ article }: ArticleViewProps) {
       </div>
 
       {/* Content */}
-      {article.contentHtml ? (
-        <article
-          className="prose prose-neutral max-w-none dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: article.contentHtml }}
-        />
-      ) : (
-        <article className="prose prose-neutral max-w-none dark:prose-invert">
-          <p>{article.content || article.summary}</p>
-        </article>
-      )}
+      <article className="prose prose-neutral max-w-none dark:prose-invert">
+        {article.contentHtml ? (
+          <div dangerouslySetInnerHTML={{ __html: article.contentHtml }} />
+        ) : (
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {article.content || article.summary}
+          </ReactMarkdown>
+        )}
+      </article>
 
       {/* Sources */}
       {article.sourceUrls && article.sourceUrls.length > 0 && (

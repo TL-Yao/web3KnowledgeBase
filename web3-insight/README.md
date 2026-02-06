@@ -139,10 +139,43 @@ web3-insight/
 | GET | /api/sources | List data sources |
 | POST | /api/import | Batch import articles |
 
+### KB Auto-Update
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/kb-update/trigger | Trigger knowledge base update |
+| GET | /api/kb-update/status/:jobId | Get update job status |
+| GET | /api/kb-update/history | List update history (paginated) |
+| POST | /api/kb/keywords/init | Initialize keyword pool |
+| GET | /api/kb/keywords/stats | Get keyword pool stats |
+| GET | /api/kb/scheduler/status | Get scheduler status |
+| POST | /api/kb/scheduler/start | Start auto-update scheduler |
+| POST | /api/kb/scheduler/stop | Stop auto-update scheduler |
+
 ### Chat
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | WS | /ws/chat | AI chat via WebSocket |
+
+## KB Auto-Update
+
+The system includes an automated knowledge base update feature that generates Web3 technical articles using Claude Code CLI.
+
+**How it works:**
+1. A keyword pool (target: 200) is maintained and auto-replenished when below 30
+2. Every 4 hours (or manually triggered), 3 keywords are picked for article generation
+3. Each keyword is sent to Claude Code CLI (`--print` mode) which researches and writes a Chinese technical article
+4. Articles are saved to the knowledge base automatically
+
+**Key components:**
+- `ClaudeExecutor` - Claude Code CLI wrapper with per-call session isolation
+- `KeywordPoolService` - Keyword pool management with auto-replenishment
+- `ArticleGeneratorService` - Article generation with 60-min timeout and delimiter-based output parsing
+- `KBUpdateOrchestrator` - Job orchestration with locking and orphaned job cleanup
+- `KBScheduler` - Cron-based scheduler (`0 */4 * * *`)
+
+**Reliability:** Job locking (409 on duplicate), orphaned job cleanup (>30 min), process group termination, per-article failure isolation.
+
+**Frontend:** Admin page at `/admin/kb-update` with manual trigger, keyword pool stats, live progress polling, and update history.
 
 ## Development
 

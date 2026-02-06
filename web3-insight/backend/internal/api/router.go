@@ -196,6 +196,25 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			models.GET("/selections", server.modelConfigHandler.GetUserSelections)
 			models.PUT("/selections", server.modelConfigHandler.UpdateUserSelections)
 		}
+
+		// Knowledge Base Update
+		kbUpdateHandler := NewKBUpdateHandler(db)
+		kb := api.Group("/kb")
+		{
+			// Update operations
+			kb.POST("/update/trigger", kbUpdateHandler.TriggerUpdate)
+			kb.GET("/update/jobs", kbUpdateHandler.GetUpdateHistory)
+			kb.GET("/update/jobs/:job_id", kbUpdateHandler.GetJobStatus)
+
+			// Keyword pool management
+			kb.POST("/keywords/init", kbUpdateHandler.InitKeywordPool)
+			kb.GET("/keywords/stats", kbUpdateHandler.GetKeywordStats)
+
+			// Scheduler control
+			kb.GET("/scheduler/status", kbUpdateHandler.GetSchedulerStatus)
+			kb.POST("/scheduler/start", kbUpdateHandler.StartScheduler)
+			kb.POST("/scheduler/stop", kbUpdateHandler.StopScheduler)
+		}
 	}
 
 	// WebSocket for chat
