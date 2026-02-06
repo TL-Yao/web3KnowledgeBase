@@ -11,11 +11,17 @@ import (
 	"github.com/user/web3-insight/internal/service"
 )
 
+var wsAllowedOrigins = map[string]bool{
+	"http://localhost:3000":  true,
+	"http://127.0.0.1:3000": true,
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins in dev
+		origin := r.Header.Get("Origin")
+		return wsAllowedOrigins[origin]
 	},
 }
 
@@ -54,6 +60,9 @@ func (h *ChatHandler) HandleWebSocket(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
+
+	// Limit max message size to 32KB
+	conn.SetReadLimit(32 * 1024)
 
 	// Use mutex to prevent concurrent writes
 	var writeMu sync.Mutex

@@ -1,11 +1,25 @@
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080'
 
-export function createChatWebSocket(onMessage: (data: any) => void) {
+export interface ChatMessage {
+  type: 'chunk' | 'done' | 'error'
+  content?: string
+  model?: string
+}
+
+export function createChatWebSocket(onMessage: (data: ChatMessage) => void) {
   const ws = new WebSocket(`${WS_URL}/ws/chat`)
 
   ws.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-    onMessage(data)
+    try {
+      const data = JSON.parse(event.data) as ChatMessage
+      onMessage(data)
+    } catch {
+      console.error('Failed to parse WebSocket message:', event.data)
+    }
+  }
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error)
   }
 
   return ws

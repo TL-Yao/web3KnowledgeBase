@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -459,6 +460,10 @@ func trimString(s string) string {
 }
 
 func mustMarshalJSON(v interface{}) []byte {
-	data, _ := json.Marshal(v)
+	data, err := json.Marshal(v)
+	if err != nil {
+		log.Printf("ERROR: failed to marshal JSON: %v", err)
+		return []byte("null")
+	}
 	return data
 }
