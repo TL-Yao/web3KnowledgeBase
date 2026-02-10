@@ -33,6 +33,7 @@ const (
 type ArticleGeneratorService struct {
 	articleRepo *repository.ArticleRepository
 	classifier  *Classifier
+	tagger      *Tagger
 	prompts     *config.PromptsConfig
 }
 
@@ -42,6 +43,11 @@ func NewArticleGeneratorService(articleRepo *repository.ArticleRepository, class
 		classifier:  classifier,
 		prompts:     prompts,
 	}
+}
+
+// SetTagger sets the tagger service for post-generation tagging
+func (ag *ArticleGeneratorService) SetTagger(tagger *Tagger) {
+	ag.tagger = tagger
 }
 
 // ArticleData represents parsed article data
@@ -127,6 +133,24 @@ func (ag *ArticleGeneratorService) GenerateArticle(ctx context.Context, keyword 
 		}()
 	} else {
 		log.Printf("Classifier not configured, skipping classification for article %s", article.ID)
+	}
+
+	// Trigger async tagging (non-blocking)
+	if ag.tagger != nil {
+		go func() {
+			tagCtx := context.Background()
+			// Re-fetch the article to get the latest state (after classification may have updated it)
+			freshArticle, err := ag.articleRepo.GetByID(article.ID)
+			if err != nil {
+				log.Printf("Warning: Failed to re-fetch article %s for tagging: %v", article.ID, err)
+				return
+			}
+			if err := ag.tagger.TagArticle(tagCtx, freshArticle); err != nil {
+				log.Printf("Warning: Failed to tag article %s: %v", article.ID, err)
+			} else {
+				log.Printf("Successfully tagged article %s", article.ID)
+			}
+		}()
 	}
 
 	return article, sessionID, nil

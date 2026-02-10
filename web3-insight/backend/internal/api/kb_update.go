@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/user/web3-insight/internal/config"
+	"github.com/user/web3-insight/internal/llm"
 	"github.com/user/web3-insight/internal/repository"
 	"github.com/user/web3-insight/internal/service"
 	"gorm.io/gorm"
@@ -26,17 +27,26 @@ type KBUpdateHandler struct {
 	prompts      *config.PromptsConfig
 }
 
-func NewKBUpdateHandler(db *gorm.DB, prompts *config.PromptsConfig) *KBUpdateHandler {
+func NewKBUpdateHandler(db *gorm.DB, cfg *config.Config) *KBUpdateHandler {
+	prompts := cfg.Prompts
+
 	// Initialize repositories
 	keywordRepo := repository.NewKeywordRepository(db)
 	articleRepo := repository.NewArticleRepository(db)
 	jobRepo := repository.NewKBUpdateJobRepository(db)
 	themeRepo := repository.NewThemeRepository(db)
 	configRepo := repository.NewConfigRepository(db)
+	tagRepo := repository.NewTagRepository(db)
 
 	// Initialize services
 	keywordPool := service.NewKeywordPoolService(keywordRepo, prompts)
 	articleGen := service.NewArticleGeneratorService(articleRepo, nil, prompts)
+
+	// Wire tagger if LLM config is available
+	llmRouter := llm.NewRouterFromConfig(&cfg.LLM)
+	tagger := service.NewTagger(llmRouter, tagRepo, articleRepo)
+	articleGen.SetTagger(tagger)
+
 	orchestrator := service.NewKBUpdateOrchestrator(keywordPool, articleGen, keywordRepo, jobRepo, themeRepo, configRepo, prompts)
 	scheduler := service.NewKBScheduler(orchestrator)
 

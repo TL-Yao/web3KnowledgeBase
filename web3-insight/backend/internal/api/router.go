@@ -198,7 +198,7 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		}
 
 		// Knowledge Base Update
-		kbUpdateHandler := NewKBUpdateHandler(db, cfg.Prompts)
+		kbUpdateHandler := NewKBUpdateHandler(db, cfg)
 		kb := api.Group("/kb")
 		{
 			// Update operations
