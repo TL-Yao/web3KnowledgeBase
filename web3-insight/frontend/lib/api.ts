@@ -58,6 +58,7 @@ export interface ArticleListResponse {
 
 export interface ArticleListParams {
   category?: string
+  tag?: string
   page?: number
   limit?: number
   q?: string
@@ -68,6 +69,7 @@ export const articleAPI = {
   list: (params?: ArticleListParams) => {
     const searchParams = new URLSearchParams()
     if (params?.category) searchParams.set('category', params.category)
+    if (params?.tag) searchParams.set('tag', params.tag)
     if (params?.page) searchParams.set('page', String(params.page))
     if (params?.limit) searchParams.set('page_size', String(params.limit))
     if (params?.q) searchParams.set('q', params.q)
@@ -572,5 +574,51 @@ export const kbUpdateAPI = {
     fetchAPI<{ message: string }>('/api/kb/config/batch-size', {
       method: 'PUT',
       body: JSON.stringify({ batchSize: size }),
+    }),
+}
+
+// Tag Types
+export interface Tag {
+  id: string
+  name: string
+  nameEn: string
+  themeId: string | null
+  status: 'active' | 'pending' | 'deprecated'
+  suggestCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TagListResponse {
+  tags: Tag[]
+  total: number
+}
+
+export interface TagStats {
+  totalTags: number
+  activeTags: number
+  pendingTags: number
+  deprecatedTags: number
+  avgTagsPerArticle: number
+}
+
+// Tag API
+export const tagAPI = {
+  list: (params?: { status?: string; page?: number; limit?: number; q?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.page) searchParams.set('page', String(params.page))
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    if (params?.q) searchParams.set('q', params.q)
+    const query = searchParams.toString()
+    return fetchAPI<TagListResponse>(`/api/tags${query ? `?${query}` : ''}`)
+  },
+
+  getStats: () => fetchAPI<TagStats>('/api/tags/stats'),
+
+  updateStatus: (id: string, status: Tag['status']) =>
+    fetchAPI<Tag>(`/api/tags/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
     }),
 }

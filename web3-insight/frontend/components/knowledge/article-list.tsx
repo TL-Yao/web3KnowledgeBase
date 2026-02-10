@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Clock, FileText, AlertCircle, Inbox } from 'lucide-react'
+import { Clock, FileText, AlertCircle, Inbox, X } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { articleAPI, Article as APIArticle } from '@/lib/api'
@@ -40,14 +40,17 @@ function transformArticle(article: APIArticle): Article {
 interface ArticleListProps {
   categoryId?: string
   searchQuery?: string
+  activeTag?: string
+  onTagClick?: (tag: string) => void
 }
 
-export function ArticleList({ categoryId, searchQuery }: ArticleListProps) {
+export function ArticleList({ categoryId, searchQuery, activeTag, onTagClick }: ArticleListProps) {
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['articles', categoryId, searchQuery],
+    queryKey: ['articles', categoryId, searchQuery, activeTag],
     queryFn: async () => {
       const response = await articleAPI.list({
         category: categoryId,
+        tag: activeTag,
         q: searchQuery,
         limit: 20,
       })
@@ -83,7 +86,9 @@ export function ArticleList({ categoryId, searchQuery }: ArticleListProps) {
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Inbox className="w-12 h-12 mb-4 opacity-50" />
         <p className="text-lg font-medium">暂无文章</p>
-        <p className="text-sm">开始研究以添加新的知识文章</p>
+        <p className="text-sm">
+          {activeTag ? `没有标签为「${activeTag}」的文章` : '开始研究以添加新的知识文章'}
+        </p>
       </div>
     )
   }
@@ -91,6 +96,12 @@ export function ArticleList({ categoryId, searchQuery }: ArticleListProps) {
   const getCategoryName = (category: string | { name: string; slug: string }) => {
     if (typeof category === 'string') return category
     return category?.name || '未分类'
+  }
+
+  const handleTagClick = (e: React.MouseEvent, tag: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onTagClick?.(tag)
   }
 
   return (
@@ -101,6 +112,21 @@ export function ArticleList({ categoryId, searchQuery }: ArticleListProps) {
           <span>部分数据可能已过时，后端服务连接异常</span>
         </div>
       )}
+
+      {activeTag && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm text-muted-foreground">标签筛选:</span>
+          <Badge
+            variant="default"
+            className="cursor-pointer gap-1"
+            onClick={() => onTagClick?.('')}
+          >
+            {activeTag}
+            <X className="w-3 h-3" />
+          </Badge>
+        </div>
+      )}
+
       <ScrollArea className="h-[calc(100vh-200px)]">
         <div className="space-y-4">
           {articles.map((article) => (
@@ -126,7 +152,12 @@ export function ArticleList({ categoryId, searchQuery }: ArticleListProps) {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {article.tags?.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
+                        <Badge
+                          key={tag}
+                          variant={tag === activeTag ? 'default' : 'secondary'}
+                          className="text-xs cursor-pointer hover:bg-primary/20 transition-colors"
+                          onClick={(e) => handleTagClick(e, tag)}
+                        >
                           {tag}
                         </Badge>
                       ))}

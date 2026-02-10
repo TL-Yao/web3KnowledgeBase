@@ -11,6 +11,7 @@ import {
   FileText,
   Upload,
   RefreshCw,
+  Tag,
   ArrowLeft
 } from 'lucide-react'
 
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/admin/costs', label: '成本', icon: DollarSign },
   { href: '/admin/content', label: '内容', icon: FileText },
   { href: '/admin/kb-update', label: '知识库更新', icon: RefreshCw },
+  { href: '/admin/tags', label: '标签', icon: Tag },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

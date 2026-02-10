@@ -15,6 +15,7 @@ import {
 import { Edit, RefreshCw, MoreHorizontal, ExternalLink, Clock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import { useRouter } from 'next/navigation'
 import { Article } from '@/lib/api'
 
 function stripLeadingTitle(content: string, title: string): string {
@@ -37,6 +38,7 @@ interface ArticleViewProps {
 export function ArticleView({ article }: ArticleViewProps) {
   const [isEditing, setIsEditing] = useState(false)
   const { isDisabled: regenerateDisabled } = useFeatureFlag('articleRegenerate')
+  const router = useRouter()
 
   if (!article) {
     return (
@@ -91,7 +93,14 @@ export function ArticleView({ article }: ArticleViewProps) {
         {/* Tags */}
         <div className="flex items-center gap-2">
           {article.tags?.map((tag) => (
-            <Badge key={tag} variant="secondary">{tag}</Badge>
+            <Badge
+              key={tag}
+              variant="secondary"
+              className="cursor-pointer hover:bg-primary/20 transition-colors"
+              onClick={() => router.push(`/knowledge?tag=${encodeURIComponent(tag)}`)}
+            >
+              {tag}
+            </Badge>
           ))}
         </div>
       </div>

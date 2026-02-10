@@ -14,6 +14,7 @@ function KnowledgeContent() {
   const searchParams = useSearchParams()
 
   const categoryId = searchParams.get('category') || ''
+  const activeTag = searchParams.get('tag') || ''
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
 
   const handleCategorySelect = (id: string) => {
@@ -22,6 +23,16 @@ function KnowledgeContent() {
       params.set('category', id)
     } else {
       params.delete('category')
+    }
+    router.push(`/knowledge?${params.toString()}`)
+  }
+
+  const handleTagClick = (tag: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (tag) {
+      params.set('tag', tag)
+    } else {
+      params.delete('tag')
     }
     router.push(`/knowledge?${params.toString()}`)
   }
@@ -96,6 +107,8 @@ function KnowledgeContent() {
           <ArticleList
             categoryId={categoryId}
             searchQuery={searchParams.get('q') || ''}
+            activeTag={activeTag}
+            onTagClick={handleTagClick}
           />
         </div>
       </div>
