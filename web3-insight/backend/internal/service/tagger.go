@@ -15,14 +15,25 @@ import (
 	"github.com/user/web3-insight/internal/repository"
 )
 
-const tagPromptTemplate = `你是一个Web3知识库标签专家。请为以下文章从标签库中选择3-7个最相关的标签。
+const tagPromptTemplate = `你是一个Web3知识库标签专家。请为以下文章选择3-7个最相关的标签。
 
-## 标签库
-### 主题标签（{{.ThemeName}}）
-{{range .ThemeTags}}- {{.Name}}{{if .NameEn}} ({{.NameEn}}){{end}}
+## 选标规则（重要）
+1. 仅当文章的**核心主题**是关于某标签时才选择，**不要**仅因文章提及就选择
+2. **必须**从主题标签中选择至少2个（这些是最精准的标签）
+3. 通用标签最多选3个，仅选择与文章核心高度相关的
+4. 宁可少选也不要选不相关的标签
+
+## 错误示例（不要这样做）
+- 文章讲"闪电贷原理" → 标签包含"以太坊" ✗（以太坊只是运行平台，不是文章主题）
+- 文章讲"ETF入门" → 标签包含"DeFi" ✗（DeFi只是顺带提及的对比）
+- 文章讲"Terra崩盘" → 标签包含"以太坊" ✗（Terra不是以太坊生态）
+
+## 主题标签（{{.ThemeName}}）—— 优先从这里选择
+{{range .ThemeTags}}- {{.Name}}
 {{end}}
-### 通用标签
-{{range .UniversalTags}}- {{.Name}}{{if .NameEn}} ({{.NameEn}}){{end}}
+
+## 通用标签 —— 仅当与文章核心高度相关时选择（最多3个）
+{{range .UniversalTags}}- {{.Name}}
 {{end}}
 
 ## 文章信息
@@ -34,11 +45,7 @@ const tagPromptTemplate = `你是一个Web3知识库标签专家。请为以下�
 {{end}}
 
 ## 输出要求
-1. 从标签库中选择3-7个最相关的标签
-2. 优先选择能准确描述文章核心内容的标签
-3. 必须使用标签库中的**中文名称**（即"-"左侧的名称），不要使用括号中的英文名
-4. 如果标签库缺少关键标签，可以在 newTagSuggestions 中建议（最多2个）
-5. 返回JSON格式（不要包含markdown代码块标记）：
+返回JSON格式（不要包含markdown代码块标记）：
 {"tags": ["标签1", "标签2", ...], "newTagSuggestions": ["建议标签1"]}`
 
 // Pending tag auto-activation threshold
@@ -239,13 +246,13 @@ func (t *Tagger) buildTagPrompt(article *model.Article, themeID string, universa
 
 	summary := article.Summary
 	if summary == "" {
-		summary = truncateString(article.Content, 500)
+		summary = truncateString(article.Content, 2000)
 	}
 
-	// Include content excerpt for better context (first 1000 chars of content)
+	// Include content excerpt for better context (first 2000 chars of content)
 	contentExcerpt := ""
 	if article.Content != "" {
-		contentExcerpt = truncateString(article.Content, 1000)
+		contentExcerpt = truncateString(article.Content, 2000)
 	}
 
 	data := tagPromptData{
