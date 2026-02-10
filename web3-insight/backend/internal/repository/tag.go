@@ -15,12 +15,16 @@ func NewTagRepository(db *gorm.DB) *TagRepository {
 	return &TagRepository{db: db}
 }
 
-// FindAll returns all tags, optionally filtered by status
-func (r *TagRepository) FindAll(status string) ([]model.Tag, error) {
+// FindAll returns all tags, optionally filtered by status and search query
+func (r *TagRepository) FindAll(status string, search string) ([]model.Tag, error) {
 	var tags []model.Tag
 	query := r.db.Order("name ASC")
 	if status != "" {
 		query = query.Where("status = ?", status)
+	}
+	if search != "" {
+		pattern := "%" + search + "%"
+		query = query.Where("name ILIKE ? OR name_en ILIKE ?", pattern, pattern)
 	}
 	err := query.Find(&tags).Error
 	return tags, err

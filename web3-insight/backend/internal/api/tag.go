@@ -24,6 +24,7 @@ func NewTagHandler(db *gorm.DB) *TagHandler {
 // ListTags returns tags with optional filtering
 func (h *TagHandler) List(c *gin.Context) {
 	status := c.Query("status")
+	search := c.Query("q")
 	themeID := c.Query("themeId")
 	if themeID == "" {
 		themeID = c.Query("theme")
@@ -39,7 +40,7 @@ func (h *TagHandler) List(c *gin.Context) {
 		return
 	}
 
-	tags, err := h.tagRepo.FindAll(status)
+	tags, err := h.tagRepo.FindAll(status, search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tags"})
 		return
