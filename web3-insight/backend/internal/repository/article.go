@@ -19,6 +19,7 @@ type ArticleListParams struct {
 	CategoryID *uuid.UUID
 	Status     string
 	Tags       []string
+	Tag        string // single tag filter (uses PostgreSQL array contains)
 	Search     string
 	Page       int
 	PageSize   int
@@ -42,6 +43,9 @@ func (r *ArticleRepository) List(params ArticleListParams) (*ArticleListResult, 
 	}
 	if params.Search != "" {
 		query = query.Where("title ILIKE ? OR summary ILIKE ?", "%"+params.Search+"%", "%"+params.Search+"%")
+	}
+	if params.Tag != "" {
+		query = query.Where("? = ANY(tags)", params.Tag)
 	}
 
 	var total int64

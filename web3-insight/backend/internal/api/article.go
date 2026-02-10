@@ -41,6 +41,7 @@ func (h *ArticleHandler) List(c *gin.Context) {
 	params := repository.ArticleListParams{
 		Status: c.Query("status"),
 		Search: search,
+		Tag:    c.Query("tag"),
 	}
 
 	// Accept both "category" (frontend) and "category_id" (legacy) parameter names
