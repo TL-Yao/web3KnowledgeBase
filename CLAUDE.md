@@ -151,6 +151,9 @@ web3-insight/
 | 基础 | Feature Flags | DisabledFeature | - |
 | 基础 | 错误边界 | ExplorerErrorBoundary | - |
 | 管理 | 知识库自动更新 (主题驱动) | KBUpdatePage | /api/kb (trigger, jobs, keywords, scheduler, themes, config) |
+| 管理 | 标签管理 (注册表+生命周期) | TagsPage | /api/tags (list, stats, status, approve) |
+| 标签 | 文章自动标签 (LLM Haiku) | - | tagger.go (TagArticle) |
+| 标签 | 标签评估管道 | - | eval-tagger CLI |
 | 基础 | CORS 中间件 | - | middleware.go |
 
 ## Model Fallback Pattern
@@ -239,6 +242,54 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 - **Next.js useSearchParams**: Requires `<Suspense>` boundary wrapper in App Router, otherwise build fails.
 - **Repository Testing**: PostgreSQL-specific features (UUID, pq.StringArray, array_append) make SQLite-based tests impossible. Use integration tests against real PostgreSQL.
 - **LLM Prompt Specificity**: Concrete keywords ("Gas optimization tips") produce reliable structured output. Abstract keywords ("Byzantine fault tolerance") cause LLMs to output free-form text instead.
+
+## Pending: Article Tagging BDD Browser Tests
+
+Chrome 扩展连接问题导致未完成浏览器端测试。API 测试 12/12 通过。重启后执行以下测试：
+
+### 场景 1: 知识库页面标签显示
+1. 打开 `http://localhost:3000/knowledge`
+2. 验证文章卡片上显示标签 badge
+3. 点击标签 badge → 触发标签筛选 (URL 添加 `?tag=xxx`)
+4. 验证筛选后只显示包含该标签的文章
+5. 清除筛选 → 显示所有文章
+
+### 场景 2: 管理后台标签页
+1. 打开 `http://localhost:3000/admin/tags`
+2. 验证统计卡片: 总标签数=92, 已激活=92, 待审核=0, 通用标签=18
+3. 搜索框输入 "DeFi" → 只显示名称包含 DeFi 的标签
+4. 状态筛选下拉选 "已激活" → 只显示 active 标签
+5. 点击某标签的 "停用" 按钮 → 标签变为 deprecated, 统计更新
+6. 点击 "激活" 恢复
+
+### 场景 3: 文章详情页标签
+1. 打开某篇文章详情页
+2. 验证标签显示在文章元信息区域
+3. 点击标签 → 跳转到知识库列表并自动筛选
+
+### 场景 4: 搜索回归测试
+1. 在知识库页面搜索 "区块链"
+2. 验证返回 >=1 条结果
+3. 清空搜索 → 显示所有文章
+
+### Success Matrix (标签质量指标)
+
+| 指标 | 目标 | 当前 | 说明 |
+|------|------|------|------|
+| 每篇标签数 | 3-7 | 1 (旧数据) | 需 tagger 处理后评估 |
+| 注册表合规率 | >95% | 0% (旧数据) | 旧标签非来自注册表 |
+| 标签复用率 (>=3篇) | >80% | 0% | 需更多文章 |
+| 孤儿标签率 (仅1篇) | <15% | 100% | 需更多文章 |
+| 最大覆盖率 | <=40% | 25% | PASS |
+| 空标签率 | 0% | 0% | PASS |
+
+**评估命令:**
+```bash
+/usr/local/go/bin/go run -C /path/to/backend ./cmd/eval-tagger --limit 50
+/usr/local/go/bin/go run -C /path/to/backend ./cmd/eval-tagger --export review.md
+```
+
+**注意**: Success Matrix 需在 tagger 对足够数量文章 (>=20) 打标后才有意义。当前 4 篇文章的旧标签不具参考价值。
 
 ## Plan Completion Protocol
 
