@@ -15,38 +15,25 @@ import (
 	"github.com/user/web3-insight/internal/repository"
 )
 
-const tagPromptTemplate = `你是一个Web3知识库标签专家。请为以下文章选择3-7个最相关的标签。
+const tagPromptTemplate = `为以下文章从标签库中选择4-6个标签。
 
-## 选标规则（重要）
-1. 仅当文章的**核心主题**是关于某标签时才选择，**不要**仅因文章提及就选择
-2. **必须**从主题标签中选择至少2个（这些是最精准的标签）
-3. 通用标签最多选3个，仅选择与文章核心高度相关的
-4. 宁可少选也不要选不相关的标签
+规则：
+- 选择4-6个标签，只选文章**核心主题**相关的
+- **只能**从下方标签库中选择，禁止自创标签
+- 通用标签最多选2个
 
-## 错误示例（不要这样做）
-- 文章讲"闪电贷原理" → 标签包含"以太坊" ✗（以太坊只是运行平台，不是文章主题）
-- 文章讲"ETF入门" → 标签包含"DeFi" ✗（DeFi只是顺带提及的对比）
-- 文章讲"Terra崩盘" → 标签包含"以太坊" ✗（Terra不是以太坊生态）
+标签库：
+专题标签: {{range .ThemeTags}}{{.Name}}, {{end}}
+通用标签: {{range .UniversalTags}}{{.Name}}, {{end}}
 
-## 主题标签（{{.ThemeName}}）—— 优先从这里选择
-{{range .ThemeTags}}- {{.Name}}
-{{end}}
-
-## 通用标签 —— 仅当与文章核心高度相关时选择（最多3个）
-{{range .UniversalTags}}- {{.Name}}
-{{end}}
-
-## 文章信息
-标题：{{.Title}}
-摘要：{{.Summary}}
+文章标题：{{.Title}}
+文章摘要：{{.Summary}}
 {{if .ContentExcerpt}}
-正文节选：
-{{.ContentExcerpt}}
+正文节选：{{.ContentExcerpt}}
 {{end}}
 
-## 输出要求
-返回JSON格式（不要包含markdown代码块标记）：
-{"tags": ["标签1", "标签2", ...], "newTagSuggestions": ["建议标签1"]}`
+返回JSON（不要代码块标记）：
+{"tags": ["标签1", "标签2", ...], "newTagSuggestions": []}`
 
 // Pending tag auto-activation threshold
 const suggestCountThreshold = 3
