@@ -19,21 +19,26 @@ const tagPromptTemplate = `你是一个Web3知识库标签专家。请为以下�
 
 ## 标签库
 ### 主题标签（{{.ThemeName}}）
-{{range .ThemeTags}}- {{.Name}}
+{{range .ThemeTags}}- {{.Name}}{{if .NameEn}} ({{.NameEn}}){{end}}
 {{end}}
 ### 通用标签
-{{range .UniversalTags}}- {{.Name}}
+{{range .UniversalTags}}- {{.Name}}{{if .NameEn}} ({{.NameEn}}){{end}}
 {{end}}
 
 ## 文章信息
 标题：{{.Title}}
 摘要：{{.Summary}}
+{{if .ContentExcerpt}}
+正文节选：
+{{.ContentExcerpt}}
+{{end}}
 
 ## 输出要求
 1. 从标签库中选择3-7个最相关的标签
 2. 优先选择能准确描述文章核心内容的标签
-3. 如果标签库缺少关键标签，可以在 newTagSuggestions 中建议（最多2个）
-4. 返回JSON格式（不要包含markdown代码块标记）：
+3. 必须使用标签库中的**中文名称**（即"-"左侧的名称），不要使用括号中的英文名
+4. 如果标签库缺少关键标签，可以在 newTagSuggestions 中建议（最多2个）
+5. 返回JSON格式（不要包含markdown代码块标记）：
 {"tags": ["标签1", "标签2", ...], "newTagSuggestions": ["建议标签1"]}`
 
 // Pending tag auto-activation threshold
@@ -63,11 +68,12 @@ type TaggingResult struct {
 
 // tagPromptData holds template variables for the tagging prompt
 type tagPromptData struct {
-	ThemeName    string
-	ThemeTags    []model.Tag
-	UniversalTags []model.Tag
-	Title        string
-	Summary      string
+	ThemeName      string
+	ThemeTags      []model.Tag
+	UniversalTags  []model.Tag
+	Title          string
+	Summary        string
+	ContentExcerpt string
 }
 
 // TagArticle tags an article using the tag registry and LLM
@@ -109,21 +115,32 @@ func (t *Tagger) TagArticle(ctx context.Context, article *model.Article) error {
 		return fmt.Errorf("failed to parse tagging response (model: %s): %w", modelUsed, err)
 	}
 
-	// Build valid tag set from registry
-	validTags := make(map[string]bool, len(universalTags)+len(themeTags))
+	// Build valid tag lookup: lowercased name/name_en -> canonical name
+	canonicalTag := make(map[string]string, (len(universalTags)+len(themeTags))*2)
 	for _, tag := range universalTags {
-		validTags[tag.Name] = true
+		canonicalTag[strings.ToLower(tag.Name)] = tag.Name
+		if tag.NameEn != "" {
+			canonicalTag[strings.ToLower(tag.NameEn)] = tag.Name
+		}
 	}
 	for _, tag := range themeTags {
-		validTags[tag.Name] = true
+		canonicalTag[strings.ToLower(tag.Name)] = tag.Name
+		if tag.NameEn != "" {
+			canonicalTag[strings.ToLower(tag.NameEn)] = tag.Name
+		}
 	}
 
-	// Filter: only keep tags that exist in the registry
+	// Filter: only keep tags that exist in the registry (case-insensitive, name_en also accepted)
+	seen := make(map[string]bool)
 	var validatedTags []string
 	for _, tagName := range result.Tags {
 		tagName = strings.TrimSpace(tagName)
-		if validTags[tagName] {
-			validatedTags = append(validatedTags, tagName)
+		canonical := resolveTag(tagName, canonicalTag)
+		if canonical != "" {
+			if !seen[canonical] {
+				validatedTags = append(validatedTags, canonical)
+				seen[canonical] = true
+			}
 		} else {
 			log.Printf("Tag '%s' not in registry, skipping (article: %s)", tagName, article.Title)
 		}
@@ -150,6 +167,32 @@ func (t *Tagger) TagArticle(ctx context.Context, article *model.Article) error {
 	}
 
 	return nil
+}
+
+// resolveTag attempts to match a tag name against the canonical registry.
+// Handles: exact match, case-insensitive, parenthetical suffix stripping (e.g. "AMM (AMM)" -> "AMM").
+func resolveTag(tagName string, canonicalTag map[string]string) string {
+	lower := strings.ToLower(tagName)
+
+	// Direct match
+	if c, ok := canonicalTag[lower]; ok {
+		return c
+	}
+
+	// Strip parenthetical suffix: "流动性池 (Liquidity Pool)" -> "流动性池"
+	if idx := strings.Index(tagName, "("); idx > 0 {
+		stripped := strings.TrimSpace(tagName[:idx])
+		if c, ok := canonicalTag[strings.ToLower(stripped)]; ok {
+			return c
+		}
+		// Also try the content inside parentheses: "(Liquidity Pool)" -> "Liquidity Pool"
+		inner := strings.TrimRight(tagName[idx+1:], ") ")
+		if c, ok := canonicalTag[strings.ToLower(inner)]; ok {
+			return c
+		}
+	}
+
+	return ""
 }
 
 // handleNewTagSuggestion processes a new tag suggestion from the LLM
@@ -199,12 +242,19 @@ func (t *Tagger) buildTagPrompt(article *model.Article, themeID string, universa
 		summary = truncateString(article.Content, 500)
 	}
 
+	// Include content excerpt for better context (first 1000 chars of content)
+	contentExcerpt := ""
+	if article.Content != "" {
+		contentExcerpt = truncateString(article.Content, 1000)
+	}
+
 	data := tagPromptData{
-		ThemeName:    themeID,
-		ThemeTags:    themeTags,
-		UniversalTags: universalTags,
-		Title:        article.Title,
-		Summary:      summary,
+		ThemeName:      themeID,
+		ThemeTags:      themeTags,
+		UniversalTags:  universalTags,
+		Title:          article.Title,
+		Summary:        summary,
+		ContentExcerpt: contentExcerpt,
 	}
 
 	var buf bytes.Buffer
