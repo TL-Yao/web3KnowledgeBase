@@ -598,8 +598,7 @@ export interface TagStats {
   totalTags: number
   activeTags: number
   pendingTags: number
-  deprecatedTags: number
-  avgTagsPerArticle: number
+  universalTags: number
 }
 
 // Tag API

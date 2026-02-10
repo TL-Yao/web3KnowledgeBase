@@ -128,10 +128,10 @@ export default function AdminTagsPage() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">平均标签/文章</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">通用标签</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.avgTagsPerArticle?.toFixed(1) ?? 0}</div>
+              <div className="text-2xl font-bold">{stats.universalTags}</div>
             </CardContent>
           </Card>
         </div>

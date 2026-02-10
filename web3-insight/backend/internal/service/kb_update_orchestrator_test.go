@@ -53,8 +53,8 @@ func TestKBUpdateOrchestrator_GetJobStatus_ValidUUID(t *testing.T) {
 //     // Initialize services
 //     executor := NewClaudeExecutor()
 //     keywordPool := NewKeywordPoolService(executor, keywordRepo)
-//     classifier := NewClassifier(llmRouter, articleRepo, categoryRepo)
-//     articleGen := NewArticleGeneratorService(articleRepo, classifier)
+//     tagger := NewTagger(llmRouter, tagRepo, articleRepo)
+//     articleGen := NewArticleGeneratorService(articleRepo, tagger, prompts)
 //
 //     // Create orchestrator
 //     orchestrator := NewKBUpdateOrchestrator(keywordPool, articleGen, keywordRepo, jobRepo)

@@ -10,7 +10,6 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/user/web3-insight/internal/collector"
 	"github.com/user/web3-insight/internal/config"
-	"github.com/user/web3-insight/internal/llm"
 	"github.com/user/web3-insight/internal/model"
 	"github.com/user/web3-insight/internal/repository"
 	"github.com/user/web3-insight/internal/service"
@@ -22,7 +21,7 @@ const (
 	TaskTypeContentGenerate = "content:generate"
 	TaskTypeRSSSync         = "rss:sync"
 	TaskTypeWebCrawl        = "web:crawl"
-	TaskTypeClassify        = "content:classify"
+	TaskTypeClassify        = "content:classify" // Deprecated: replaced by tagger service
 	TaskTypeEmbedding       = "content:embedding"
 )
 
@@ -61,7 +60,6 @@ var (
 	rssCollector     *collector.RSSCollector
 	webCrawler       *collector.WebCrawler
 	embeddingService *service.EmbeddingService
-	classifier       *service.Classifier
 	db               *gorm.DB
 	llmConfig        *config.LLMConfig
 )
@@ -74,15 +72,10 @@ func InitWorkerDependencies(database *gorm.DB, cfg *config.LLMConfig) {
 	newsRepo := repository.NewNewsRepository(db)
 	dsRepo := repository.NewDataSourceRepository(db)
 	articleRepo := repository.NewArticleRepository(db)
-	categoryRepo := repository.NewCategoryRepository(db)
-
-	// Initialize LLM router for services that need it
-	llmRouter := llm.NewRouterFromConfig(cfg)
 
 	rssCollector = collector.NewRSSCollector(newsRepo, dsRepo)
 	webCrawler = collector.NewWebCrawler(newsRepo)
 	embeddingService = service.NewEmbeddingService(articleRepo, cfg)
-	classifier = service.NewClassifier(llmRouter, articleRepo, categoryRepo)
 }
 
 // NewTaskMux creates and configures the task multiplexer
@@ -218,29 +211,10 @@ func handleWebCrawl(ctx context.Context, t *asynq.Task) error {
 	return nil
 }
 
-// handleClassify handles content classification tasks
+// handleClassify is deprecated — classification is replaced by the Tagger service.
+// Kept as a no-op handler for any in-flight tasks in the queue.
 func handleClassify(ctx context.Context, t *asynq.Task) error {
-	var payload ClassifyPayload
-	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal payload: %w", err)
-	}
-
-	log.Printf("Processing classification task: articleId=%s", payload.ArticleID)
-
-	if classifier == nil {
-		return fmt.Errorf("classifier not initialized")
-	}
-
-	articleID, err := uuid.Parse(payload.ArticleID)
-	if err != nil {
-		return fmt.Errorf("invalid article ID: %w", err)
-	}
-
-	if err := classifier.ClassifyAndUpdate(ctx, articleID); err != nil {
-		return fmt.Errorf("classification failed: %w", err)
-	}
-
-	log.Printf("Classification completed for article: %s", payload.ArticleID)
+	log.Printf("Classification task received but classifier has been replaced by tagger service. Skipping.")
 	return nil
 }
 

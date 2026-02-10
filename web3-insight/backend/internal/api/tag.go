@@ -25,6 +25,9 @@ func NewTagHandler(db *gorm.DB) *TagHandler {
 func (h *TagHandler) List(c *gin.Context) {
 	status := c.Query("status")
 	themeID := c.Query("themeId")
+	if themeID == "" {
+		themeID = c.Query("theme")
+	}
 
 	if themeID != "" {
 		tags, err := h.tagRepo.FindByTheme(themeID)
@@ -79,33 +82,20 @@ func (h *TagHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	// Find tag by ID to get its name
-	tags, err := h.tagRepo.FindAll("")
+	tag, err := h.tagRepo.FindByID(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tags"})
-		return
-	}
-
-	var tagName string
-	for _, t := range tags {
-		if t.ID == id {
-			tagName = t.Name
-			break
-		}
-	}
-	if tagName == "" {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
 		return
 	}
 
-	if err := h.tagRepo.UpdateStatus(tagName, req.Status); err != nil {
+	if err := h.tagRepo.UpdateStatus(tag.Name, req.Status); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tag status"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Tag status updated",
-		"name":    tagName,
+		"name":    tag.Name,
 		"status":  req.Status,
 	})
 }
@@ -118,31 +108,24 @@ func (h *TagHandler) ApprovePending(c *gin.Context) {
 		return
 	}
 
-	tags, err := h.tagRepo.FindAll("pending")
+	tag, err := h.tagRepo.FindByID(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tags"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
 		return
 	}
 
-	var tagName string
-	for _, t := range tags {
-		if t.ID == id {
-			tagName = t.Name
-			break
-		}
-	}
-	if tagName == "" {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pending tag not found"})
+	if tag.Status != "pending" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Only pending tags can be approved"})
 		return
 	}
 
-	if err := h.tagRepo.UpdateStatus(tagName, "active"); err != nil {
+	if err := h.tagRepo.UpdateStatus(tag.Name, "active"); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to approve tag"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Tag approved",
-		"name":    tagName,
+		"name":    tag.Name,
 	})
 }

@@ -21,16 +21,14 @@ type Generator struct {
 	llmRouter   *llm.Router
 	articleRepo *repository.ArticleRepository
 	newsRepo    *repository.NewsRepository
-	classifier  *Classifier
 }
 
 // NewGenerator creates a new generator service
-func NewGenerator(router *llm.Router, articleRepo *repository.ArticleRepository, newsRepo *repository.NewsRepository, classifier *Classifier) *Generator {
+func NewGenerator(router *llm.Router, articleRepo *repository.ArticleRepository, newsRepo *repository.NewsRepository) *Generator {
 	return &Generator{
 		llmRouter:   router,
 		articleRepo: articleRepo,
 		newsRepo:    newsRepo,
-		classifier:  classifier,
 	}
 }
 
@@ -101,16 +99,6 @@ func (g *Generator) GenerateArticle(ctx context.Context, req *GenerationRequest)
 	// Save to database
 	if err := g.articleRepo.Create(article); err != nil {
 		return nil, fmt.Errorf("failed to save article: %w", err)
-	}
-
-	// Trigger classification if no category specified
-	if req.CategoryID == nil && g.classifier != nil {
-		go func() {
-			ctx := context.Background()
-			if err := g.classifier.ClassifyAndUpdate(ctx, article.ID); err != nil {
-				log.Printf("Auto-classification failed: %v", err)
-			}
-		}()
 	}
 
 	return &GenerationResult{

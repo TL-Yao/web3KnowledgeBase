@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/google/uuid"
 	"github.com/user/web3-insight/internal/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -30,6 +31,16 @@ func (r *TagRepository) FindByTheme(themeID string) ([]model.Tag, error) {
 	var tags []model.Tag
 	err := r.db.Where("theme_id = ?", themeID).Order("name ASC").Find(&tags).Error
 	return tags, err
+}
+
+// FindByID returns a tag by its UUID
+func (r *TagRepository) FindByID(id uuid.UUID) (*model.Tag, error) {
+	var tag model.Tag
+	err := r.db.Where("id = ?", id).First(&tag).Error
+	if err != nil {
+		return nil, err
+	}
+	return &tag, nil
 }
 
 // FindByName returns a tag by its exact name

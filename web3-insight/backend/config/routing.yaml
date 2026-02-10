@@ -6,7 +6,7 @@ task_types:
     name: "内容生成（简单）"
     description: "生成简单的文章内容"
     default_primary: "llama3:70b"
-    default_fallback: "claude-haiku-3-20240307"
+    default_fallback: "claude-haiku-4-5-20251001"
     required_capability: "generation"
 
   - id: "complex_generation"
@@ -20,7 +20,7 @@ task_types:
     name: "摘要/分类"
     description: "生成文章摘要和自动分类"
     default_primary: "qwen2.5:32b"
-    default_fallback: "claude-haiku-3-20240307"
+    default_fallback: "claude-haiku-4-5-20251001"
     required_capability: "summarization"
 
   - id: "chat"
@@ -34,12 +34,12 @@ task_types:
     name: "翻译"
     description: "内容翻译"
     default_primary: "qwen2.5:32b"
-    default_fallback: "claude-haiku-3-20240307"
+    default_fallback: "claude-haiku-4-5-20251001"
     required_capability: "translation"
 
   - id: "tagging"
     name: "文章标签"
     description: "从标签库中为文章选择相关标签"
-    default_primary: "claude-haiku-3-20240307"
+    default_primary: "claude-haiku-4-5-20251001"
     default_fallback: "qwen2.5:32b"
     required_capability: "summarization"

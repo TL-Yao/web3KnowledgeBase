@@ -23,23 +23,6 @@ const PromptNewsSummary = `你是一个 Web3 新闻编辑。请将以下英文�
   "tags": ["标签1", "标签2", "标签3"]
 }`
 
-const PromptClassification = `你是一个 Web3 内容分类专家。根据文章内容，推荐最合适的分类。
-
-可用分类（按路径表示层级）：
-%s
-
-文章标题：%s
-文章内容摘要：%s
-
-请返回以下 JSON 格式（不要包含 markdown 代码块标记）：
-{
-  "primaryCategory": "分类路径，如 '基础技术/区块链原理/共识机制'",
-  "secondaryCategories": ["可选的次要分类路径"],
-  "suggestedTags": ["标签1", "标签2"],
-  "confidence": 0.85,
-  "reasoning": "分类理由简述"
-}`
-
 const PromptKnowledgeArticle = `你是一个 Web3 技术专家，正在为一位刚入职区块链公司的程序员撰写技术文档。
 
 要求：
