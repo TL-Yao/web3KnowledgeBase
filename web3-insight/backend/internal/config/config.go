@@ -106,6 +106,10 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	// Expand environment variables in API keys (config.yaml uses ${VAR} syntax)
+	cfg.LLM.Claude.APIKey = os.ExpandEnv(cfg.LLM.Claude.APIKey)
+	cfg.LLM.OpenAI.APIKey = os.ExpandEnv(cfg.LLM.OpenAI.APIKey)
+
 	return &cfg, nil
 }
 

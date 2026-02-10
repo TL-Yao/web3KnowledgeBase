@@ -114,23 +114,24 @@ func loadTagsYAML() ([]string, error) {
 		return nil, fmt.Errorf("tags.yaml not found in any candidate path: %v", loadErr)
 	}
 
-	// Collect all tag names (universal + all themes)
+	// Collect all tag names and name_en (universal + all themes)
 	seen := make(map[string]bool)
 	var tags []string
-	for _, t := range tagsConfig.UniversalTags {
-		name := strings.TrimSpace(t.Name)
-		if !seen[name] {
+	addTag := func(name string) {
+		name = strings.TrimSpace(name)
+		if name != "" && !seen[name] {
 			tags = append(tags, name)
 			seen[name] = true
 		}
 	}
+	for _, t := range tagsConfig.UniversalTags {
+		addTag(t.Name)
+		addTag(t.NameEn)
+	}
 	for _, themeTags := range tagsConfig.ThemeTags {
 		for _, t := range themeTags {
-			name := strings.TrimSpace(t.Name)
-			if !seen[name] {
-				tags = append(tags, name)
-				seen[name] = true
-			}
+			addTag(t.Name)
+			addTag(t.NameEn)
 		}
 	}
 	return tags, nil

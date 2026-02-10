@@ -15,12 +15,16 @@ func NewTagRepository(db *gorm.DB) *TagRepository {
 	return &TagRepository{db: db}
 }
 
-// FindAll returns all tags, optionally filtered by status
-func (r *TagRepository) FindAll(status string) ([]model.Tag, error) {
+// FindAll returns all tags, optionally filtered by status and search query
+func (r *TagRepository) FindAll(status string, search string) ([]model.Tag, error) {
 	var tags []model.Tag
 	query := r.db.Order("name ASC")
 	if status != "" {
 		query = query.Where("status = ?", status)
+	}
+	if search != "" {
+		pattern := "%" + search + "%"
+		query = query.Where("name ILIKE ? OR name_en ILIKE ?", pattern, pattern)
 	}
 	err := query.Find(&tags).Error
 	return tags, err
@@ -53,13 +57,15 @@ func (r *TagRepository) FindByName(name string) (*model.Tag, error) {
 	return &tag, nil
 }
 
-// FindActiveForTagging returns active tags for a theme + all universal (theme_id IS NULL) active tags
+// FindActiveForTagging returns active tags for tagging: universal tags + all themed active tags.
+// The themeID parameter is kept for interface compatibility but all active themed tags are returned
+// to allow cross-theme tagging (e.g., an advanced_defi article can use defi_basics tags like "DEX").
 func (r *TagRepository) FindActiveForTagging(themeID string) (universal []model.Tag, theme []model.Tag, err error) {
 	err = r.db.Where("theme_id IS NULL AND status = ?", "active").Order("name ASC").Find(&universal).Error
 	if err != nil {
 		return nil, nil, err
 	}
-	err = r.db.Where("theme_id = ? AND status = ?", themeID, "active").Order("name ASC").Find(&theme).Error
+	err = r.db.Where("theme_id IS NOT NULL AND status = ?", "active").Order("theme_id ASC, name ASC").Find(&theme).Error
 	if err != nil {
 		return nil, nil, err
 	}

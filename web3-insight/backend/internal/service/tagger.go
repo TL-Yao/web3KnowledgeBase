@@ -15,29 +15,44 @@ import (
 	"github.com/user/web3-insight/internal/repository"
 )
 
-const tagPromptTemplate = `你是一个Web3知识库标签专家。请为以下文章从标签库中选择3-7个最相关的标签。
+const tagPromptTemplate = `你是一个Web3知识库标签专家。请为以下文章选择最合适的标签。
 
-## 标签库
-### 主题标签（{{.ThemeName}}）
+## 选标规则（重要）
+1. 仅当文章的**核心主题**是关于某标签时才选择，**不要**仅因文章提及就选择
+2. **必须**从专题标签中选择至少2个（这些是最精准的标签）
+3. 通用标签最多选3个，仅选择与文章核心高度相关的
+4. 每篇文章必须选择至少4个标签，确保充分描述文章内容
+5. **禁止自创标签**，必须从下方标签列表中逐字复制标签名。不在列表中的词（如PoW、宏观经济、算法稳定币等）不可使用
+6. 如果专题标签不够4个，请用通用标签补齐
+
+## 注意区分（以下情况不应选择该标签）
+- 文章讲"闪电贷原理" → 不应选"以太坊"（以太坊只是运行平台，不是文章主题）
+- 文章讲"ETF入门" → 不应选"DeFi"（DeFi只是顺带提及的对比）
+- 文章讲"Terra崩盘" → 不应选"以太坊"（Terra不是以太坊生态）
+
+## 正确示例
+- 文章讨论"以太坊2.0的PoS共识机制升级" → 应选"以太坊"、"共识机制"（都是核心主题）
+- 文章介绍"Uniswap V3的集中流动性机制" → 应选"AMM"、"DEX"、"集中流动性"、"流动性池"
+
+## 专题标签 —— 优先从这里选择
 {{range .ThemeTags}}- {{.Name}}
 {{end}}
-### 通用标签
+
+## 通用标签 —— 仅当与文章核心高度相关时选择（最多3个）
 {{range .UniversalTags}}- {{.Name}}
 {{end}}
 
 ## 文章信息
 标题：{{.Title}}
 摘要：{{.Summary}}
+{{if .ContentExcerpt}}
+正文节选：
+{{.ContentExcerpt}}
+{{end}}
 
 ## 输出要求
-1. 从标签库中选择3-7个最相关的标签
-2. 优先选择能准确描述文章核心内容的标签
-3. 如果标签库缺少关键标签，可以在 newTagSuggestions 中建议（最多2个）
-4. 返回JSON格式（不要包含markdown代码块标记）：
-{"tags": ["标签1", "标签2", ...], "newTagSuggestions": ["建议标签1"]}`
-
-// Pending tag auto-activation threshold
-const suggestCountThreshold = 3
+选择4-6个标签，返回JSON格式（不要包含markdown代码块标记）：
+{"tags": ["标签1", "标签2", "标签3", "标签4"]}`
 
 // Tagger handles automatic article tagging using the tag registry
 type Tagger struct {
@@ -63,11 +78,12 @@ type TaggingResult struct {
 
 // tagPromptData holds template variables for the tagging prompt
 type tagPromptData struct {
-	ThemeName    string
-	ThemeTags    []model.Tag
-	UniversalTags []model.Tag
-	Title        string
-	Summary      string
+	ThemeName      string
+	ThemeTags      []model.Tag
+	UniversalTags  []model.Tag
+	Title          string
+	Summary        string
+	ContentExcerpt string
 }
 
 // TagArticle tags an article using the tag registry and LLM
@@ -109,33 +125,55 @@ func (t *Tagger) TagArticle(ctx context.Context, article *model.Article) error {
 		return fmt.Errorf("failed to parse tagging response (model: %s): %w", modelUsed, err)
 	}
 
-	// Build valid tag set from registry
-	validTags := make(map[string]bool, len(universalTags)+len(themeTags))
+	// Build valid tag lookup: lowercased name/name_en -> canonical name
+	canonicalTag := make(map[string]string, (len(universalTags)+len(themeTags))*2)
 	for _, tag := range universalTags {
-		validTags[tag.Name] = true
+		canonicalTag[strings.ToLower(tag.Name)] = tag.Name
+		if tag.NameEn != "" {
+			canonicalTag[strings.ToLower(tag.NameEn)] = tag.Name
+		}
 	}
 	for _, tag := range themeTags {
-		validTags[tag.Name] = true
+		canonicalTag[strings.ToLower(tag.Name)] = tag.Name
+		if tag.NameEn != "" {
+			canonicalTag[strings.ToLower(tag.NameEn)] = tag.Name
+		}
 	}
 
-	// Filter: only keep tags that exist in the registry
+	// Filter: only keep tags that exist in the registry (case-insensitive, name_en also accepted)
+	seen := make(map[string]bool)
 	var validatedTags []string
 	for _, tagName := range result.Tags {
 		tagName = strings.TrimSpace(tagName)
-		if validTags[tagName] {
-			validatedTags = append(validatedTags, tagName)
+		canonical := resolveTag(tagName, canonicalTag)
+		if canonical != "" {
+			if !seen[canonical] {
+				validatedTags = append(validatedTags, canonical)
+				seen[canonical] = true
+			}
 		} else {
 			log.Printf("Tag '%s' not in registry, skipping (article: %s)", tagName, article.Title)
 		}
 	}
 
-	// Handle new tag suggestions (pending lifecycle)
-	for _, suggestion := range result.NewTagSuggestions {
-		suggestion = strings.TrimSpace(suggestion)
-		if suggestion == "" {
-			continue
+	// Fallback: if too few tags after validation, supplement with keyword-matching universal tags
+	if len(validatedTags) < 3 {
+		titleLower := strings.ToLower(article.Title + " " + article.Summary)
+		for _, tag := range universalTags {
+			if seen[tag.Name] {
+				continue
+			}
+			nameLower := strings.ToLower(tag.Name)
+			nameEnLower := strings.ToLower(tag.NameEn)
+			if strings.Contains(titleLower, nameLower) || (nameEnLower != "" && strings.Contains(titleLower, nameEnLower)) {
+				validatedTags = append(validatedTags, tag.Name)
+				seen[tag.Name] = true
+				log.Printf("Auto-supplemented tag '%s' for article '%s' (fallback)", tag.Name, article.Title)
+				if len(validatedTags) >= 4 {
+					break
+				}
+			}
 		}
-		t.handleNewTagSuggestion(suggestion, themeID)
 	}
 
 	// Update article tags
@@ -152,39 +190,30 @@ func (t *Tagger) TagArticle(ctx context.Context, article *model.Article) error {
 	return nil
 }
 
-// handleNewTagSuggestion processes a new tag suggestion from the LLM
-func (t *Tagger) handleNewTagSuggestion(name string, themeID string) {
-	existing, err := t.tagRepo.FindByName(name)
-	if err == nil {
-		// Tag exists — just increment suggest count
-		newCount, err := t.tagRepo.IncrementSuggestCount(existing.Name)
-		if err != nil {
-			log.Printf("Failed to increment suggest count for '%s': %v", name, err)
-			return
-		}
-		// Auto-activate if threshold reached and still pending
-		if existing.Status == "pending" && newCount >= suggestCountThreshold {
-			if err := t.tagRepo.UpdateStatus(name, "active"); err != nil {
-				log.Printf("Failed to auto-activate tag '%s': %v", name, err)
-			} else {
-				log.Printf("Auto-activated tag '%s' (suggest count: %d)", name, newCount)
-			}
-		}
-		return
+// resolveTag attempts to match a tag name against the canonical registry.
+// Handles: exact match, case-insensitive, parenthetical suffix stripping (e.g. "AMM (AMM)" -> "AMM").
+func resolveTag(tagName string, canonicalTag map[string]string) string {
+	lower := strings.ToLower(tagName)
+
+	// Direct match
+	if c, ok := canonicalTag[lower]; ok {
+		return c
 	}
 
-	// Tag doesn't exist — create as pending
-	tag := model.Tag{
-		Name:         name,
-		ThemeID:      &themeID,
-		Status:       "pending",
-		SuggestCount: 1,
+	// Strip parenthetical suffix: "流动性池 (Liquidity Pool)" -> "流动性池"
+	if idx := strings.Index(tagName, "("); idx > 0 {
+		stripped := strings.TrimSpace(tagName[:idx])
+		if c, ok := canonicalTag[strings.ToLower(stripped)]; ok {
+			return c
+		}
+		// Also try the content inside parentheses: "(Liquidity Pool)" -> "Liquidity Pool"
+		inner := strings.TrimRight(tagName[idx+1:], ") ")
+		if c, ok := canonicalTag[strings.ToLower(inner)]; ok {
+			return c
+		}
 	}
-	if err := t.tagRepo.Create(&tag); err != nil {
-		log.Printf("Failed to create pending tag '%s': %v", name, err)
-	} else {
-		log.Printf("Created pending tag suggestion: '%s' (theme: %s)", name, themeID)
-	}
+
+	return ""
 }
 
 // buildTagPrompt renders the tagging prompt template
@@ -196,15 +225,22 @@ func (t *Tagger) buildTagPrompt(article *model.Article, themeID string, universa
 
 	summary := article.Summary
 	if summary == "" {
-		summary = truncateString(article.Content, 500)
+		summary = truncateString(article.Content, 2000)
+	}
+
+	// Include content excerpt for better context (first 2000 chars of content)
+	contentExcerpt := ""
+	if article.Content != "" {
+		contentExcerpt = truncateString(article.Content, 2000)
 	}
 
 	data := tagPromptData{
-		ThemeName:    themeID,
-		ThemeTags:    themeTags,
-		UniversalTags: universalTags,
-		Title:        article.Title,
-		Summary:      summary,
+		ThemeName:      themeID,
+		ThemeTags:      themeTags,
+		UniversalTags:  universalTags,
+		Title:          article.Title,
+		Summary:        summary,
+		ContentExcerpt: contentExcerpt,
 	}
 
 	var buf bytes.Buffer
