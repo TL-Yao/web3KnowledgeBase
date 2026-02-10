@@ -198,13 +198,14 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		}
 
 		// Tags
-		tagHandler := NewTagHandler(db)
+		tagHandler := NewTagHandler(db, &cfg.LLM)
 		tags := api.Group("/tags")
 		{
 			tags.GET("", tagHandler.List)
 			tags.GET("/stats", tagHandler.GetStats)
 			tags.PUT("/:id/status", tagHandler.UpdateStatus)
 			tags.POST("/:id/approve", tagHandler.ApprovePending)
+			tags.POST("/bulk-tag", tagHandler.BulkTag)
 		}
 
 		// Knowledge Base Update

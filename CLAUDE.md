@@ -252,19 +252,19 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 
 ## Tagging Quality Metrics (Success Matrix)
 
-Evaluated on 27 articles (2026-02-10). Tagger uses Claude Haiku with tag registry validation.
+Evaluated on 27 articles (2026-02-10). Tagger uses Claude Haiku with tag registry validation + keyword fallback.
 
 | 指标 | 目标 | 实际 | 状态 | 说明 |
 |------|------|------|------|------|
-| 每篇标签数 (3-7) | >95% in range | 63% (avg 3.0) | FAIL | 10 articles with <3 tags |
-| 注册表合规率 | >95% | 91% (75/82) | FAIL | 4 off-registry: Lido, Rocket Pool, 分布式账本, 算法稳定币 |
-| 标签复用率 (>=3篇) | >80% | 23% | FAIL | 10/44 tags reused (expected low at 27 articles) |
-| 孤儿标签率 (仅1篇) | <15% | 64% | FAIL | 28/44 tags orphaned (expected high at 27 articles) |
-| 最大覆盖率 | <=40% | 44% | FAIL | "DeFi" covers 12/27 articles |
-| Gini 系数 | <=0.60 | 0.36 | PASS | Reasonable distribution |
+| 每篇标签数 (3-7) | >95% in range | 96% (avg 4.0) | PASS | 26/27 in range, 1 article at 2 tags |
+| 注册表合规率 | >95% | 100% (107/107) | PASS | All tags from registry |
+| 标签复用率 (>=3篇) | >80% | 20% | FAIL* | 11/54 reused (dataset size limit) |
+| 孤儿标签率 (仅1篇) | <15% | 57% | FAIL* | 31/54 orphaned (dataset size limit) |
+| 最大覆盖率 | <=40% | 30% | PASS | "DeFi协议" covers 8/27 articles |
+| Gini 系数 | <=0.60 | 0.37 | PASS | Good distribution |
 | 空标签率 | 0% | 0% | PASS | All 27 articles tagged |
 
-**Known issues**: (1) "DeFi" tag overused - appears in 44% of articles; prompt needs to discourage overly generic tags. (2) LLM occasionally invents tags (4 off-registry out of 82). (3) Reuse/orphan metrics inherently poor with only 27 articles.
+*Reuse/orphan metrics are mathematically limited at 27 articles. With 54 unique tags × 3 articles = 162 min assignments needed for 80% reuse, but only 107 total assignments exist. These targets become meaningful at 50+ articles.
 
 **评估命令:**
 ```bash
@@ -272,12 +272,19 @@ Evaluated on 27 articles (2026-02-10). Tagger uses Claude Haiku with tag registr
 /usr/local/go/bin/go run -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend ./cmd/eval-tagger --export review.md
 ```
 
+**批量标签 API:**
+```bash
+curl -X POST "http://localhost:8080/api/tags/bulk-tag?force=true"
+```
+
 ### Tagging Lessons (2026-02-10)
 
-- **LLM tag compliance**: Even with explicit "only choose from this list" prompts, Claude Haiku generates off-registry tags ~34% of the time. The `resolveTag()` function in `tagger.go` handles case-insensitive matching and parenthetical stripping, but fundamentally the LLM creates new tags. Consider retry-on-failure or post-filter with fuzzy matching.
-- **Viper env expansion**: `config.yaml` uses `${ANTHROPIC_API_KEY}` syntax but Viper doesn't auto-expand. CLI tools must call `os.ExpandEnv()` on API key config values before creating LLM router.
-- **Reuse/orphan metrics require scale**: With only 27 articles, tag reuse metrics are inherently low. These targets (>80% reuse, <15% orphan) are meaningful only at 100+ articles.
-- **Bulk tagging CLI**: `cmd/bulk-tag` with `--force` flag re-tags all articles. Uses 500ms delay between articles to avoid rate limits. `--limit N` for partial runs.
+- **LLM tag compliance**: Even with explicit "only choose from this list" prompts, Claude Haiku generates off-registry tags ~15% of the time. The `resolveTag()` function handles case-insensitive matching and parenthetical stripping. Code-level validation filters these out to achieve 100% compliance.
+- **Keyword fallback for minimum tags**: After LLM tag validation, if fewer than 3 tags remain, auto-supplement from universal tags by keyword matching against article title/summary. This raised in-range from 89% to 96%.
+- **Config env expansion**: `config.yaml` uses `${ANTHROPIC_API_KEY}` syntax. Config loader now calls `os.ExpandEnv()` automatically. CLI tools no longer need manual expansion.
+- **Reuse/orphan metrics require scale**: With only 27 articles, tag reuse metrics are inherently low. These targets (>80% reuse, <15% orphan) are meaningful only at 50+ articles.
+- **Bulk tagging**: Use `POST /api/tags/bulk-tag?force=true` endpoint or `cmd/bulk-tag --force` CLI. API endpoint runs in background, CLI is synchronous.
+- **Tag auto-creation disabled**: The `handleNewTagSuggestion()` was causing DB pollution (196 auto-created tags). Now disabled - LLM suggestions are logged but not auto-created.
 
 ## Plan Completion Protocol
 
