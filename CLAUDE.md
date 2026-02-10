@@ -16,6 +16,12 @@ All file operations (create, delete, modify, read, execute) MUST be confined to 
 - Explain what operation was requested and why it's out of scope
 - Ask for explicit user confirmation before proceeding
 
+**Secrets & API Keys:**
+- NEVER read, print, log, or expose any API keys, tokens, or secrets (e.g., `ANTHROPIC_API_KEY`, `.env` files)
+- NEVER include API keys in code, commits, logs, or any output
+- Only reference environment variables by name (e.g., `os.Getenv("ANTHROPIC_API_KEY")`), never by value
+- This applies to ALL agents, teammates, and subprocesses
+
 # Project Guidelines
 
 ## Go Build Commands
