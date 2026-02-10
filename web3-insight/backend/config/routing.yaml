@@ -36,3 +36,10 @@ task_types:
     default_primary: "qwen2.5:32b"
     default_fallback: "claude-haiku-3-20240307"
     required_capability: "translation"
+
+  - id: "tagging"
+    name: "文章标签"
+    description: "从标签库中为文章选择相关标签"
+    default_primary: "claude-haiku-3-20240307"
+    default_fallback: "qwen2.5:32b"
+    required_capability: "summarization"

@@ -89,6 +89,11 @@ func (r *Router) setupDefaultRoutes(cfg *config.LLMConfig) {
 		r.SetRoute(TaskClassification, summaryRoute)
 	}
 
+	// Tagging: lightweight task, same route as classification
+	if len(summaryRoute) > 0 {
+		r.SetRoute(TaskTagging, summaryRoute)
+	}
+
 	// Chat: prefer local, fallback to powerful cloud model
 	chatRoute := []string{}
 	if cfg.DefaultLocal != "" {

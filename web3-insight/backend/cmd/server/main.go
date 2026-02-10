@@ -44,6 +44,12 @@ func main() {
 	}
 	log.Println("Theme sync completed")
 
+	// Sync tags from tags.yaml to database
+	if err := service.SyncTagsFromConfig(db, cfg.Tags); err != nil {
+		log.Printf("Warning: tag sync failed: %v", err)
+	}
+	log.Println("Tag sync completed")
+
 	router := api.NewRouterWithDB(cfg, db)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)

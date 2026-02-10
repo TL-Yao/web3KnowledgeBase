@@ -55,6 +55,7 @@ const (
 	TaskContentGeneration = "content_generation"
 	TaskSummarization     = "summarization"
 	TaskClassification    = "classification"
+	TaskTagging           = "tagging"
 	TaskChat              = "chat"
 	TaskTranslation       = "translation"
 	TaskEmbedding         = "embedding"

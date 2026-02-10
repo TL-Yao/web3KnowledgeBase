@@ -20,6 +20,7 @@ type Config struct {
 	Models  *ModelsConfig
 	Routing *RoutingConfig
 	Prompts *PromptsConfig
+	Tags    *TagsConfig
 
 	// Warnings collected during configuration loading
 	Warnings []string
@@ -164,6 +165,16 @@ func LoadAll() (*Config, error) {
 		return nil, fmt.Errorf("failed to load prompts.yaml: %w", err)
 	}
 	cfg.Prompts = prompts
+
+	// Find and load tags.yaml (optional — tags are not required for basic operation)
+	tagsPath, err := findConfigFile("tags.yaml")
+	if err == nil {
+		tags, err := LoadTags(tagsPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load tags.yaml: %w", err)
+		}
+		cfg.Tags = tags
+	}
 
 	// Validate task models against model registry and store warnings
 	cfg.Warnings = cfg.Routing.ValidateTaskModels(cfg.Models)
