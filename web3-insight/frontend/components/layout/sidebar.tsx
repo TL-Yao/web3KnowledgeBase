@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { FileText, Newspaper, Search, Settings, RefreshCw } from 'lucide-react'
+import { FileText, Newspaper, Search, Settings } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CategoryTree } from '@/components/knowledge/category-tree'
 
@@ -43,10 +43,6 @@ export function Sidebar({ className }: SidebarProps) {
         <Link href="/admin" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent/10 text-sm">
           <Settings className="w-4 h-4" />
           后台管理
-        </Link>
-        <Link href="/admin/kb-update" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent/10 text-sm">
-          <RefreshCw className="w-4 h-4" />
-          知识库更新
         </Link>
       </nav>
 

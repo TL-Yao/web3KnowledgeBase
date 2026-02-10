@@ -31,6 +31,14 @@ themes:
       - Simple → complex ordering is critical
       - NO overlap with excluded keywords
 
+      **Anti-Duplication** (CRITICAL):
+      - Each keyword MUST target a genuinely DISTINCT topic that would produce a different article
+      - NEVER generate semantic duplicates — keywords that cover the same concept in different words
+      - BAD examples (these are duplicates): "区块链的基本原理" vs "什么是区块链", "加密钱包入门" vs "如何使用加密钱包", "共识机制概述" vs "共识机制是什么"
+      - GOOD examples (these are distinct): "工作量证明(PoW)", "权益证明(PoS)", "委托权益证明(DPoS)" — each covers a different mechanism
+      - Cover diverse angles: specific technologies, mechanisms, use cases, comparisons, security aspects, ecosystem tools
+      - If a concept was already covered, do NOT rephrase it — find a NEW concept instead
+
       Output the JSON array directly without any additional text.
 
     article_prompt: |
@@ -105,6 +113,14 @@ themes:
       - Simple → complex ordering
       - NO overlap with excluded keywords
 
+      **Anti-Duplication** (CRITICAL):
+      - Each keyword MUST target a genuinely DISTINCT topic that would produce a different article
+      - NEVER generate semantic duplicates — keywords that cover the same concept in different words
+      - BAD examples (these are duplicates): "去中心化交易所" vs "什么是DEX", "流动性挖矿" vs "如何参与流动性挖矿", "DeFi lending" vs "DeFi借贷协议"
+      - GOOD examples (these are distinct): "Uniswap的AMM机制", "Curve的稳定币交换", "Balancer的多资产池" — each covers a specific protocol/mechanism
+      - Cover diverse angles: specific protocols, mechanisms, risk types, yield strategies, governance models
+      - If a concept was already covered, do NOT rephrase it — find a NEW concept instead
+
       Output the JSON array directly without any additional text.
 
     article_prompt: |
@@ -177,6 +193,14 @@ themes:
       - Be EXHAUSTIVE
       - Simple → complex ordering
       - NO overlap with excluded keywords
+
+      **Anti-Duplication** (CRITICAL):
+      - Each keyword MUST target a genuinely DISTINCT topic that would produce a different article
+      - NEVER generate semantic duplicates — keywords that cover the same concept in different words
+      - BAD examples (these are duplicates): "什么是股票" vs "股票基础知识", "债券投资入门" vs "如何投资债券"
+      - GOOD examples (these are distinct): "国债", "公司债", "可转债", "市政债" — each covers a specific bond type
+      - Cover diverse angles: specific instruments, markets, regulations, historical events, risk types, institutions
+      - If a concept was already covered, do NOT rephrase it — find a NEW concept instead
 
       Output the JSON array directly without any additional text.
 
@@ -254,6 +278,14 @@ themes:
       - Include both successful and failed/abandoned approaches
       - NO overlap with excluded keywords
 
+      **Anti-Duplication** (CRITICAL):
+      - Each keyword MUST target a genuinely DISTINCT technology or solution
+      - NEVER generate semantic duplicates — keywords that cover the same topic differently
+      - BAD examples (these are duplicates): "零知识证明技术" vs "什么是零知识证明", "跨链桥安全" vs "跨链桥的安全问题"
+      - GOOD examples (these are distinct): "zkSNARKs", "zkSTARKs", "Plonk证明系统" — each covers a different ZK scheme
+      - Prefer naming specific implementations, protocols, or EIPs over generic categories
+      - If a concept was already covered, do NOT rephrase it — find a NEW concept instead
+
       Output the JSON array directly without any additional text.
 
     article_prompt: |
@@ -329,6 +361,14 @@ themes:
       - Focus on specific mechanisms, not generic concepts
       - NO overlap with excluded keywords
 
+      **Anti-Duplication** (CRITICAL):
+      - Each keyword MUST target a genuinely DISTINCT mechanism or protocol design
+      - NEVER generate semantic duplicates — keywords that cover the same topic differently
+      - BAD examples (these are duplicates): "ve-tokenomics机制" vs "veCRV治理模型", "集中流动性" vs "Uniswap v3的流动性管理"
+      - GOOD examples (these are distinct): "Curve Wars", "Convex Finance的CVX模型", "Yearn的策略架构" — each covers a different protocol's specific mechanism
+      - Name specific protocols and their unique mechanisms rather than abstract categories
+      - If a concept was already covered, do NOT rephrase it — find a NEW concept instead
+
       Output the JSON array directly without any additional text.
 
     article_prompt: |
@@ -399,6 +439,14 @@ themes:
       - Include the year if helpful for disambiguation
       - Be EXHAUSTIVE — every significant event
       - NO overlap with excluded keywords
+
+      **Anti-Duplication** (CRITICAL):
+      - Each keyword MUST identify a genuinely DISTINCT historical event
+      - NEVER generate semantic duplicates — keywords that describe the same event differently
+      - BAD examples (these are duplicates): "FTX的崩溃" vs "FTX破产事件", "Terra Luna崩盘" vs "UST脱锚危机"
+      - GOOD examples (these are distinct): "2014年Mt.Gox破产", "2016年The DAO攻击", "2022年FTX崩溃" — each is a different event
+      - Use specific event names with dates, not generic descriptions of the same incident
+      - If an event was already covered, do NOT rephrase it — find a NEW event instead
 
       Output the JSON array directly without any additional text.
 
@@ -474,6 +522,13 @@ themes:
       - Each keyword: the product/protocol name (1-4 words)
       - Include both successful and struggling/failed products
       - NO overlap with excluded keywords
+
+      **Anti-Duplication** (CRITICAL):
+      - Each keyword MUST name a genuinely DISTINCT product or protocol
+      - NEVER generate semantic duplicates — do not list the same product under different names
+      - BAD examples (these are duplicates): "MetaMask钱包" vs "MetaMask", "Uniswap协议" vs "Uniswap"
+      - Use the most commonly known name for each product (e.g., just "MetaMask", not "MetaMask钱包")
+      - If a product was already listed, do NOT add it with a suffix or translation — find a NEW product instead
 
       Output the JSON array directly without any additional text.
 
@@ -551,6 +606,13 @@ themes:
       - Include both thriving and failed companies
       - NO overlap with excluded keywords
 
+      **Anti-Duplication** (CRITICAL):
+      - Each keyword MUST name a genuinely DISTINCT company or organization
+      - NEVER generate semantic duplicates — do not list the same entity under different names
+      - BAD examples (these are duplicates): "Binance交易所" vs "Binance", "a16z Crypto" vs "Andreessen Horowitz"
+      - Use the most commonly known name (e.g., "a16z" not "Andreessen Horowitz Crypto Fund")
+      - If a company was already listed, do NOT add it with a different qualifier — find a NEW company instead
+
       Output the JSON array directly without any additional text.
 
     article_prompt: |
@@ -599,6 +661,6 @@ themes:
 generation:
   default_batch_size: 3
   max_batch_size: 10
-  keyword_pool_target: 200
+  keyword_pool_target: 400
   keyword_refill_threshold: 10
   article_timeout_minutes: 60

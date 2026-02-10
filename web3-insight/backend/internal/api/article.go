@@ -32,12 +32,23 @@ func NewArticleHandler(repo *repository.ArticleRepository) *ArticleHandler {
 // @Success 200 {object} repository.ArticleListResult
 // @Router /api/articles [get]
 func (h *ArticleHandler) List(c *gin.Context) {
-	params := repository.ArticleListParams{
-		Status: c.Query("status"),
-		Search: c.Query("search"),
+	// Accept both "q" (frontend) and "search" (legacy) parameter names
+	search := c.Query("q")
+	if search == "" {
+		search = c.Query("search")
 	}
 
-	if categoryID := c.Query("category_id"); categoryID != "" {
+	params := repository.ArticleListParams{
+		Status: c.Query("status"),
+		Search: search,
+	}
+
+	// Accept both "category" (frontend) and "category_id" (legacy) parameter names
+	categoryIDStr := c.Query("category")
+	if categoryIDStr == "" {
+		categoryIDStr = c.Query("category_id")
+	}
+	if categoryID := categoryIDStr; categoryID != "" {
 		id, err := uuid.Parse(categoryID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category_id"})

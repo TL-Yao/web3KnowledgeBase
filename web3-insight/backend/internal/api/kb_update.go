@@ -158,9 +158,9 @@ func (h *KBUpdateHandler) InitKeywordPool(c *gin.Context) {
 		return
 	}
 
-	// Default to 200 if not specified
+	// Default to 400 if not specified (matches keyword_pool_target in prompts.yaml)
 	if req.Count == 0 {
-		req.Count = 200
+		req.Count = 400
 	}
 
 	// Get active theme for initialization

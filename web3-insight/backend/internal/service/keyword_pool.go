@@ -16,7 +16,7 @@ import (
 
 const (
 	MaxRetries       = 3   // Max retry attempts for generation
-	KeywordBatchSize = 100 // Max keywords per LLM call for auto-batching
+	KeywordBatchSize = 400 // Max keywords per LLM call for auto-batching
 )
 
 type KeywordPoolService struct {
