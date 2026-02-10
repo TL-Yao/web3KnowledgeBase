@@ -17,6 +17,19 @@ import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Article } from '@/lib/api'
 
+function stripLeadingTitle(content: string, title: string): string {
+  const lines = content.split('\n')
+  const firstContentIdx = lines.findIndex(line => line.trim().length > 0)
+  if (firstContentIdx === -1) return content
+  const firstLine = lines[firstContentIdx].trim()
+  const match = firstLine.match(/^#\s+(.+)$/)
+  if (match && match[1].trim() === title.trim()) {
+    lines.splice(firstContentIdx, 1)
+    return lines.join('\n').trimStart()
+  }
+  return content
+}
+
 interface ArticleViewProps {
   article: Article
 }
@@ -89,7 +102,7 @@ export function ArticleView({ article }: ArticleViewProps) {
           <div dangerouslySetInnerHTML={{ __html: article.contentHtml }} />
         ) : (
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {article.content || article.summary}
+            {stripLeadingTitle(article.content || article.summary, article.title)}
           </ReactMarkdown>
         )}
       </article>

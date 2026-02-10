@@ -19,6 +19,7 @@ type Config struct {
 	// Model registry and routing configs (loaded separately from YAML files)
 	Models  *ModelsConfig
 	Routing *RoutingConfig
+	Prompts *PromptsConfig
 
 	// Warnings collected during configuration loading
 	Warnings []string
@@ -151,6 +152,18 @@ func LoadAll() (*Config, error) {
 		return nil, fmt.Errorf("failed to load routing.yaml: %w", err)
 	}
 	cfg.Routing = routing
+
+	// Find and load prompts.yaml
+	promptsPath, err := findConfigFile("prompts.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	prompts, err := LoadPrompts(promptsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load prompts.yaml: %w", err)
+	}
+	cfg.Prompts = prompts
 
 	// Validate task models against model registry and store warnings
 	cfg.Warnings = cfg.Routing.ValidateTaskModels(cfg.Models)

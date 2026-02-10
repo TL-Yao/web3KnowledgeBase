@@ -7,6 +7,7 @@ import (
 	"github.com/user/web3-insight/internal/api"
 	"github.com/user/web3-insight/internal/config"
 	"github.com/user/web3-insight/internal/database"
+	"github.com/user/web3-insight/internal/service"
 )
 
 func main() {
@@ -36,6 +37,12 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 	log.Println("Migrations completed")
+
+	// Sync themes from prompts.yaml to database
+	if err := service.SyncThemesFromConfig(db, cfg.Prompts); err != nil {
+		log.Printf("Warning: theme sync failed: %v", err)
+	}
+	log.Println("Theme sync completed")
 
 	router := api.NewRouterWithDB(cfg, db)
 

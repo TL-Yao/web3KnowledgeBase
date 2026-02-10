@@ -198,7 +198,7 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		}
 
 		// Knowledge Base Update
-		kbUpdateHandler := NewKBUpdateHandler(db)
+		kbUpdateHandler := NewKBUpdateHandler(db, cfg.Prompts)
 		kb := api.Group("/kb")
 		{
 			// Update operations
@@ -209,6 +209,15 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			// Keyword pool management
 			kb.POST("/keywords/init", kbUpdateHandler.InitKeywordPool)
 			kb.GET("/keywords/stats", kbUpdateHandler.GetKeywordStats)
+
+			// Theme management
+			kb.GET("/themes", kbUpdateHandler.GetThemes)
+			kb.GET("/themes/active", kbUpdateHandler.GetActiveTheme)
+			kb.PUT("/themes/:id/activate", kbUpdateHandler.SetActiveTheme)
+
+			// KB config
+			kb.GET("/config", kbUpdateHandler.GetKBConfig)
+			kb.PUT("/config/batch-size", kbUpdateHandler.UpdateBatchSize)
 
 			// Scheduler control
 			kb.GET("/scheduler/status", kbUpdateHandler.GetSchedulerStatus)

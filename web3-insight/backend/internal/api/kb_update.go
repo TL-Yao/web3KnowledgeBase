@@ -2,11 +2,14 @@ package api
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/user/web3-insight/internal/config"
 	"github.com/user/web3-insight/internal/repository"
 	"github.com/user/web3-insight/internal/service"
 	"gorm.io/gorm"
@@ -18,22 +21,23 @@ type KBUpdateHandler struct {
 	keywordPool  *service.KeywordPoolService
 	keywordRepo  *repository.KeywordRepository
 	jobRepo      *repository.KBUpdateJobRepository
+	themeRepo    *repository.ThemeRepository
+	configRepo   *repository.ConfigRepository
+	prompts      *config.PromptsConfig
 }
 
-func NewKBUpdateHandler(db *gorm.DB) *KBUpdateHandler {
+func NewKBUpdateHandler(db *gorm.DB, prompts *config.PromptsConfig) *KBUpdateHandler {
 	// Initialize repositories
 	keywordRepo := repository.NewKeywordRepository(db)
 	articleRepo := repository.NewArticleRepository(db)
 	jobRepo := repository.NewKBUpdateJobRepository(db)
+	themeRepo := repository.NewThemeRepository(db)
+	configRepo := repository.NewConfigRepository(db)
 
 	// Initialize services
-	keywordPool := service.NewKeywordPoolService(keywordRepo)
-
-	// Note: Classifier disabled for now (would need actual LLM router from config)
-	// Pass nil classifier to skip auto-classification
-	articleGen := service.NewArticleGeneratorService(articleRepo, nil)
-
-	orchestrator := service.NewKBUpdateOrchestrator(keywordPool, articleGen, keywordRepo, jobRepo)
+	keywordPool := service.NewKeywordPoolService(keywordRepo, prompts)
+	articleGen := service.NewArticleGeneratorService(articleRepo, nil, prompts)
+	orchestrator := service.NewKBUpdateOrchestrator(keywordPool, articleGen, keywordRepo, jobRepo, themeRepo, configRepo, prompts)
 	scheduler := service.NewKBScheduler(orchestrator)
 
 	return &KBUpdateHandler{
@@ -42,6 +46,9 @@ func NewKBUpdateHandler(db *gorm.DB) *KBUpdateHandler {
 		keywordPool:  keywordPool,
 		keywordRepo:  keywordRepo,
 		jobRepo:      jobRepo,
+		themeRepo:    themeRepo,
+		configRepo:   configRepo,
+		prompts:      prompts,
 	}
 }
 
@@ -156,48 +163,78 @@ func (h *KBUpdateHandler) InitKeywordPool(c *gin.Context) {
 		req.Count = 200
 	}
 
-	log.Printf("API: Initializing keyword pool with %d keywords", req.Count)
-
-	err := h.keywordPool.InitializePool(c.Request.Context(), req.Count)
+	// Get active theme for initialization
+	activeTheme, err := h.themeRepo.GetActive()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to initialize keyword pool",
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "No active theme configured",
 			"details": err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Keyword pool initialized successfully",
-		"count":   req.Count,
+	themeID := activeTheme.ID
+	count := req.Count
+	log.Printf("API: Initializing keyword pool for theme %s with %d keywords", themeID, count)
+
+	// Run async — keyword generation can take minutes
+	go func() {
+		ctx := context.Background()
+		if err := h.keywordPool.InitializePool(ctx, themeID, count); err != nil {
+			log.Printf("Keyword pool initialization failed for theme %s: %v", themeID, err)
+		} else {
+			log.Printf("Keyword pool initialization completed for theme %s", themeID)
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"message": "Keyword pool initialization started",
+		"count":   count,
+		"themeId": themeID,
 	})
 }
 
-// GetKeywordStats retrieves statistics about the keyword pool
+// GetKeywordStats retrieves statistics about the keyword pool for the active theme
 func (h *KBUpdateHandler) GetKeywordStats(c *gin.Context) {
-	pendingCount, err := h.keywordRepo.CountPendingKeywords()
+	activeTheme, err := h.themeRepo.GetActive()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch keyword stats",
-			"details": err.Error(),
+		// Fall back to global stats if no active theme
+		pendingCount, err := h.keywordRepo.CountPendingKeywords()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch keyword stats"})
+			return
+		}
+		usedKeywords, err := h.keywordRepo.GetAllUsedKeywords()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch used keywords"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"pending": pendingCount,
+			"used":    len(usedKeywords),
+			"total":   int(pendingCount) + len(usedKeywords),
 		})
 		return
 	}
 
-	// Count used keywords
-	usedKeywords, err := h.keywordRepo.GetAllUsedKeywords()
+	pendingCount, err := h.keywordRepo.CountPendingByTheme(activeTheme.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch used keywords",
-			"details": err.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch keyword stats"})
 		return
 	}
 
+	totalCount, err := h.keywordRepo.CountByTheme(activeTheme.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch theme keywords"})
+		return
+	}
+
+	usedCount := totalCount - pendingCount
 	c.JSON(http.StatusOK, gin.H{
 		"pending": pendingCount,
-		"used":    len(usedKeywords),
-		"total":   int(pendingCount) + len(usedKeywords),
+		"used":    usedCount,
+		"total":   totalCount,
+		"themeId": activeTheme.ID,
 	})
 }
 
@@ -228,5 +265,128 @@ func (h *KBUpdateHandler) StopScheduler(c *gin.Context) {
 	h.scheduler.Stop()
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Scheduler stopped successfully",
+	})
+}
+
+// === Theme Management Endpoints ===
+
+// GetThemes returns all themes with keyword stats
+func (h *KBUpdateHandler) GetThemes(c *gin.Context) {
+	themes, err := h.themeRepo.List()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch themes"})
+		return
+	}
+
+	type ThemeWithStats struct {
+		ID              string `json:"id"`
+		Name            string `json:"name"`
+		Category        string `json:"category"`
+		Description     string `json:"description"`
+		Status          string `json:"status"`
+		SortOrder       int    `json:"sortOrder"`
+		KeywordsPending int64  `json:"keywordsPending"`
+		KeywordsUsed    int64  `json:"keywordsUsed"`
+		KeywordsTotal   int64  `json:"keywordsTotal"`
+	}
+
+	var result []ThemeWithStats
+	var activeThemeID string
+
+	for _, t := range themes {
+		pending, _ := h.keywordRepo.CountPendingByTheme(t.ID)
+		total, _ := h.keywordRepo.CountByTheme(t.ID)
+		used := total - pending
+
+		if t.Status == "active" {
+			activeThemeID = t.ID
+		}
+
+		result = append(result, ThemeWithStats{
+			ID:              t.ID,
+			Name:            t.Name,
+			Category:        t.Category,
+			Description:     t.Description,
+			Status:          t.Status,
+			SortOrder:       t.SortOrder,
+			KeywordsPending: pending,
+			KeywordsUsed:    used,
+			KeywordsTotal:   total,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"themes":        result,
+		"activeThemeId": activeThemeID,
+	})
+}
+
+// GetActiveTheme returns the currently active theme
+func (h *KBUpdateHandler) GetActiveTheme(c *gin.Context) {
+	theme, err := h.themeRepo.GetActive()
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No active theme"})
+		return
+	}
+	c.JSON(http.StatusOK, theme)
+}
+
+// SetActiveTheme activates a theme by ID (pauses all others)
+func (h *KBUpdateHandler) SetActiveTheme(c *gin.Context) {
+	themeID := c.Param("id")
+
+	// Verify theme exists in config
+	if _, err := h.prompts.GetThemeByID(themeID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("Theme not found: %s", themeID)})
+		return
+	}
+
+	if err := h.themeRepo.SetActive(themeID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate theme"})
+		return
+	}
+
+	log.Printf("API: Activated theme %s", themeID)
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Theme '%s' activated", themeID),
+		"themeId": themeID,
+	})
+}
+
+// === KB Config Endpoints ===
+
+// GetKBConfig returns KB configuration (batch size, etc.)
+func (h *KBUpdateHandler) GetKBConfig(c *gin.Context) {
+	batchSize := h.orchestrator.GetBatchSize()
+
+	c.JSON(http.StatusOK, gin.H{
+		"batchSize":    batchSize,
+		"maxBatchSize": service.MaxKeywordBatchSize,
+	})
+}
+
+// UpdateBatchSizeRequest is the request body for updating batch size
+type UpdateBatchSizeRequest struct {
+	BatchSize int `json:"batchSize" binding:"required,min=1,max=10"`
+}
+
+// UpdateBatchSize updates the KB batch size in DB config
+func (h *KBUpdateHandler) UpdateBatchSize(c *gin.Context) {
+	var req UpdateBatchSizeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid batch size (must be 1-10)"})
+		return
+	}
+
+	val, _ := json.Marshal(strconv.Itoa(req.BatchSize))
+	if err := h.configRepo.SetJSON("kb.batch_size", val, "Number of articles per KB update cycle"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save batch size"})
+		return
+	}
+
+	log.Printf("API: Updated batch size to %d", req.BatchSize)
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "Batch size updated",
+		"batchSize": req.BatchSize,
 	})
 }

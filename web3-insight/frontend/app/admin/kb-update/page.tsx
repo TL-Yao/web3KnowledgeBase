@@ -6,6 +6,8 @@ import { MainLayout } from '@/components/layout/main-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
@@ -14,14 +16,37 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { kbUpdateAPI, KBUpdateJob } from '@/lib/api'
-import { AlertCircle, CheckCircle2, Clock, Play, RefreshCw, Loader2, AlertTriangle } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { kbUpdateAPI, KBUpdateJob, Theme } from '@/lib/api'
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Play,
+  RefreshCw,
+  Loader2,
+  AlertTriangle,
+  BookOpen,
+  Zap,
+  History,
+  Building2,
+  Package,
+  Minus,
+  Plus,
+} from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { toast } from 'sonner'
 
-function formatDuration(seconds?: number): string {
-  if (!seconds) return '-'
+function formatDuration(startedAt?: string, completedAt?: string): string {
+  if (!startedAt || !completedAt) return '-'
+  const seconds = Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000)
+  if (seconds < 0) return '-'
   const minutes = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${minutes}分${secs}秒`
@@ -42,45 +67,121 @@ function getStatusBadge(status: KBUpdateJob['status']) {
   }
 }
 
+const categoryIcons: Record<string, React.ReactNode> = {
+  '基础知识': <BookOpen className="w-4 h-4" />,
+  '进阶': <Zap className="w-4 h-4" />,
+  '历史事件': <History className="w-4 h-4" />,
+  '产品介绍': <Package className="w-4 h-4" />,
+  '公司介绍': <Building2 className="w-4 h-4" />,
+}
+
+function ThemeCard({ theme, isActive, onActivate, isActivating }: {
+  theme: Theme
+  isActive: boolean
+  onActivate: () => void
+  isActivating: boolean
+}) {
+  const isEmpty = (theme.keywordsTotal ?? 0) === 0
+  return (
+    <div
+      className={`relative rounded-lg border p-4 transition-colors ${
+        isActive
+          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+          : isEmpty
+            ? 'border-border opacity-60 hover:opacity-80 hover:border-primary/40 cursor-pointer'
+            : 'border-border hover:border-primary/40 cursor-pointer'
+      }`}
+      onClick={() => !isActive && !isActivating && onActivate()}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm">{theme.name}</span>
+          {isActive && (
+            <Badge className="bg-primary text-primary-foreground text-xs px-1.5 py-0">
+              当前
+            </Badge>
+          )}
+          {isEmpty && (
+            <Badge variant="outline" className="text-xs px-1.5 py-0 text-muted-foreground">
+              未初始化
+            </Badge>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{theme.description}</p>
+      <div className="flex gap-3 text-xs text-muted-foreground">
+        <span>待用 <span className="font-medium text-foreground">{theme.keywordsPending ?? 0}</span></span>
+        <span>已用 <span className="font-medium text-foreground">{theme.keywordsUsed ?? 0}</span></span>
+        <span>总计 <span className="font-medium text-foreground">{theme.keywordsTotal ?? 0}</span></span>
+      </div>
+      {isActivating && !isActive && (
+        <div className="absolute inset-0 bg-background/60 rounded-lg flex items-center justify-center">
+          <Loader2 className="w-4 h-4 animate-spin" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function KBUpdatePage() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
+  const [batchSizeInput, setBatchSizeInput] = useState<number | null>(null)
   const pageSize = 20
+
+  // Get themes
+  const { data: themesData } = useQuery({
+    queryKey: ['kb-themes'],
+    queryFn: kbUpdateAPI.getThemes,
+    refetchInterval: 30000,
+  })
+
+  // Get KB config
+  const { data: kbConfig } = useQuery({
+    queryKey: ['kb-config'],
+    queryFn: kbUpdateAPI.getConfig,
+  })
 
   // Get keyword stats
   const { data: keywordStats } = useQuery({
     queryKey: ['kb-keyword-stats'],
     queryFn: kbUpdateAPI.getKeywordStats,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   })
 
   // Get job history
   const { data: jobsData, isLoading: jobsLoading } = useQuery({
     queryKey: ['kb-jobs', page],
     queryFn: () => kbUpdateAPI.getJobs(page, pageSize),
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 5000,
   })
 
-  // Check if any job is currently running (more reliable than just checking first item)
   const hasRunningJob = jobsData?.items?.some(job => job.status === 'running') ?? false
   const runningJob = jobsData?.items?.find(job => job.status === 'running')
-
-  // For backward compatibility, keep isRunning
   const isRunning = hasRunningJob
+
+  // Activate theme mutation
+  const activateThemeMutation = useMutation({
+    mutationFn: kbUpdateAPI.setActiveTheme,
+    onSuccess: () => {
+      toast.success('主题已切换')
+      queryClient.invalidateQueries({ queryKey: ['kb-themes'] })
+      queryClient.invalidateQueries({ queryKey: ['kb-keyword-stats'] })
+    },
+    onError: (error: Error) => {
+      toast.error('切换失败', { description: error.message })
+    },
+  })
 
   // Trigger update mutation
   const triggerMutation = useMutation({
     mutationFn: kbUpdateAPI.trigger,
     onSuccess: (data) => {
-      toast.success('更新已触发', {
-        description: data.message,
-      })
+      toast.success('更新已触发', { description: data.message })
       queryClient.invalidateQueries({ queryKey: ['kb-jobs'] })
     },
     onError: (error: Error) => {
-      toast.error('触发失败', {
-        description: error.message,
-      })
+      toast.error('触发失败', { description: error.message })
     },
   })
 
@@ -88,15 +189,25 @@ export default function KBUpdatePage() {
   const initKeywordsMutation = useMutation({
     mutationFn: kbUpdateAPI.initKeywords,
     onSuccess: (data) => {
-      toast.success('关键词池初始化成功', {
-        description: `已生成 ${data.count} 个关键词`,
-      })
+      toast.success('关键词池初始化成功', { description: `已生成 ${data.count} 个关键词` })
       queryClient.invalidateQueries({ queryKey: ['kb-keyword-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['kb-themes'] })
     },
     onError: (error: Error) => {
-      toast.error('初始化失败', {
-        description: error.message,
-      })
+      toast.error('初始化失败', { description: error.message })
+    },
+  })
+
+  // Update batch size mutation
+  const updateBatchSizeMutation = useMutation({
+    mutationFn: kbUpdateAPI.updateBatchSize,
+    onSuccess: () => {
+      toast.success('批量大小已更新')
+      queryClient.invalidateQueries({ queryKey: ['kb-config'] })
+      setBatchSizeInput(null)
+    },
+    onError: (error: Error) => {
+      toast.error('更新失败', { description: error.message })
     },
   })
 
@@ -107,6 +218,31 @@ export default function KBUpdatePage() {
   const handleInitKeywords = () => {
     initKeywordsMutation.mutate({ count: 200 })
   }
+
+  const currentBatchSize = batchSizeInput ?? kbConfig?.batchSize ?? 3
+  const maxBatchSize = kbConfig?.maxBatchSize ?? 10
+
+  const handleBatchSizeChange = (delta: number) => {
+    const newSize = Math.max(1, Math.min(maxBatchSize, currentBatchSize + delta))
+    setBatchSizeInput(newSize)
+  }
+
+  const handleSaveBatchSize = () => {
+    if (batchSizeInput !== null) {
+      updateBatchSizeMutation.mutate(batchSizeInput)
+    }
+  }
+
+  // Group themes by category
+  const themesByCategory = (themesData?.themes ?? []).reduce<Record<string, Theme[]>>((acc, theme) => {
+    const cat = theme.category
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(theme)
+    return acc
+  }, {})
+
+  const activeThemeId = themesData?.activeThemeId
+  const activeTheme = themesData?.themes?.find(t => t.id === activeThemeId)
 
   const showInitButton = keywordStats && keywordStats.pending === 0
 
@@ -121,6 +257,8 @@ export default function KBUpdatePage() {
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: ['kb-jobs'] })
               queryClient.invalidateQueries({ queryKey: ['kb-keyword-stats'] })
+              queryClient.invalidateQueries({ queryKey: ['kb-themes'] })
+              queryClient.invalidateQueries({ queryKey: ['kb-config'] })
             }}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -128,83 +266,183 @@ export default function KBUpdatePage() {
           </Button>
         </div>
 
-        {/* Action Buttons */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">操作</CardTitle>
-          </CardHeader>
-          <CardContent className="flex gap-4">
-            <Button
-              onClick={handleTriggerUpdate}
-              disabled={isRunning || triggerMutation.isPending}
-            >
-              {triggerMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  触发中...
-                </>
-              ) : isRunning ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  任务运行中 - 请等待
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 mr-2" />
-                  立即更新知识库
-                </>
-              )}
-            </Button>
-
-            {showInitButton && (
-              <Button
-                variant="outline"
-                onClick={handleInitKeywords}
-                disabled={initKeywordsMutation.isPending}
-              >
-                {initKeywordsMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    初始化中...
-                  </>
-                ) : (
-                  '初始化关键词池'
-                )}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Keyword Stats */}
-        {keywordStats && (
+        {/* Theme Selector */}
+        {Object.keys(themesByCategory).length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">关键词池统计</CardTitle>
+              <CardTitle className="text-lg">内容主题</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <div className="text-sm text-muted-foreground">待用</div>
-                  <div className="text-2xl font-bold">{keywordStats.pending ?? 0}</div>
+            <CardContent className="space-y-5">
+              {Object.entries(themesByCategory).map(([category, themes]) => (
+                <div key={category}>
+                  <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
+                    {categoryIcons[category] || <BookOpen className="w-4 h-4" />}
+                    <span>{category}</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {themes.map((theme) => (
+                      <ThemeCard
+                        key={theme.id}
+                        theme={theme}
+                        isActive={theme.id === activeThemeId}
+                        onActivate={() => activateThemeMutation.mutate(theme.id)}
+                        isActivating={activateThemeMutation.isPending}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">已用</div>
-                  <div className="text-2xl font-bold">{keywordStats.used ?? 0}</div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Action & Config */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Action Buttons */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">操作</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button
+                onClick={handleTriggerUpdate}
+                disabled={isRunning || triggerMutation.isPending || (themesData && !activeThemeId)}
+                className="w-full"
+              >
+                {triggerMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    触发中...
+                  </>
+                ) : isRunning ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    任务运行中 - 请等待
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    立即更新知识库
+                  </>
+                )}
+              </Button>
+              {activeTheme ? (
+                <p className="text-xs text-muted-foreground text-center">
+                  当前主题: {activeTheme.name}
+                </p>
+              ) : themesData && !activeThemeId ? (
+                <div className="flex items-center gap-2 text-xs text-amber-600 justify-center">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span>请先在上方选择一个内容主题</span>
                 </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">总计</div>
-                  <div className="text-2xl font-bold">{keywordStats.total ?? 0}</div>
+              ) : null}
+
+              {showInitButton && (
+                <Button
+                  variant="outline"
+                  onClick={handleInitKeywords}
+                  disabled={initKeywordsMutation.isPending}
+                  className="w-full"
+                >
+                  {initKeywordsMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      初始化中...
+                    </>
+                  ) : (
+                    '初始化关键词池'
+                  )}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Batch Size Config + Keyword Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">配置</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Batch Size */}
+              <div className="space-y-2">
+                <Label className="text-sm">每次生成文章数</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleBatchSizeChange(-1)}
+                    disabled={currentBatchSize <= 1}
+                  >
+                    <Minus className="w-3 h-3" />
+                  </Button>
+                  <Input
+                    type="number"
+                    value={currentBatchSize}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value)
+                      if (!isNaN(val) && val >= 1 && val <= maxBatchSize) {
+                        setBatchSizeInput(val)
+                      }
+                    }}
+                    className="w-16 h-8 text-center"
+                    min={1}
+                    max={maxBatchSize}
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleBatchSizeChange(1)}
+                    disabled={currentBatchSize >= maxBatchSize}
+                  >
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                  {batchSizeInput !== null && batchSizeInput !== (kbConfig?.batchSize ?? 3) && (
+                    <Button
+                      size="sm"
+                      className="h-8"
+                      onClick={handleSaveBatchSize}
+                      disabled={updateBatchSizeMutation.isPending}
+                    >
+                      {updateBatchSizeMutation.isPending ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : '保存'}
+                    </Button>
+                  )}
                 </div>
+                <p className="text-xs text-muted-foreground">范围: 1-{maxBatchSize} 篇</p>
               </div>
-              {keywordStats.pending < 30 && keywordStats.pending > 0 && (
-                <div className="mt-4 flex items-center gap-2 text-sm text-amber-600">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>待用关键词不足 30 个，建议及时补充</span>
+
+              {/* Keyword Stats */}
+              {keywordStats && (
+                <div className="pt-3 border-t">
+                  <Label className="text-sm mb-2 block">关键词池</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <div className="text-xs text-muted-foreground">待用</div>
+                      <div className="text-lg font-bold">{keywordStats.pending ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">已用</div>
+                      <div className="text-lg font-bold">{keywordStats.used ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">总计</div>
+                      <div className="text-lg font-bold">{keywordStats.total ?? 0}</div>
+                    </div>
+                  </div>
+                  {keywordStats.pending < 30 && keywordStats.pending > 0 && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-amber-600">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>待用关键词不足 30 个，建议及时补充</span>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
-        )}
+        </div>
 
         {/* Current Job Status */}
         {isRunning && runningJob && (
@@ -219,7 +457,7 @@ export default function KBUpdatePage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">已生成文章</span>
-                <span className="font-medium">{runningJob.articlesGenerated ?? 0} / 20</span>
+                <span className="font-medium">{runningJob.articlesGenerated ?? 0} / {currentBatchSize}</span>
               </div>
               {runningJob.articlesPublished > 0 && (
                 <div className="flex items-center justify-between">
@@ -227,11 +465,11 @@ export default function KBUpdatePage() {
                   <span className="font-medium">{runningJob.articlesPublished ?? 0}</span>
                 </div>
               )}
-              {runningJob.startTime && (
+              {runningJob.startedAt && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">开始时间</span>
                   <span className="text-sm">
-                    {formatDistanceToNow(new Date(runningJob.startTime), {
+                    {formatDistanceToNow(new Date(runningJob.startedAt), {
                       addSuffix: true,
                       locale: zhCN,
                     })}
@@ -263,6 +501,7 @@ export default function KBUpdatePage() {
                       <TableHead>文章数</TableHead>
                       <TableHead>开始时间</TableHead>
                       <TableHead>耗时</TableHead>
+                      <TableHead>错误</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -276,11 +515,29 @@ export default function KBUpdatePage() {
                         </TableCell>
                         <TableCell>{job.articlesGenerated ?? 0}</TableCell>
                         <TableCell>
-                          {job.startTime
-                            ? new Date(job.startTime).toLocaleString('zh-CN')
+                          {job.startedAt
+                            ? new Date(job.startedAt).toLocaleString('zh-CN')
                             : '-'}
                         </TableCell>
-                        <TableCell>{formatDuration(job.duration)}</TableCell>
+                        <TableCell>{formatDuration(job.startedAt, job.completedAt)}</TableCell>
+                        <TableCell>
+                          {job.errorMessage ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-xs text-destructive cursor-help truncate max-w-[120px] inline-block">
+                                    {job.errorMessage.slice(0, 30)}...
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-sm">
+                                  <p className="text-xs whitespace-pre-wrap">{job.errorMessage}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

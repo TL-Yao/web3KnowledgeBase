@@ -453,6 +453,29 @@ export const modelConfigAPI = {
     }),
 }
 
+// Theme Types
+export interface Theme {
+  id: string
+  name: string
+  category: string
+  description: string
+  status: 'active' | 'paused'
+  sortOrder: number
+  keywordsPending?: number
+  keywordsUsed?: number
+  keywordsTotal?: number
+}
+
+export interface ThemeListResponse {
+  themes: Theme[]
+  activeThemeId: string | null
+}
+
+export interface KBConfig {
+  batchSize: number
+  maxBatchSize: number
+}
+
 // Knowledge Base Update Types
 export interface KBUpdateJob {
   id: string
@@ -461,9 +484,8 @@ export interface KBUpdateJob {
   keywordsGenerated: number
   articlesGenerated: number
   articlesPublished: number
-  startTime?: string
-  endTime?: string
-  duration?: number
+  startedAt?: string
+  completedAt?: string
   errorMessage?: string
   createdAt: string
   updatedAt: string
@@ -529,4 +551,26 @@ export const kbUpdateAPI = {
   // Get keyword stats
   getKeywordStats: () =>
     fetchAPI<KBKeywordStats>('/api/kb/keywords/stats'),
+
+  // Theme management
+  getThemes: () =>
+    fetchAPI<ThemeListResponse>('/api/kb/themes'),
+
+  getActiveTheme: () =>
+    fetchAPI<Theme>('/api/kb/themes/active'),
+
+  setActiveTheme: (themeId: string) =>
+    fetchAPI<{ message: string }>(`/api/kb/themes/${themeId}/activate`, {
+      method: 'PUT',
+    }),
+
+  // KB config
+  getConfig: () =>
+    fetchAPI<KBConfig>('/api/kb/config'),
+
+  updateBatchSize: (size: number) =>
+    fetchAPI<{ message: string }>('/api/kb/config/batch-size', {
+      method: 'PUT',
+      body: JSON.stringify({ batchSize: size }),
+    }),
 }

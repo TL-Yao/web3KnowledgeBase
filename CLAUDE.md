@@ -40,7 +40,8 @@ web3-insight/
 │   │   └── cleardata/main.go     # 数据清理工具
 │   ├── config/
 │   │   ├── models.yaml           # 模型注册表 (本地/云端模型定义)
-│   │   └── routing.yaml          # 任务路由配置 (任务→模型映射)
+│   │   ├── routing.yaml          # 任务路由配置 (任务→模型映射)
+│   │   └── prompts.yaml          # 主题提示词模板 (9个主题 + 生成配置)
 │   ├── internal/
 │   │   ├── api/                  # HTTP 路由和处理器
 │   │   │   ├── router.go         # 路由注册
@@ -54,12 +55,14 @@ web3-insight/
 │   │   │   ├── importer.go       # 导入导出
 │   │   │   ├── search.go         # 搜索 (关键词+语义)
 │   │   │   ├── task.go           # 任务监控
+│   │   │   ├── kb_update.go      # 知识库更新 API (主题、关键词、调度)
 │   │   │   ├── chat_ws.go        # WebSocket 聊天
 │   │   │   └── middleware.go     # CORS 中间件
 │   │   ├── config/               # 配置加载 (Viper)
 │   │   │   ├── config.go         # 主配置
 │   │   │   ├── models.go         # 模型注册表解析
-│   │   │   └── routing.go        # 路由配置解析
+│   │   │   ├── routing.go        # 路由配置解析
+│   │   │   └── prompts.go        # 主题提示词配置解析
 │   │   ├── collector/            # 数据采集
 │   │   │   ├── crawler.go        # 网页爬虫 (Colly)
 │   │   │   ├── rss.go            # RSS 订阅
@@ -84,7 +87,12 @@ web3-insight/
 │   │   │   ├── summarizer.go     # 摘要生成
 │   │   │   ├── classifier.go     # 自动分类
 │   │   │   ├── research.go       # 即时研究
-│   │   │   └── semantic_search.go # 语义搜索
+│   │   │   ├── semantic_search.go # 语义搜索
+│   │   │   ├── keyword_pool.go   # 关键词池 (主题感知, 自动批次)
+│   │   │   ├── article_generator.go # 文章生成 (Claude CLI)
+│   │   │   ├── kb_update_orchestrator.go # KB更新编排器
+│   │   │   ├── kb_scheduler.go   # KB更新调度器
+│   │   │   └── theme_sync.go     # 主题同步 (config→DB)
 │   │   └── worker/               # 异步任务 (Asynq)
 │   └── scripts/
 │       └── clear_data.sql        # 数据清理 SQL
@@ -96,7 +104,8 @@ web3-insight/
 │   │   └── admin/                # 管理后台
 │   │       ├── page.tsx          # 仪表板 (状态+任务)
 │   │       ├── config/page.tsx   # 模型配置
-│   │       └── import/page.tsx   # 文章导入
+│   │       ├── import/page.tsx   # 文章导入
+│   │       └── kb-update/page.tsx # 知识库更新 (主题管理+调度)
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui 基础组件
 │   │   ├── layout/               # 布局 (Sidebar, Header, MainLayout)
@@ -135,7 +144,7 @@ web3-insight/
 | 管理 | 新闻管理 | - | /api/news |
 | 基础 | Feature Flags | DisabledFeature | - |
 | 基础 | 错误边界 | ExplorerErrorBoundary | - |
-| 管理 | 知识库自动更新 | KBUpdatePage | /api/kb-update (trigger, status, history), /api/kb (keywords, scheduler) |
+| 管理 | 知识库自动更新 (主题驱动) | KBUpdatePage | /api/kb (trigger, jobs, keywords, scheduler, themes, config) |
 | 基础 | CORS 中间件 | - | middleware.go |
 
 ## Model Fallback Pattern
@@ -200,6 +209,14 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 - **Stats null safety**: Use `?? 0` pattern for safe defaults
 - **Next.js cache**: Use `rm -rf .next` to force clean rebuild when encountering persistent errors
 - **CSS compatibility**: Avoid `field-sizing: content` (limited browser support)
+
+### Theme System Lessons (2026-02-10)
+
+- **JSON field naming consistency**: Backend Go struct JSON tags MUST match frontend request body keys. Use camelCase throughout (`json:"batchSize"`, not `json:"batch_size"`). The `binding:"required"` validator will silently reject mismatched field names, making the bug hard to trace.
+- **Composite unique indexes for multi-tenant data**: When data is partitioned by a foreign key (e.g., keywords by theme), unique constraints must be composite: `uniqueIndex:idx_keyword_theme` on BOTH `Keyword` and `ThemeID` fields. Single-field unique index prevents valid cross-theme duplicates.
+- **Config-to-DB sync pattern**: Define config as source of truth in YAML, sync to DB on startup. Create new records as "paused", update metadata for existing (preserve runtime status). Auto-activate first item if none active.
+- **Go template rendering for prompts**: Use `text/template` with struct variables (`{{.Keyword}}`, `{{.Count}}`). Keep prompts in YAML config, never hardcode in Go. Mark prompt fields `json:"-"` to prevent API exposure.
+- **GORM AutoMigrate ordering**: Tables with foreign keys must appear AFTER the referenced table in the `AutoMigrate()` call. Theme must come before Keyword.
 
 ### KB Auto-Update Lessons (2026-02-07)
 

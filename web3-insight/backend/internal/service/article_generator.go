@@ -1,19 +1,22 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/gosimple/slug"
+	"github.com/user/web3-insight/internal/config"
 	"github.com/user/web3-insight/internal/model"
 	"github.com/user/web3-insight/internal/repository"
 )
 
 const (
-	ArticleGenerationTimeout = 10 * time.Minute // 10 minutes timeout per article
+	ArticleGenerationTimeout = 60 * time.Minute // 60 minutes timeout per article
 	MinContentLength         = 500              // Minimum content length in characters
 )
 
@@ -30,12 +33,14 @@ const (
 type ArticleGeneratorService struct {
 	articleRepo *repository.ArticleRepository
 	classifier  *Classifier
+	prompts     *config.PromptsConfig
 }
 
-func NewArticleGeneratorService(articleRepo *repository.ArticleRepository, classifier *Classifier) *ArticleGeneratorService {
+func NewArticleGeneratorService(articleRepo *repository.ArticleRepository, classifier *Classifier, prompts *config.PromptsConfig) *ArticleGeneratorService {
 	return &ArticleGeneratorService{
 		articleRepo: articleRepo,
 		classifier:  classifier,
+		prompts:     prompts,
 	}
 }
 
@@ -46,17 +51,26 @@ type ArticleData struct {
 	Summary string
 }
 
-// GenerateArticle generates a comprehensive article for the given keyword
-func (ag *ArticleGeneratorService) GenerateArticle(ctx context.Context, keyword string) (*model.Article, string, error) {
+// GenerateArticle generates a comprehensive article for the given keyword using theme-specific prompt
+func (ag *ArticleGeneratorService) GenerateArticle(ctx context.Context, keyword string, themeID string) (*model.Article, string, error) {
 	executor := NewClaudeExecutor()
 	sessionID := executor.GetSessionID()
 
-	log.Printf("Generating article for keyword: '%s' (session: %s)", keyword, sessionID)
+	log.Printf("Generating article for keyword: '%s' (theme: %s, session: %s)", keyword, themeID, sessionID)
 
-	genCtx, cancel := context.WithTimeout(ctx, ArticleGenerationTimeout)
+	// Use timeout from config if available
+	timeout := ArticleGenerationTimeout
+	if ag.prompts != nil && ag.prompts.Generation.ArticleTimeoutMinutes > 0 {
+		timeout = time.Duration(ag.prompts.Generation.ArticleTimeoutMinutes) * time.Minute
+	}
+
+	genCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	prompt := ag.buildPrompt(keyword)
+	prompt, err := ag.buildThemePrompt(keyword, themeID)
+	if err != nil {
+		return nil, sessionID, fmt.Errorf("failed to build prompt: %w", err)
+	}
 
 	response, err := executor.Execute(genCtx, prompt)
 	if err != nil {
@@ -92,6 +106,7 @@ func (ag *ArticleGeneratorService) GenerateArticle(ctx context.Context, keyword 
 		Summary: articleData.Summary,
 		Status:  "published",
 		Tags:    []string{keyword},
+		ThemeID: &themeID,
 	}
 
 	if err := ag.articleRepo.Create(article); err != nil {
@@ -117,10 +132,29 @@ func (ag *ArticleGeneratorService) GenerateArticle(ctx context.Context, keyword 
 	return article, sessionID, nil
 }
 
-// buildPrompt constructs the prompt for article generation using delimiter-based output format.
-// Delimiters avoid JSON escaping issues with complex markdown content.
-func (ag *ArticleGeneratorService) buildPrompt(keyword string) string {
-	return fmt.Sprintf(`Write a comprehensive Web3 knowledge article about: "%s"
+// buildThemePrompt renders the article prompt template for the given theme and keyword.
+// Falls back to a hardcoded default prompt if no theme config is available.
+func (ag *ArticleGeneratorService) buildThemePrompt(keyword string, themeID string) (string, error) {
+	if ag.prompts != nil {
+		theme, err := ag.prompts.GetThemeByID(themeID)
+		if err == nil && theme.ArticlePrompt != "" {
+			tmpl, err := template.New("article").Parse(theme.ArticlePrompt)
+			if err != nil {
+				return "", fmt.Errorf("failed to parse article prompt template: %w", err)
+			}
+			data := map[string]interface{}{
+				"Keyword": keyword,
+			}
+			var buf bytes.Buffer
+			if err := tmpl.Execute(&buf, data); err != nil {
+				return "", fmt.Errorf("failed to render article prompt: %w", err)
+			}
+			return buf.String(), nil
+		}
+	}
+
+	// Fallback: hardcoded default prompt
+	return fmt.Sprintf(`Write a comprehensive educational article about: "%s"
 
 **Target Audience**: Complete beginners with NO prior knowledge of this topic.
 
@@ -130,13 +164,9 @@ func (ag *ArticleGeneratorService) buildPrompt(keyword string) string {
 - NO assumptions: Explain all concepts from scratch
 - Language: Chinese (中文)
 - Technical terms: Use "English (中文)" format, e.g., "Smart Contract (智能合约)"
-- Structure: Title, Introduction, Main Content (multiple sections), Conclusion
-- Format: Markdown
 - Length: 1500-2500 words
 
-**Research**:
-- If you need latest information or accurate data, use WebFetch tool to search the web
-- Incorporate search results naturally into the article
+**Research**: Use WebFetch if you need the latest information or accurate data.
 
 **OUTPUT FORMAT** (use these exact delimiters):
 
@@ -144,13 +174,13 @@ func (ag *ArticleGeneratorService) buildPrompt(keyword string) string {
 Article title in Chinese here
 ===TITLE_END===
 ===CONTENT_START===
-Full Markdown content in Chinese here (can be multiple lines, include all headings, paragraphs, etc.)
+Full Markdown content here
 ===CONTENT_END===
 ===SUMMARY_START===
-100-word summary in Chinese here
+80-120 word summary in Chinese
 ===SUMMARY_END===
 
-IMPORTANT: Use exactly these delimiter tags. Put your article content between the tags. No other format.`, keyword)
+IMPORTANT: Use exactly these delimiter tags. No other format.`, keyword), nil
 }
 
 // parseDelimitedResponse extracts title, content, and summary from delimiter-based format

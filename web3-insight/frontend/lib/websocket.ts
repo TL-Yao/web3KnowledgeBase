@@ -18,8 +18,8 @@ export function createChatWebSocket(onMessage: (data: ChatMessage) => void) {
     }
   }
 
-  ws.onerror = (error) => {
-    console.error('WebSocket error:', error)
+  ws.onerror = () => {
+    // Silently handle connection failures — backend may not be running
   }
 
   return ws

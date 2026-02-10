@@ -68,6 +68,57 @@ func (r *KeywordRepository) GetAllUsedKeywords() ([]string, error) {
 	return keywords, err
 }
 
+// GetPendingByTheme returns pending keywords for a specific theme, ordered by sort_order
+func (r *KeywordRepository) GetPendingByTheme(themeID string, limit int) ([]model.Keyword, error) {
+	var keywords []model.Keyword
+	err := r.db.
+		Where("theme_id = ? AND status = ?", themeID, "pending").
+		Order("sort_order ASC").
+		Limit(limit).
+		Find(&keywords).Error
+	return keywords, err
+}
+
+// CountPendingByTheme counts pending keywords for a specific theme
+func (r *KeywordRepository) CountPendingByTheme(themeID string) (int64, error) {
+	var count int64
+	err := r.db.
+		Model(&model.Keyword{}).
+		Where("theme_id = ? AND status = ?", themeID, "pending").
+		Count(&count).Error
+	return count, err
+}
+
+// GetAllKeywordsForTheme returns all keyword strings for a theme (for dedup during refill)
+func (r *KeywordRepository) GetAllKeywordsForTheme(themeID string) ([]string, error) {
+	var keywords []string
+	err := r.db.
+		Model(&model.Keyword{}).
+		Where("theme_id = ?", themeID).
+		Pluck("keyword", &keywords).Error
+	return keywords, err
+}
+
+// CountByTheme counts all keywords for a theme
+func (r *KeywordRepository) CountByTheme(themeID string) (int64, error) {
+	var count int64
+	err := r.db.
+		Model(&model.Keyword{}).
+		Where("theme_id = ?", themeID).
+		Count(&count).Error
+	return count, err
+}
+
+// CountUsedByTheme counts used keywords for a theme
+func (r *KeywordRepository) CountUsedByTheme(themeID string) (int64, error) {
+	var count int64
+	err := r.db.
+		Model(&model.Keyword{}).
+		Where("theme_id = ? AND status = ?", themeID, "used").
+		Count(&count).Error
+	return count, err
+}
+
 // GetByID 根据ID获取关键词
 func (r *KeywordRepository) GetByID(id uuid.UUID) (*model.Keyword, error) {
 	var keyword model.Keyword

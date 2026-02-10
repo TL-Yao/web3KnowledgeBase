@@ -1,0 +1,604 @@
+# Theme definitions and prompt templates
+# Each theme has: metadata + keyword_prompt + article_prompt
+# Template variables: {{.Keyword}}, {{.ExistingKeywords}}, {{.Count}}, {{.BatchNumber}}
+
+themes:
+  # =============================================
+  # 基础知识类 (Foundational Knowledge)
+  # =============================================
+  - id: "web3_basics"
+    name: "Web3基础知识"
+    category: "基础知识"
+    description: "区块链、智能合约、共识机制等Web3核心概念"
+    sort_order: 1
+    keyword_prompt: |
+      Generate {{.Count}} unique keywords for beginner-friendly Web3 educational articles.
+
+      **Scope**: Blockchain fundamentals, smart contracts, consensus mechanisms, wallets,
+      Layer1/Layer2, tokenomics, DAOs, NFTs, Web3 infrastructure.
+
+      **Ordering**: Start from the most fundamental concepts (what is blockchain, what is
+      a wallet) and progress to more advanced topics (MEV, account abstraction).
+      A reader should be able to read articles in this order and build knowledge progressively.
+
+      **Excluded keywords** (MUST NOT duplicate):
+      {{.ExistingKeywords}}
+
+      **Rules**:
+      - Return ONLY a JSON array: ["keyword1", "keyword2", ...]
+      - Each keyword: 2-6 words, Chinese or English
+      - Be EXHAUSTIVE — cover every fundamental Web3 concept you can think of
+      - Simple → complex ordering is critical
+      - NO overlap with excluded keywords
+
+      Output the JSON array directly without any additional text.
+
+    article_prompt: |
+      Write a comprehensive educational article about: "{{.Keyword}}"
+
+      **Target Audience**: Complete beginners with NO prior knowledge of this topic.
+
+      **Content Requirements**:
+      - Purpose: Educational — help readers LEARN and UNDERSTAND from scratch
+      - Be CONCRETE: Use real-world analogies, specific examples, practical scenarios
+      - NO assumptions: Explain every concept as if the reader has never heard of it
+      - If this builds on simpler concepts, briefly recap them before diving deeper
+      - Language: Chinese (中文)
+      - Technical terms: Use "English (中文)" format, e.g., "Smart Contract (智能合约)"
+      - Length: 1500-2500 words
+
+      **Structure** (use clear Markdown headings):
+      - 引言: Hook the reader, explain why this topic matters
+      - 核心概念: Break down the topic into digestible pieces
+      - 工作原理: How does it actually work? Use analogies
+      - 实际应用: Real examples and use cases
+      - 常见误区: Common misconceptions to avoid
+      - 总结: Key takeaways
+
+      **Formatting**:
+      - Use ## for main sections, ### for subsections
+      - Use bullet points and numbered lists for clarity
+      - Bold key terms on first introduction
+      - Add a horizontal rule (---) between major sections
+      - Use > blockquotes for important tips or warnings
+
+      **Research**: Use WebFetch if you need the latest information or accurate data.
+
+      **标题要求**：简洁清晰，直接使用关键词或关键词的简短描述作为标题。不要使用社交媒体风格的长标题、不要加副标题、不要使用冒号分隔的标题格式。例如：关键词是"智能合约"，标题就是"智能合约"或"什么是智能合约"。
+
+      **OUTPUT FORMAT** (use these exact delimiters):
+
+      ===TITLE_START===
+      Concise keyword-based title in Chinese (e.g. "智能合约" or "什么是智能合约")
+      ===TITLE_END===
+      ===CONTENT_START===
+      Full Markdown content here
+      ===CONTENT_END===
+      ===SUMMARY_START===
+      80-120 word summary in Chinese
+      ===SUMMARY_END===
+
+      IMPORTANT: Use exactly these delimiter tags. No other format.
+
+  - id: "defi_basics"
+    name: "DeFi基础知识"
+    category: "基础知识"
+    description: "去中心化金融的核心协议、机制和概念"
+    sort_order: 2
+    keyword_prompt: |
+      Generate {{.Count}} unique keywords for beginner-friendly DeFi educational articles.
+
+      **Scope**: DEX (AMM, order books), lending protocols, stablecoins, yield farming,
+      liquidity pools, flash loans, oracles, insurance, derivatives, governance tokens,
+      DeFi composability, risks and security.
+
+      **Ordering**: Start from the most basic DeFi concepts (what is DeFi, what is a DEX)
+      and progress to more complex mechanisms (flash loan arbitrage, protocol governance).
+
+      **Excluded keywords** (MUST NOT duplicate):
+      {{.ExistingKeywords}}
+
+      **Rules**:
+      - Return ONLY a JSON array: ["keyword1", "keyword2", ...]
+      - Each keyword: 2-6 words, Chinese or English
+      - Be EXHAUSTIVE — cover every DeFi concept
+      - Simple → complex ordering
+      - NO overlap with excluded keywords
+
+      Output the JSON array directly without any additional text.
+
+    article_prompt: |
+      Write a comprehensive educational article about: "{{.Keyword}}"
+
+      **Target Audience**: Complete beginners with NO prior knowledge of DeFi.
+
+      **Content Requirements**:
+      - Purpose: Educational — help readers LEARN and UNDERSTAND from scratch
+      - Be CONCRETE: Use specific protocol examples (Uniswap, Aave, MakerDAO, etc.)
+      - Compare with traditional finance equivalents where applicable
+      - Include real numbers and examples where possible
+      - Explain risks honestly — don't just promote
+      - Language: Chinese (中文)
+      - Technical terms: "English (中文)" format
+      - Length: 1500-2500 words
+
+      **Structure**:
+      - 引言: What problem does this solve? Why does it exist?
+      - 传统金融对比: How does TradFi handle this? What's different?
+      - 核心机制: How does it actually work? Step by step
+      - 代表项目: Real protocols that implement this (with examples)
+      - 风险与挑战: What can go wrong? Real incidents if any
+      - 总结
+
+      **Formatting**:
+      - Use ## for main sections, ### for subsections
+      - Use bullet points and numbered lists for clarity
+      - Bold key terms on first introduction
+      - Add --- between major sections
+      - Use > blockquotes for important warnings
+
+      **Research**: Use WebFetch for latest protocol data, TVL numbers, etc.
+
+      **标题要求**：简洁清晰，直接使用关键词或关键词的简短描述作为标题。不要使用社交媒体风格的长标题、不要加副标题、不要使用冒号分隔的标题格式。例如：关键词是"流动性挖矿"，标题就是"流动性挖矿"或"什么是流动性挖矿"。
+
+      **OUTPUT FORMAT**:
+
+      ===TITLE_START===
+      Concise keyword-based title in Chinese
+      ===TITLE_END===
+      ===CONTENT_START===
+      Full Markdown content
+      ===CONTENT_END===
+      ===SUMMARY_START===
+      80-120 word summary in Chinese
+      ===SUMMARY_END===
+
+  - id: "tradfi_basics"
+    name: "传统金融基础知识"
+    category: "基础知识"
+    description: "传统金融市场的基本概念、工具和机制"
+    sort_order: 3
+    keyword_prompt: |
+      Generate {{.Count}} unique keywords for beginner-friendly traditional finance articles.
+
+      **Scope**: Stock markets, bonds, derivatives (futures, options), forex, ETFs,
+      mutual funds, central banking, monetary policy, risk management, portfolio theory,
+      financial regulation, credit systems, insurance, IPOs, M&A.
+
+      **Ordering**: Start from the most basic concepts (what is a stock, what is interest)
+      and progress to more complex topics (derivatives pricing, credit default swaps).
+
+      **Excluded keywords**:
+      {{.ExistingKeywords}}
+
+      **Rules**:
+      - Return ONLY a JSON array: ["keyword1", "keyword2", ...]
+      - Each keyword: 2-6 words, Chinese or English
+      - Be EXHAUSTIVE
+      - Simple → complex ordering
+      - NO overlap with excluded keywords
+
+      Output the JSON array directly without any additional text.
+
+    article_prompt: |
+      Write a comprehensive educational article about: "{{.Keyword}}"
+
+      **Target Audience**: Complete beginners with NO prior knowledge of finance.
+
+      **Content Requirements**:
+      - Purpose: Educational — make finance accessible to everyone
+      - Use everyday analogies to explain financial concepts
+      - Include historical context where relevant
+      - Connect to real-world impact on ordinary people
+      - Language: Chinese (中文)
+      - Technical terms: "English (中文)" format
+      - Length: 1500-2500 words
+
+      **Structure**:
+      - 引言: Why should a normal person care about this?
+      - 基本概念: Plain-language explanation
+      - 运作机制: How does it work in practice?
+      - 现实案例: Real-world examples
+      - 与加密市场的关联: How does this connect to crypto/Web3? (brief)
+      - 总结
+
+      **Formatting**:
+      - Use ## for main sections, ### for subsections
+      - Bullet points and numbered lists
+      - Bold key terms, --- between sections
+      - > blockquotes for tips
+
+      **Research**: Use WebFetch for current market data or examples.
+
+      **标题要求**：简洁清晰，直接使用关键词或关键词的简短描述作为标题。不要使用社交媒体风格的长标题、不要加副标题、不要使用冒号分隔的标题格式。例如：关键词是"股票"，标题就是"股票"或"什么是股票"。
+
+      **OUTPUT FORMAT**:
+
+      ===TITLE_START===
+      Concise keyword-based title in Chinese
+      ===TITLE_END===
+      ===CONTENT_START===
+      Full Markdown content
+      ===CONTENT_END===
+      ===SUMMARY_START===
+      80-120 word summary in Chinese
+      ===SUMMARY_END===
+
+  # =============================================
+  # 进阶类 (Advanced / Deep-Dive)
+  # =============================================
+  - id: "advanced_tech"
+    name: "进阶技术深度解析"
+    category: "进阶"
+    description: "前沿技术方案的深度分析：解决了什么问题、是否成功、为什么"
+    sort_order: 10
+    keyword_prompt: |
+      Generate {{.Count}} unique keywords about advanced Web3/blockchain technical solutions.
+
+      **Scope**: Zero-knowledge proofs (zkSNARKs, zkSTARKs, Plonk), rollup architectures
+      (optimistic vs zk), data availability (EIP-4844, Celestia), account abstraction (ERC-4337),
+      cross-chain bridges, MEV, PBS (proposer-builder separation), restaking,
+      modular blockchains, intent-based architectures, FHE, MPC wallets,
+      parallel execution (Monad, Sei), alternative VMs (Move, Cairo, Fuel).
+
+      **Ordering**: Group by problem domain, within each domain go from the problem statement
+      to specific solutions.
+
+      **Excluded keywords**:
+      {{.ExistingKeywords}}
+
+      **Rules**:
+      - Return ONLY a JSON array: ["keyword1", "keyword2", ...]
+      - Each keyword: 2-6 words, Chinese or English
+      - Focus on SPECIFIC technical solutions, not generic concepts
+      - Include both successful and failed/abandoned approaches
+      - NO overlap with excluded keywords
+
+      Output the JSON array directly without any additional text.
+
+    article_prompt: |
+      Write an in-depth analysis article about: "{{.Keyword}}"
+
+      **Angle**: Evaluate this technology/solution critically. Don't just explain — analyze.
+
+      **Content Requirements**:
+      - What specific problem does this solve? Why was the old way insufficient?
+      - How does the solution work technically? (explain clearly, not superficially)
+      - Did it succeed? Is it still actively used/developed?
+      - If it succeeded: why? What made it work? Who adopted it?
+      - If it failed or lost popularity: why? What replaced it?
+      - What are the tradeoffs? Nothing is free — what did it sacrifice?
+      - Language: Chinese (中文)
+      - Technical terms: "English (中文)" format
+      - Length: 2000-3000 words
+
+      **Structure**:
+      - 引言: The problem this exists to solve
+      - 技术原理: How it works (diagrams described in text if helpful)
+      - 发展现状: Current adoption, key metrics, ecosystem
+      - 优势与局限: Honest assessment of tradeoffs
+      - 竞争格局: Alternatives and how they compare
+      - 前景展望: Is this the future, a stepping stone, or a dead end?
+      - 总结
+
+      **Formatting**:
+      - ## for main sections, ### for subsections
+      - Bullet points, numbered lists
+      - Bold key terms, --- between sections
+      - > blockquotes for key insights
+      - Use comparison tables (markdown) where appropriate
+
+      **Research**: Use WebFetch for latest data, TVL, adoption metrics, recent developments.
+
+      **标题要求**：简洁清晰，直接使用关键词或关键词的简短描述作为标题。不要使用社交媒体风格的长标题、不要加副标题、不要使用冒号分隔的标题格式。例如：关键词是"零知识证明"，标题就是"零知识证明"或"零知识证明技术解析"。
+
+      **OUTPUT FORMAT**:
+
+      ===TITLE_START===
+      Concise keyword-based title in Chinese
+      ===TITLE_END===
+      ===CONTENT_START===
+      Full Markdown content
+      ===CONTENT_END===
+      ===SUMMARY_START===
+      80-120 word summary in Chinese
+      ===SUMMARY_END===
+
+  - id: "advanced_defi"
+    name: "DeFi进阶机制"
+    category: "进阶"
+    description: "DeFi协议的高级机制、创新设计和风险分析"
+    sort_order: 11
+    keyword_prompt: |
+      Generate {{.Count}} unique keywords about advanced DeFi mechanisms and protocol design.
+
+      **Scope**: ve-tokenomics (Curve wars), concentrated liquidity (Uniswap v3/v4),
+      real yield vs emissions, protocol-owned liquidity, liquid staking derivatives,
+      GHO/crvUSD stablecoin design, perpetual DEX design (dYdX, GMX), points/airdrop meta,
+      restaking (EigenLayer), LRT, intent-based trading, MEV on DeFi,
+      cross-chain DeFi, RWA tokenization, undercollateralized lending.
+
+      **Ordering**: Group by protocol category, within each go from concept to implementation.
+
+      **Excluded keywords**:
+      {{.ExistingKeywords}}
+
+      **Rules**:
+      - Return ONLY a JSON array: ["keyword1", "keyword2", ...]
+      - Each keyword: 2-6 words, Chinese or English
+      - Focus on specific mechanisms, not generic concepts
+      - NO overlap with excluded keywords
+
+      Output the JSON array directly without any additional text.
+
+    article_prompt: |
+      Write an in-depth analysis of this DeFi mechanism: "{{.Keyword}}"
+
+      **Angle**: Critical analysis — did this innovation deliver on its promise?
+
+      **Content Requirements**:
+      - What problem does this mechanism solve in DeFi?
+      - How does it work mechanically? (with specific numbers/examples)
+      - Which protocols implement this? How successful are they?
+      - What are the risks? Have there been exploits or failures?
+      - Is this still a trending approach or has the market moved on?
+      - Language: Chinese (中文), terms in "English (中文)" format
+      - Length: 2000-3000 words
+
+      **Structure**:
+      - 引言: The DeFi problem this addresses
+      - 机制详解: Step-by-step mechanical explanation
+      - 代表协议: Key protocols, their implementations and metrics
+      - 风险分析: What can go wrong (with real examples)
+      - 市场评价: Community sentiment, adoption trends
+      - 总结与展望
+
+      **Formatting**: ## sections, ### subsections, bold terms, ---, > blockquotes, tables
+
+      **Research**: Use WebFetch for TVL data, protocol metrics, recent events.
+
+      **标题要求**：简洁清晰，直接使用关键词或关键词的简短描述作为标题。不要使用社交媒体风格的长标题、不要加副标题、不要使用冒号分隔的标题格式。例如：关键词是"ve-tokenomics"，标题就是"ve-tokenomics机制"。
+
+      **OUTPUT FORMAT**:
+      ===TITLE_START===
+      Concise keyword-based title in Chinese
+      ===TITLE_END===
+      ===CONTENT_START===
+      Full Markdown content
+      ===CONTENT_END===
+      ===SUMMARY_START===
+      80-120 word summary in Chinese
+      ===SUMMARY_END===
+
+  # =============================================
+  # 历史事件类 (Historical Events)
+  # =============================================
+  - id: "crypto_history"
+    name: "加密行业重大事件"
+    category: "历史事件"
+    description: "改变行业走向的重大事件、黑客攻击、监管里程碑"
+    sort_order: 20
+    keyword_prompt: |
+      Generate {{.Count}} unique keywords about significant events in crypto/Web3 history.
+
+      **Scope**: Major hacks (Mt. Gox, The DAO, FTX collapse, Terra/Luna crash),
+      regulatory milestones (Bitcoin ETF approval, China ban, MiCA),
+      technological milestones (Ethereum Merge, Bitcoin halving events, Lightning Network),
+      market events (2017 ICO boom, 2021 DeFi summer, NFT mania),
+      notable court cases (Ripple vs SEC, SBF trial),
+      protocol incidents (Curve exploit, Wormhole hack, Ronin bridge hack).
+
+      **Ordering**: Chronological — earliest events first, most recent last.
+
+      **Excluded keywords**:
+      {{.ExistingKeywords}}
+
+      **Rules**:
+      - Return ONLY a JSON array: ["keyword1", "keyword2", ...]
+      - Each keyword: 3-8 words, should clearly identify the event
+      - Include the year if helpful for disambiguation
+      - Be EXHAUSTIVE — every significant event
+      - NO overlap with excluded keywords
+
+      Output the JSON array directly without any additional text.
+
+    article_prompt: |
+      Write a comprehensive historical account of: "{{.Keyword}}"
+
+      **Angle**: Full context journalism — cause, event, consequence.
+
+      **Content Requirements**:
+      - Background: What was the state of the industry before this event?
+      - Build-up: What led to this event? Warning signs? Key players?
+      - The event itself: What exactly happened? Timeline of events
+      - Immediate aftermath: Market reaction, community response
+      - Long-term impact: How did this change the industry? New regulations? New tech?
+      - Lessons learned: What should people take away from this?
+      - Language: Chinese (中文), terms in "English (中文)" format
+      - Length: 2000-3000 words
+
+      **Structure**:
+      - 引言: Why this event matters
+      - 背景: Industry context before the event
+      - 事件经过: Detailed chronological account
+      - 影响与后果: Immediate and long-term consequences
+      - 行业反思: What the industry learned
+      - 总结
+
+      **Formatting**: ## sections, ### subsections, bold terms, ---, > blockquotes
+      **Important**: Be factual. Use specific dates, numbers, names. No speculation.
+
+      **Research**: Use WebFetch for accurate dates, amounts, and outcomes.
+
+      **标题要求**：简洁清晰，直接使用事件名称作为标题。不要使用社交媒体风格的长标题、不要加副标题、不要使用冒号分隔的标题格式。例如：关键词是"Mt. Gox事件"，标题就是"Mt. Gox事件"。
+
+      **OUTPUT FORMAT**:
+      ===TITLE_START===
+      Concise event-name title in Chinese
+      ===TITLE_END===
+      ===CONTENT_START===
+      Full Markdown content
+      ===CONTENT_END===
+      ===SUMMARY_START===
+      80-120 word summary in Chinese
+      ===SUMMARY_END===
+
+  # =============================================
+  # 产品介绍类 (Product Introductions)
+  # =============================================
+  - id: "notable_products"
+    name: "知名产品与协议"
+    category: "产品介绍"
+    description: "值得了解的产品和协议：是什么、为什么受欢迎、是否仍然活跃"
+    sort_order: 30
+    keyword_prompt: |
+      Generate {{.Count}} unique keywords about notable Web3/crypto products and protocols.
+
+      **Scope**: Major protocols (Ethereum, Solana, Bitcoin Lightning),
+      DeFi protocols (Uniswap, Aave, Curve, Lido, MakerDAO, Compound),
+      infrastructure (Chainlink, The Graph, Filecoin, Arweave),
+      wallets (MetaMask, Phantom, Ledger, Safe),
+      exchanges (Binance, Coinbase, dYdX, Hyperliquid),
+      NFT platforms (OpenSea, Blur, Magic Eden),
+      L2s (Arbitrum, Optimism, Base, zkSync, StarkNet),
+      tools (Etherscan, DefiLlama, Dune Analytics),
+      newer protocols (EigenLayer, Celestia, Monad, Berachain).
+
+      **Ordering**: By significance and maturity — most established first, newer projects later.
+
+      **Excluded keywords**:
+      {{.ExistingKeywords}}
+
+      **Rules**:
+      - Return ONLY a JSON array: ["keyword1", "keyword2", ...]
+      - Each keyword: the product/protocol name (1-4 words)
+      - Include both successful and struggling/failed products
+      - NO overlap with excluded keywords
+
+      Output the JSON array directly without any additional text.
+
+    article_prompt: |
+      Write a comprehensive product profile of: "{{.Keyword}}"
+
+      **Angle**: Product review — what is it, is it worth knowing about, why or why not?
+
+      **Content Requirements**:
+      - What is this product/protocol? What does it do?
+      - Who created it? Brief founding story
+      - How does it work? (user perspective, not deep technical)
+      - Is it popular? Key metrics (users, TVL, volume, market cap)
+      - Why do people like it? What's its competitive advantage?
+      - What are the criticisms? Controversies? Weaknesses?
+      - Is it still relevant? Growing or declining?
+      - Language: Chinese (中文), terms in "English (中文)" format
+      - Length: 1500-2500 words
+
+      **Structure**:
+      - 引言: One-sentence summary of what it is
+      - 产品概述: What it does and who it's for
+      - 核心特点: Key features and differentiators
+      - 使用体验: What's it like to actually use? (if applicable)
+      - 市场表现: Adoption metrics, competitive position
+      - 争议与风险: Known issues, criticisms
+      - 总结: Worth paying attention to? Why?
+
+      **Formatting**: ## sections, ### subsections, bold terms, ---, > blockquotes
+
+      **Research**: Use WebFetch for current metrics, recent news, user counts.
+
+      **标题要求**：简洁清晰，直接使用产品或协议名称作为标题。不要使用社交媒体风格的长标题、不要加副标题、不要使用冒号分隔的标题格式。例如：关键词是"Uniswap"，标题就是"Uniswap"。
+
+      **OUTPUT FORMAT**:
+      ===TITLE_START===
+      Concise product-name title in Chinese
+      ===TITLE_END===
+      ===CONTENT_START===
+      Full Markdown content
+      ===CONTENT_END===
+      ===SUMMARY_START===
+      80-120 word summary in Chinese
+      ===SUMMARY_END===
+
+  # =============================================
+  # 公司介绍类 (Company Introductions)
+  # =============================================
+  - id: "notable_companies"
+    name: "知名公司与组织"
+    category: "公司介绍"
+    description: "加密行业的关键公司和组织"
+    sort_order: 40
+    keyword_prompt: |
+      Generate {{.Count}} unique keywords about notable companies and organizations in crypto.
+
+      **Scope**: Exchanges (Binance, Coinbase, Kraken, OKX),
+      infrastructure companies (Consensys, Alchemy, Infura, QuickNode),
+      investment firms (a16z, Paradigm, Polychain, Galaxy Digital),
+      research/analytics (Chainalysis, Nansen, Messari, Glassnode),
+      foundations (Ethereum Foundation, Bitcoin Foundation, Solana Foundation),
+      custodians (BitGo, Fireblocks, Copper),
+      hardware (Ledger, Trezor, Bitmain, MicroBT),
+      failed companies (FTX, Three Arrows Capital, Celsius, BlockFi, Voyager),
+      TradFi entering crypto (BlackRock, Fidelity, JPMorgan).
+
+      **Ordering**: By significance — most impactful companies first.
+
+      **Excluded keywords**:
+      {{.ExistingKeywords}}
+
+      **Rules**:
+      - Return ONLY a JSON array: ["keyword1", "keyword2", ...]
+      - Each keyword: the company/org name (1-4 words)
+      - Include both thriving and failed companies
+      - NO overlap with excluded keywords
+
+      Output the JSON array directly without any additional text.
+
+    article_prompt: |
+      Write a comprehensive company profile of: "{{.Keyword}}"
+
+      **Angle**: Business journalism — who are they, what's their story, are they important?
+
+      **Content Requirements**:
+      - What does this company/org do? Core business
+      - Founding story: who started it, when, why?
+      - Key milestones: major achievements, funding rounds, pivots
+      - Business model: how do they make money?
+      - Industry position: market share, competitive landscape
+      - Controversies: any scandals, regulatory issues, criticism?
+      - Current status: thriving, struggling, or defunct? Why?
+      - Language: Chinese (中文), terms in "English (中文)" format
+      - Length: 1500-2500 words
+
+      **Structure**:
+      - 引言: One-line summary
+      - 公司概况: What they do and scale
+      - 发展历程: Timeline of key events
+      - 商业模式: Revenue and strategy
+      - 行业地位: Where they stand in the market
+      - 争议与挑战: Problems and criticisms
+      - 总结: Significance to the industry
+
+      **Formatting**: ## sections, ### subsections, bold terms, ---, > blockquotes
+
+      **Research**: Use WebFetch for current data, recent news, employee counts, revenue.
+
+      **标题要求**：简洁清晰，直接使用公司或组织名称作为标题。不要使用社交媒体风格的长标题、不要加副标题、不要使用冒号分隔的标题格式。例如：关键词是"Coinbase"，标题就是"Coinbase"。
+
+      **OUTPUT FORMAT**:
+      ===TITLE_START===
+      Concise company-name title in Chinese
+      ===TITLE_END===
+      ===CONTENT_START===
+      Full Markdown content
+      ===CONTENT_END===
+      ===SUMMARY_START===
+      80-120 word summary in Chinese
+      ===SUMMARY_END===
+
+# Global settings for keyword/article generation
+generation:
+  default_batch_size: 3
+  max_batch_size: 10
+  keyword_pool_target: 200
+  keyword_refill_threshold: 10
+  article_timeout_minutes: 60

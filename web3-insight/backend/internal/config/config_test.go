@@ -103,6 +103,26 @@ cloud_models:
 		t.Fatalf("failed to write routing.yaml: %v", err)
 	}
 
+	// Create prompts.yaml
+	promptsYAML := `themes:
+  - id: "web3_basics"
+    name: "Web3基础知识"
+    category: "基础知识"
+    description: "Web3 core concepts"
+    sort_order: 1
+    keyword_prompt: "Generate {{.Count}} keywords"
+    article_prompt: "Write about {{.Keyword}}"
+generation:
+  default_batch_size: 3
+  max_batch_size: 10
+  keyword_pool_target: 200
+  keyword_refill_threshold: 10
+  article_timeout_minutes: 60
+`
+	if err := os.WriteFile(filepath.Join(configDir, "prompts.yaml"), []byte(promptsYAML), 0644); err != nil {
+		t.Fatalf("failed to write prompts.yaml: %v", err)
+	}
+
 	// Change to temp directory so viper can find the config
 	origDir, err := os.Getwd()
 	if err != nil {
@@ -214,6 +234,26 @@ cloud_models: []
 	}
 	if err := os.WriteFile(filepath.Join(configDir, "routing.yaml"), []byte(routingYAML), 0644); err != nil {
 		t.Fatalf("failed to write routing.yaml: %v", err)
+	}
+
+	// Create prompts.yaml
+	promptsYAML2 := `themes:
+  - id: "web3_basics"
+    name: "Web3基础知识"
+    category: "基础知识"
+    description: "Web3 core concepts"
+    sort_order: 1
+    keyword_prompt: "Generate {{.Count}} keywords"
+    article_prompt: "Write about {{.Keyword}}"
+generation:
+  default_batch_size: 3
+  max_batch_size: 10
+  keyword_pool_target: 200
+  keyword_refill_threshold: 10
+  article_timeout_minutes: 60
+`
+	if err := os.WriteFile(filepath.Join(configDir, "prompts.yaml"), []byte(promptsYAML2), 0644); err != nil {
+		t.Fatalf("failed to write prompts.yaml: %v", err)
 	}
 
 	// Change to temp directory
