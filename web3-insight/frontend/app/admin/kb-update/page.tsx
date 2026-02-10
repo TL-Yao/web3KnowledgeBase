@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { MainLayout } from '@/components/layout/main-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -216,7 +215,7 @@ export default function KBUpdatePage() {
   }
 
   const handleInitKeywords = () => {
-    initKeywordsMutation.mutate({ count: 200 })
+    initKeywordsMutation.mutate({ count: 400 })
   }
 
   const currentBatchSize = batchSizeInput ?? kbConfig?.batchSize ?? 3
@@ -247,7 +246,6 @@ export default function KBUpdatePage() {
   const showInitButton = keywordStats && keywordStats.pending === 0
 
   return (
-    <MainLayout>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">知识库自动更新</h1>
@@ -580,6 +578,5 @@ export default function KBUpdatePage() {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
   )
 }
