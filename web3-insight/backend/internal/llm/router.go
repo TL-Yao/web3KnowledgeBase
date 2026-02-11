@@ -109,6 +109,18 @@ func (r *Router) setupDefaultRoutes(cfg *config.LLMConfig) {
 		r.SetRoute(TaskChat, chatRoute)
 	}
 
+	// Article update: prefer Sonnet for quality
+	articleUpdateRoute := []string{}
+	if cfg.Claude.Enabled {
+		articleUpdateRoute = append(articleUpdateRoute, cfg.Claude.DefaultModel)
+	}
+	if cfg.DefaultLocal != "" {
+		articleUpdateRoute = append(articleUpdateRoute, cfg.DefaultLocal)
+	}
+	if len(articleUpdateRoute) > 0 {
+		r.SetRoute(TaskArticleUpdate, articleUpdateRoute)
+	}
+
 	// Translation: prefer models good at Chinese
 	translationRoute := []string{}
 	if cfg.DefaultLocal != "" {

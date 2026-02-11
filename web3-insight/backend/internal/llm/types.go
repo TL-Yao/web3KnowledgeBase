@@ -59,6 +59,7 @@ const (
 	TaskChat              = "chat"
 	TaskTranslation       = "translation"
 	TaskEmbedding         = "embedding"
+	TaskArticleUpdate     = "article_update"
 )
 
 // Default options

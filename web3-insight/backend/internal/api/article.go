@@ -1,24 +1,28 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/user/web3-insight/internal/llm"
 	"github.com/user/web3-insight/internal/model"
 	"github.com/user/web3-insight/internal/repository"
+	"github.com/user/web3-insight/internal/service"
 	"gorm.io/gorm"
 )
 
 type ArticleHandler struct {
-	repo *repository.ArticleRepository
-	db   *gorm.DB
+	repo    *repository.ArticleRepository
+	db      *gorm.DB
+	updater *service.ArticleUpdater
 }
 
-func NewArticleHandler(repo *repository.ArticleRepository, db *gorm.DB) *ArticleHandler {
-	return &ArticleHandler{repo: repo, db: db}
+func NewArticleHandler(repo *repository.ArticleRepository, db *gorm.DB, updater *service.ArticleUpdater) *ArticleHandler {
+	return &ArticleHandler{repo: repo, db: db, updater: updater}
 }
 
 // ListArticles godoc
@@ -381,4 +385,98 @@ func (h *ArticleHandler) UpdateTags(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, article)
+}
+
+type GenerateUpdateRequest struct {
+	ConversationHistory []struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	} `json:"conversationHistory" binding:"required"`
+}
+
+func (h *ArticleHandler) GenerateUpdate(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid article ID"})
+		return
+	}
+
+	article, err := h.repo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "article not found"})
+		return
+	}
+
+	var req GenerateUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(req.ConversationHistory) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "conversation history is required"})
+		return
+	}
+
+	// Convert to llm.Message
+	messages := make([]llm.Message, len(req.ConversationHistory))
+	for i, m := range req.ConversationHistory {
+		messages[i] = llm.Message{Role: m.Role, Content: m.Content}
+	}
+
+	result, err := h.updater.GenerateUpdate(context.Background(), article, messages)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate update: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+type ApplyUpdateRequest struct {
+	UpdatedContent string `json:"updatedContent" binding:"required"`
+	ChangeSummary  string `json:"changeSummary"`
+}
+
+func (h *ArticleHandler) ApplyUpdate(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid article ID"})
+		return
+	}
+
+	article, err := h.repo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "article not found"})
+		return
+	}
+
+	var req ApplyUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.ChangeSummary == "" {
+		req.ChangeSummary = "文章内容已更新"
+	}
+
+	// Save current content as version snapshot
+	_, err = h.repo.CreateVersion(article.ID, article.Content, "chat_refinement", req.ChangeSummary)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create version snapshot"})
+		return
+	}
+
+	// Update article content
+	article.Content = req.UpdatedContent
+	if err := h.repo.Update(article); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update article"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"article": article,
+		"message": "Article updated successfully",
+	})
 }

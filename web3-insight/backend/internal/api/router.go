@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/user/web3-insight/internal/config"
+	"github.com/user/web3-insight/internal/llm"
 	"github.com/user/web3-insight/internal/repository"
 	"github.com/user/web3-insight/internal/service"
 	"gorm.io/gorm"
@@ -32,11 +33,13 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	// Initialize services
 	chatService := service.NewChatService(db, &cfg.LLM)
 	semanticSearchService := service.NewSemanticSearchService(articleRepo, &cfg.LLM)
+	llmRouter := llm.NewRouterFromConfig(&cfg.LLM)
+	articleUpdater := service.NewArticleUpdater(llmRouter)
 
 	return &Server{
 		config:             cfg,
 		db:                 db,
-		articleHandler:     NewArticleHandler(articleRepo, db),
+		articleHandler:     NewArticleHandler(articleRepo, db, articleUpdater),
 		categoryHandler:    NewCategoryHandler(categoryRepo),
 		configHandler:      NewConfigHandler(configRepo),
 		taskHandler:        NewTaskHandler(taskRepo),
@@ -91,6 +94,8 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			articles.DELETE("/:id", server.articleHandler.Delete)
 			articles.PATCH("/:id/archive", server.articleHandler.ToggleArchive)
 			articles.PUT("/:id/tags", server.articleHandler.UpdateTags)
+			articles.POST("/:id/generate-update", server.articleHandler.GenerateUpdate)
+			articles.POST("/:id/apply-update", server.articleHandler.ApplyUpdate)
 			articles.POST("/:id/regenerate", server.articleHandler.Regenerate)
 		}
 

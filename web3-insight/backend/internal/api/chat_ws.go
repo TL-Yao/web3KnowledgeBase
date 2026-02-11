@@ -2,12 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/user/web3-insight/internal/llm"
 	"github.com/user/web3-insight/internal/service"
 )
 
@@ -25,12 +27,19 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+// ChatMessage represents a single message in conversation history
+type ChatMessage struct {
+	Role    string `json:"role"`    // "user" or "assistant"
+	Content string `json:"content"`
+}
+
 // ChatRequest represents a chat message from the client
 type ChatRequest struct {
-	ArticleID    string `json:"articleId"`
-	Message      string `json:"message"`
-	SelectedText string `json:"selectedText,omitempty"`
-	SessionID    string `json:"sessionId"`
+	ArticleID    string        `json:"articleId"`
+	Message      string        `json:"message"`
+	SelectedText string        `json:"selectedText,omitempty"`
+	SessionID    string        `json:"sessionId"`
+	History      []ChatMessage `json:"history,omitempty"`
 }
 
 // ChatResponse represents a response chunk sent to the client
@@ -94,7 +103,24 @@ func (h *ChatHandler) HandleWebSocket(c *gin.Context) {
 		}
 
 		// Stream response from LLM
-		stream, model, err := h.chatService.Chat(req.ArticleID, req.Message, req.SelectedText)
+		var stream <-chan llm.StreamChunk
+		var model string
+
+		if len(req.History) > 0 {
+			// Multi-turn: convert history + current message to llm.Message slice
+			llmMessages := make([]llm.Message, 0, len(req.History)+1)
+			for _, m := range req.History {
+				llmMessages = append(llmMessages, llm.Message{Role: m.Role, Content: m.Content})
+			}
+			userMsg := req.Message
+			if req.SelectedText != "" {
+				userMsg = fmt.Sprintf("关于「%s」这部分内容：%s", req.SelectedText, req.Message)
+			}
+			llmMessages = append(llmMessages, llm.Message{Role: "user", Content: userMsg})
+			stream, model, err = h.chatService.ChatWithMessages(req.ArticleID, llmMessages)
+		} else {
+			stream, model, err = h.chatService.Chat(req.ArticleID, req.Message, req.SelectedText)
+		}
 		if err != nil {
 			writeJSON(ChatResponse{Type: "error", Content: err.Error()})
 			continue

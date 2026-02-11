@@ -137,6 +137,17 @@ func (r *ArticleRepository) RenameTag(oldName, newName string) error {
 	).Error
 }
 
+// CreateVersion saves the current article content as a version snapshot
+func (r *ArticleRepository) CreateVersion(articleID uuid.UUID, content, editedBy, changeSummary string) (*model.ArticleVersion, error) {
+	version := &model.ArticleVersion{
+		ArticleID:     articleID,
+		Content:       content,
+		EditedBy:      editedBy,
+		ChangeSummary: changeSummary,
+	}
+	return version, r.db.Create(version).Error
+}
+
 // RemoveTag removes a tag name from all articles' tag arrays and returns affected count
 func (r *ArticleRepository) RemoveTag(name string) (int64, error) {
 	result := r.db.Exec(

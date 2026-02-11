@@ -43,3 +43,10 @@ task_types:
     default_primary: "claude-sonnet-4-20250514"
     default_fallback: "claude-haiku-4-5-20251001"
     required_capability: "summarization"
+
+  - id: "article_update"
+    name: "文章更新生成"
+    description: "基于对话上下文生成文章定向更新"
+    default_primary: "claude-sonnet-4-20250514"
+    default_fallback: "claude-haiku-4-5-20251001"
+    required_capability: "generation"
