@@ -73,7 +73,7 @@ export function UpdateReviewPanel({
         </div>
 
         {/* Diff content */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className="p-6">
             {!hasChanges ? (
               <div className="text-center py-12 text-muted-foreground">

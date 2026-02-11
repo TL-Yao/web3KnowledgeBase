@@ -135,7 +135,7 @@ export function ChatSidebar({
       </ScrollArea>
 
       {/* Toolbar */}
-      <div className="px-4 py-2 border-t border-border flex items-center gap-2 shrink-0">
+      <div className="px-3 py-1.5 border-t border-border flex items-center gap-2 shrink-0">
         {messages.length >= 2 && onGenerateUpdate && (
           <Button
             variant="default"
@@ -172,14 +172,14 @@ export function ChatSidebar({
           />
           <Button
             size="icon"
-            className="absolute bottom-2 right-2 w-7 h-7"
+            className="absolute bottom-2 right-2 w-6 h-6"
             onClick={handleSubmit}
             disabled={!input.trim() || isLoading}
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">⌘↵ 发送 · ⌘/ 切换面板</p>
+        <p className="text-[11px] text-muted-foreground mt-1">⌘↵ 发送 · ⌘/ 切换面板</p>
       </div>
     </div>
   )
