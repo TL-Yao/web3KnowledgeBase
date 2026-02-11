@@ -43,4 +43,5 @@ test-results/
 # Compiled binaries
 web3-insight/backend/cleardata
 web3-insight/backend/server
+web3-insight/backend/worker
 web3-insight/backend/bin/
