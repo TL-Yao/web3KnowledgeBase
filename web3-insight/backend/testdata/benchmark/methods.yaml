@@ -1,0 +1,95 @@
+# Benchmark method definitions
+# model: must match llm.Router adapter name
+# prompt: "default" uses TagPromptTemplate from tagger.go; filename (e.g. "strict_v1") loads prompts/strict_v1.tmpl
+
+methods:
+  - id: haiku-current
+    description: "Current production prompt + Haiku"
+    model: claude-haiku
+    temperature: 0.2
+    max_tokens: 300
+    prompt: default
+
+  - id: haiku-low-temp
+    description: "Haiku with lower temperature"
+    model: claude-haiku
+    temperature: 0.05
+    max_tokens: 300
+    prompt: default
+
+  - id: sonnet-current
+    description: "Sonnet + current prompt"
+    model: claude-sonnet-4-20250514
+    temperature: 0.2
+    max_tokens: 300
+    prompt: default
+
+  - id: haiku-precise-v1
+    description: "Haiku + precise_v1 prompt (tighter rules)"
+    model: claude-haiku
+    temperature: 0.2
+    max_tokens: 300
+    prompt: precise_v1
+
+  - id: sonnet-precise-v1
+    description: "Sonnet + precise_v1 prompt"
+    model: claude-sonnet-4-20250514
+    temperature: 0.2
+    max_tokens: 300
+    prompt: precise_v1
+
+  - id: haiku-precise-v2
+    description: "Haiku + precise_v2 (examples + verify)"
+    model: claude-haiku
+    temperature: 0.2
+    max_tokens: 300
+    prompt: precise_v2
+
+  - id: sonnet-precise-v2
+    description: "Sonnet + precise_v2"
+    model: claude-sonnet-4-20250514
+    temperature: 0.2
+    max_tokens: 300
+    prompt: precise_v2
+
+  - id: sonnet-strict4
+    description: "Sonnet + strict 4 tags"
+    model: claude-sonnet-4-20250514
+    temperature: 0.2
+    max_tokens: 300
+    prompt: strict4
+
+  - id: haiku-strict4
+    description: "Haiku + strict 4 tags"
+    model: claude-haiku
+    temperature: 0.2
+    max_tokens: 300
+    prompt: strict4
+
+  - id: sonnet-balanced-v1
+    description: "Sonnet + balanced_v1 (4-5 tags, max 2 universal)"
+    model: claude-sonnet-4-20250514
+    temperature: 0.2
+    max_tokens: 300
+    prompt: balanced_v1
+
+  - id: sonnet-low-temp
+    description: "Sonnet + default prompt, temp 0.05"
+    model: claude-sonnet-4-20250514
+    temperature: 0.05
+    max_tokens: 300
+    prompt: default
+
+  - id: haiku-balanced-v1
+    description: "Haiku + balanced_v1 (4-5 tags, max 2 universal)"
+    model: claude-haiku
+    temperature: 0.2
+    max_tokens: 300
+    prompt: balanced_v1
+
+  - id: llama-local
+    description: "Llama 3 70B local + current prompt"
+    model: "llama3:70b"
+    temperature: 0.2
+    max_tokens: 300
+    prompt: default

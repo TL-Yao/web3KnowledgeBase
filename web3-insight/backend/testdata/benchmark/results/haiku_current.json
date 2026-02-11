@@ -1,0 +1,598 @@
+[
+  {
+    "methodId": "haiku-current",
+    "description": "Current production prompt + Haiku",
+    "model": "claude-haiku",
+    "articles": [
+      {
+        "title": "永续合约DEX：链上衍生品交易的崛起",
+        "theme": "advanced_defi",
+        "predicted": [
+          "永续合约",
+          "去中心化",
+          "DeFi"
+        ],
+        "expected": [
+          "永续合约",
+          "真实收益",
+          "DeFi",
+          "去中心化"
+        ],
+        "tp": 3,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1,
+        "recall": 0.75,
+        "f1": 0.8571428571428571
+      },
+      {
+        "title": "流动性质押：解锁质押资产的DeFi可组合性",
+        "theme": "advanced_defi",
+        "predicted": [
+          "流动性质押",
+          "DeFi",
+          "以太坊",
+          "智能合约"
+        ],
+        "expected": [
+          "流动性质押",
+          "DeFi",
+          "以太坊",
+          "共识机制"
+        ],
+        "tp": 3,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      {
+        "title": "Rollup技术对比：Optimistic vs ZK的扩容之争",
+        "theme": "advanced_tech",
+        "predicted": [
+          "Rollup",
+          "Layer 2",
+          "以太坊"
+        ],
+        "expected": [
+          "Rollup",
+          "零知识证明",
+          "Layer 2",
+          "以太坊"
+        ],
+        "tp": 3,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1,
+        "recall": 0.75,
+        "f1": 0.8571428571428571
+      },
+      {
+        "title": "模块化区块链：拆解单体链的架构革命",
+        "theme": "advanced_tech",
+        "predicted": [
+          "模块化区块链",
+          "Rollup"
+        ],
+        "expected": [
+          "模块化区块链",
+          "Rollup",
+          "区块链",
+          "Layer 2"
+        ],
+        "tp": 2,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      },
+      {
+        "title": "零知识证明入门：隐私与扩容的密码学基石",
+        "theme": "advanced_tech",
+        "predicted": [
+          "零知识证明",
+          "Layer 2",
+          "隐私"
+        ],
+        "expected": [
+          "零知识证明",
+          "Rollup",
+          "隐私",
+          "Layer 2"
+        ],
+        "tp": 3,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1,
+        "recall": 0.75,
+        "f1": 0.8571428571428571
+      },
+      {
+        "title": "FTX崩塌：加密行业最大的信任危机",
+        "theme": "crypto_history",
+        "predicted": [
+          "交易所事件",
+          "市场事件",
+          "监管合规",
+          "安全",
+          "代币经济"
+        ],
+        "expected": [
+          "交易所事件",
+          "监管里程碑",
+          "市场事件",
+          "安全"
+        ],
+        "tp": 3,
+        "fp": 2,
+        "fn": 1,
+        "precision": 0.6,
+        "recall": 0.75,
+        "f1": 0.6666666666666665
+      },
+      {
+        "title": "Terra/LUNA崩盘：算法稳定币的致命缺陷",
+        "theme": "crypto_history",
+        "predicted": [
+          "市场事件",
+          "协议事故",
+          "代币经济",
+          "监管合规",
+          "DeFi"
+        ],
+        "expected": [
+          "市场事件",
+          "协议事故",
+          "DeFi",
+          "代币经济"
+        ],
+        "tp": 4,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.8,
+        "recall": 1,
+        "f1": 0.888888888888889
+      },
+      {
+        "title": "The DAO事件：以太坊历史上最大的智能合约危机",
+        "theme": "crypto_history",
+        "predicted": [
+          "以太坊",
+          "智能合约",
+          "安全",
+          "市场事件"
+        ],
+        "expected": [
+          "黑客攻击",
+          "以太坊",
+          "智能合约",
+          "治理"
+        ],
+        "tp": 2,
+        "fp": 2,
+        "fn": 2,
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5
+      },
+      {
+        "title": "比特币ETF获批：加密资产走进主流金融的里程碑",
+        "theme": "crypto_history",
+        "predicted": [
+          "市场事件",
+          "监管里程碑",
+          "比特币"
+        ],
+        "expected": [
+          "监管里程碑",
+          "市场事件",
+          "比特币",
+          "监管合规"
+        ],
+        "tp": 3,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1,
+        "recall": 0.75,
+        "f1": 0.8571428571428571
+      },
+      {
+        "title": "AMM自动做市商：去中心化交易的核心引擎",
+        "theme": "defi_basics",
+        "predicted": [
+          "AMM",
+          "DEX",
+          "流动性池",
+          "代币经济"
+        ],
+        "expected": [
+          "AMM",
+          "DEX",
+          "流动性池",
+          "DeFi"
+        ],
+        "tp": 3,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      {
+        "title": "稳定币全解析：加密世界的价格锚定机制",
+        "theme": "defi_basics",
+        "predicted": [
+          "稳定币",
+          "DeFi",
+          "代币经济",
+          "监管合规"
+        ],
+        "expected": [
+          "稳定币",
+          "DeFi",
+          "监管合规"
+        ],
+        "tp": 3,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.75,
+        "recall": 1,
+        "f1": 0.8571428571428571
+      },
+      {
+        "title": "闪电贷：零抵押借贷的原理与应用",
+        "theme": "defi_basics",
+        "predicted": [
+          "闪电贷",
+          "借贷协议"
+        ],
+        "expected": [
+          "闪电贷",
+          "DeFi",
+          "智能合约",
+          "安全"
+        ],
+        "tp": 1,
+        "fp": 1,
+        "fn": 3,
+        "precision": 0.5,
+        "recall": 0.25,
+        "f1": 0.3333333333333333
+      },
+      {
+        "title": "Coinbase：从交易所到Web3基础设施的进化之路",
+        "theme": "notable_companies",
+        "predicted": [
+          "交易所",
+          "投资机构",
+          "以太坊",
+          "Layer 2",
+          "监管合规"
+        ],
+        "expected": [
+          "交易所",
+          "监管合规",
+          "Web3"
+        ],
+        "tp": 2,
+        "fp": 3,
+        "fn": 1,
+        "precision": 0.4,
+        "recall": 0.6666666666666666,
+        "f1": 0.5
+      },
+      {
+        "title": "a16z crypto：风投巨头如何塑造Web3版图",
+        "theme": "notable_companies",
+        "predicted": [
+          "投资机构",
+          "研究分析",
+          "Web3",
+          "DeFi",
+          "代币经济"
+        ],
+        "expected": [
+          "投资机构",
+          "研究分析",
+          "DeFi",
+          "Web3"
+        ],
+        "tp": 4,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.8,
+        "recall": 1,
+        "f1": 0.888888888888889
+      },
+      {
+        "title": "Solana深度解析：高性能公链的技术架构与生态",
+        "theme": "notable_products",
+        "predicted": [
+          "L1公链",
+          "DeFi协议",
+          "基础设施",
+          "共识机制"
+        ],
+        "expected": [
+          "L1公链",
+          "DeFi协议",
+          "共识机制",
+          "区块链"
+        ],
+        "tp": 3,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      {
+        "title": "以太坊生态全景：从L1到L2的完整技术栈",
+        "theme": "notable_products",
+        "predicted": [
+          "以太坊",
+          "Layer 2",
+          "DeFi协议",
+          "开发工具"
+        ],
+        "expected": [
+          "L1公链",
+          "以太坊",
+          "Layer 2",
+          "DeFi协议"
+        ],
+        "tp": 3,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      {
+        "title": "ETF投资入门：从传统基金到加密资产的桥梁",
+        "theme": "tradfi_basics",
+        "predicted": [
+          "ETF",
+          "投资组合",
+          "DeFi"
+        ],
+        "expected": [
+          "ETF",
+          "投资组合",
+          "风险管理",
+          "比特币"
+        ],
+        "tp": 2,
+        "fp": 1,
+        "fn": 2,
+        "precision": 0.6666666666666666,
+        "recall": 0.5,
+        "f1": 0.5714285714285715
+      },
+      {
+        "title": "央行货币政策如何影响加密市场",
+        "theme": "tradfi_basics",
+        "predicted": [
+          "央行政策",
+          "风险管理"
+        ],
+        "expected": [
+          "央行政策",
+          "风险管理",
+          "比特币"
+        ],
+        "tp": 2,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      },
+      {
+        "title": "Gas费详解：以太坊交易的成本机制",
+        "theme": "web3_basics",
+        "predicted": [
+          "Gas费",
+          "以太坊",
+          "Layer 2"
+        ],
+        "expected": [
+          "Gas费",
+          "以太坊",
+          "基础概念",
+          "入门教程"
+        ],
+        "tp": 2,
+        "fp": 1,
+        "fn": 2,
+        "precision": 0.6666666666666666,
+        "recall": 0.5,
+        "f1": 0.5714285714285715
+      },
+      {
+        "title": "NFT入门：数字所有权的革命性实验",
+        "theme": "web3_basics",
+        "predicted": [
+          "NFT",
+          "代币经济",
+          "Web3"
+        ],
+        "expected": [
+          "NFT",
+          "基础概念",
+          "代币经济",
+          "入门教程"
+        ],
+        "tp": 2,
+        "fp": 1,
+        "fn": 2,
+        "precision": 0.6666666666666666,
+        "recall": 0.5,
+        "f1": 0.5714285714285715
+      },
+      {
+        "title": "什么是区块链:从零开始理解这项改变世界的技术",
+        "theme": "web3_basics",
+        "predicted": [
+          "入门教程",
+          "基础概念",
+          "区块链",
+          "去中心化",
+          "共识机制",
+          "密码学"
+        ],
+        "expected": [
+          "区块链",
+          "基础概念",
+          "去中心化",
+          "密码学"
+        ],
+        "tp": 4,
+        "fp": 2,
+        "fn": 0,
+        "precision": 0.6666666666666666,
+        "recall": 1,
+        "f1": 0.8
+      },
+      {
+        "title": "共识机制详解：PoW、PoS与区块链的信任基础",
+        "theme": "web3_basics",
+        "predicted": [
+          "共识机制",
+          "区块链"
+        ],
+        "expected": [
+          "共识机制",
+          "区块链",
+          "基础概念",
+          "去中心化"
+        ],
+        "tp": 2,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      },
+      {
+        "title": "分布式账本技术：从零开始理解数字时代的信任革命",
+        "theme": "web3_basics",
+        "predicted": [
+          "区块链",
+          "共识机制"
+        ],
+        "expected": [
+          "区块链",
+          "共识机制",
+          "基础概念",
+          "去中心化"
+        ],
+        "tp": 2,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      },
+      {
+        "title": "加密钱包完全指南：如何安全管理你的数字资产",
+        "theme": "web3_basics",
+        "predicted": [
+          "钱包",
+          "安全",
+          "入门教程",
+          "基础概念",
+          "账户抽象",
+          "Web3"
+        ],
+        "expected": [
+          "钱包",
+          "安全",
+          "基础概念",
+          "入门教程"
+        ],
+        "tp": 4,
+        "fp": 2,
+        "fn": 0,
+        "precision": 0.6666666666666666,
+        "recall": 1,
+        "f1": 0.8
+      },
+      {
+        "title": "区块链的基本原理:从零开始理解这项改变世界的技术",
+        "theme": "web3_basics",
+        "predicted": [
+          "基础概念",
+          "密码学",
+          "共识机制",
+          "区块链"
+        ],
+        "expected": [
+          "区块链",
+          "基础概念",
+          "密码学",
+          "共识机制"
+        ],
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1
+      },
+      {
+        "title": "智能合约入门：区块链上的自动化程序",
+        "theme": "web3_basics",
+        "predicted": [
+          "智能合约",
+          "基础概念",
+          "dApp",
+          "去中心化"
+        ],
+        "expected": [
+          "智能合约",
+          "基础概念",
+          "dApp",
+          "以太坊"
+        ],
+        "tp": 3,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75
+      },
+      {
+        "title": "算法稳定币原理:从零开始理解加密货币世界的\"自动调节货币\"",
+        "theme": "web3_basics",
+        "predicted": [
+          "代币经济",
+          "DeFi"
+        ],
+        "expected": [
+          "DeFi",
+          "代币经济",
+          "基础概念",
+          "入门教程"
+        ],
+        "tp": 2,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      }
+    ],
+    "macroPrecision": 0.7938271604938272,
+    "macroRecall": 0.70679012345679,
+    "macroF1": 0.7257201646090536,
+    "microPrecision": 0.7628865979381443,
+    "microRecall": 0.7047619047619048,
+    "microF1": 0.7326732673267325,
+    "avgTags": 3.5925925925925926,
+    "registryRate": 0.7461538461538462,
+    "errorCount": 0
+  }
+]
