@@ -85,7 +85,7 @@ export function FloatingChat({ articleId, articleTitle, onGenerateUpdate, isGene
 
   return (
     <div
-      className="fixed bg-background border border-border rounded-lg shadow-xl flex flex-col"
+      className="fixed bg-background border border-border rounded-lg shadow-xl flex flex-col overflow-hidden"
       style={{
         bottom: position.y,
         right: position.x,
@@ -111,7 +111,7 @@ export function FloatingChat({ articleId, articleTitle, onGenerateUpdate, isGene
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 min-h-0 p-4" ref={scrollRef}>
         {messages.length === 0 && !currentResponse && (
           <div className="text-center text-muted-foreground text-sm py-8">
             <p>对「{articleTitle}」有疑问？</p>
