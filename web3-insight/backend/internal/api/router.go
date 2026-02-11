@@ -89,6 +89,8 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			articles.POST("", server.articleHandler.Create)
 			articles.PUT("/:id", server.articleHandler.Update)
 			articles.DELETE("/:id", server.articleHandler.Delete)
+			articles.PATCH("/:id/archive", server.articleHandler.ToggleArchive)
+			articles.PUT("/:id/tags", server.articleHandler.UpdateTags)
 			articles.POST("/:id/regenerate", server.articleHandler.Regenerate)
 		}
 
@@ -202,6 +204,7 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		tags := api.Group("/tags")
 		{
 			tags.GET("", tagHandler.List)
+			tags.GET("/search", tagHandler.Search)
 			tags.GET("/in-use", tagHandler.GetInUse)
 			tags.GET("/stats", tagHandler.GetStats)
 			tags.PUT("/:id/status", tagHandler.UpdateStatus)

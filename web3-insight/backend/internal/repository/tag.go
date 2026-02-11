@@ -121,6 +121,18 @@ func (r *TagRepository) FindInUseWithCounts() ([]TagInUse, error) {
 	return results, err
 }
 
+// Search returns tags matching a query string (substring match on name or nameEn)
+func (r *TagRepository) Search(query string, status string, limit int) ([]model.Tag, error) {
+	var tags []model.Tag
+	pattern := "%" + query + "%"
+	q := r.db.Where("name ILIKE ? OR name_en ILIKE ?", pattern, pattern)
+	if status != "" {
+		q = q.Where("status = ?", status)
+	}
+	err := q.Order("name ASC").Limit(limit).Find(&tags).Error
+	return tags, err
+}
+
 // GetStats returns aggregate tag statistics
 func (r *TagRepository) GetStats() (map[string]int64, error) {
 	stats := make(map[string]int64)

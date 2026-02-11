@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -41,9 +42,10 @@ func (h *ArticleHandler) List(c *gin.Context) {
 	}
 
 	params := repository.ArticleListParams{
-		Status: c.Query("status"),
-		Search: search,
-		Tag:    c.Query("tag"),
+		Status:   c.Query("status"),
+		Search:   search,
+		Tag:      c.Query("tag"),
+		Archived: c.DefaultQuery("archived", "false"),
 	}
 
 	// Accept both "category" (frontend) and "category_id" (legacy) parameter names
@@ -195,6 +197,7 @@ type UpdateArticleRequest struct {
 	CategoryID *uuid.UUID `json:"categoryId"`
 	Tags       []string   `json:"tags"`
 	Status     string     `json:"status"`
+	Archived   *bool      `json:"archived"`
 }
 
 // UpdateArticle godoc
@@ -247,6 +250,9 @@ func (h *ArticleHandler) Update(c *gin.Context) {
 	if req.Status != "" {
 		article.Status = req.Status
 	}
+	if req.Archived != nil {
+		article.Archived = *req.Archived
+	}
 
 	if err := h.repo.Update(article); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -272,12 +278,37 @@ func (h *ArticleHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// Clean up keyword references before deleting article
+	h.db.Model(&model.Keyword{}).Where("article_id = ?", id).Update("article_id", nil)
+
 	if err := h.repo.Delete(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func (h *ArticleHandler) ToggleArchive(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	article, err := h.repo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "article not found"})
+		return
+	}
+
+	article.Archived = !article.Archived
+	if err := h.repo.Update(article); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, article)
 }
 
 // RegenerateArticle godoc
@@ -308,4 +339,46 @@ func (h *ArticleHandler) Regenerate(c *gin.Context) {
 		"message":    "regeneration queued",
 		"article_id": id,
 	})
+}
+
+type UpdateTagsRequest struct {
+	Tags []string `json:"tags"`
+}
+
+func (h *ArticleHandler) UpdateTags(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid article ID"})
+		return
+	}
+
+	var req UpdateTagsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Deduplicate and trim
+	seen := make(map[string]bool)
+	var cleanTags []string
+	for _, t := range req.Tags {
+		t = strings.TrimSpace(t)
+		if t != "" && len(t) <= 100 && !seen[t] {
+			seen[t] = true
+			cleanTags = append(cleanTags, t)
+		}
+	}
+
+	if err := h.repo.UpdateTags(id, cleanTags); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update tags"})
+		return
+	}
+
+	article, err := h.repo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "article not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, article)
 }

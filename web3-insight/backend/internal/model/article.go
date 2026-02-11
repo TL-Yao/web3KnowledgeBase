@@ -24,6 +24,7 @@ type Article struct {
 	ModelUsed        string          `gorm:"size:50" json:"modelUsed"`
 	GenerationPrompt string          `gorm:"type:text" json:"generationPrompt"`
 	ThemeID          *string         `gorm:"type:varchar(50)" json:"themeId,omitempty"`
+	Archived         bool            `gorm:"default:false;index" json:"archived"`
 	ViewCount        int             `gorm:"default:0" json:"viewCount"`
 	Embedding        *pgvector.Vector `gorm:"type:vector(1536)" json:"-"`
 	CreatedAt        time.Time       `json:"createdAt"`

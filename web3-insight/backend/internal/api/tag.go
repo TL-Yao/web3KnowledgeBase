@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -150,6 +151,39 @@ func (h *TagHandler) GetInUse(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"tags": tags})
+}
+
+// Search returns tags matching a query string for autocomplete
+func (h *TagHandler) Search(c *gin.Context) {
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "q parameter required"})
+		return
+	}
+	status := c.DefaultQuery("status", "active")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if limit > 50 {
+		limit = 50
+	}
+
+	tags, err := h.tagRepo.Search(q, status, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "search failed"})
+		return
+	}
+
+	// Return lightweight response for autocomplete
+	type tagResult struct {
+		Name    string  `json:"name"`
+		NameEn  string  `json:"nameEn"`
+		ThemeID *string `json:"themeId"`
+	}
+	results := make([]tagResult, len(tags))
+	for i, t := range tags {
+		results[i] = tagResult{Name: t.Name, NameEn: t.NameEn, ThemeID: t.ThemeID}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"tags": results})
 }
 
 // BulkTag tags all untagged articles (or all with force=true query param)

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/pgvector/pgvector-go"
 	"github.com/user/web3-insight/internal/model"
 	"gorm.io/gorm"
@@ -21,6 +22,7 @@ type ArticleListParams struct {
 	Tags       []string
 	Tag        string // single tag filter (uses PostgreSQL array contains)
 	Search     string
+	Archived   string // "true", "false", or "all" (default: "false")
 	Page       int
 	PageSize   int
 }
@@ -46,6 +48,16 @@ func (r *ArticleRepository) List(params ArticleListParams) (*ArticleListResult, 
 	}
 	if params.Tag != "" {
 		query = query.Where("? = ANY(tags)", params.Tag)
+	}
+
+	switch params.Archived {
+	case "true":
+		query = query.Where("archived = ?", true)
+	case "all":
+		// no filter
+	default:
+		// "false" or empty — default: exclude archived
+		query = query.Where("archived = ?", false)
 	}
 
 	var total int64
@@ -109,6 +121,12 @@ func (r *ArticleRepository) Update(article *model.Article) error {
 
 func (r *ArticleRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&model.Article{}, "id = ?", id).Error
+}
+
+func (r *ArticleRepository) UpdateTags(id uuid.UUID, tags []string) error {
+	return r.db.Model(&model.Article{}).
+		Where("id = ?", id).
+		Update("tags", pq.StringArray(tags)).Error
 }
 
 func (r *ArticleRepository) IncrementViewCount(id uuid.UUID) error {
