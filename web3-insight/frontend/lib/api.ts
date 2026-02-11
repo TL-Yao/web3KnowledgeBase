@@ -621,3 +621,21 @@ export const tagAPI = {
       body: JSON.stringify({ status }),
     }),
 }
+
+// Config API
+export interface ConfigValue {
+  key: string
+  value: string
+  description?: string
+}
+
+export const configAPI = {
+  get: (key: string) =>
+    fetchAPI<ConfigValue>(`/api/config/${key}`),
+
+  set: (key: string, value: string, description?: string) =>
+    fetchAPI<ConfigValue>(`/api/config/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value, description }),
+    }),
+}

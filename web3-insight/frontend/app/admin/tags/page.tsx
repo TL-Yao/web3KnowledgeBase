@@ -30,7 +30,9 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react'
-import { tagAPI, Tag } from '@/lib/api'
+import { tagAPI, configAPI, Tag } from '@/lib/api'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 
 function getStatusBadge(status: Tag['status']) {
@@ -67,6 +69,27 @@ export default function AdminTagsPage() {
     staleTime: 60000,
   })
 
+  const { data: autoTagConfig } = useQuery({
+    queryKey: ['config', 'auto_tagging_enabled'],
+    queryFn: () => configAPI.get('auto_tagging_enabled'),
+    staleTime: 30000,
+    retry: false,
+  })
+
+  const autoTagEnabled = autoTagConfig?.value !== 'false'
+
+  const toggleAutoTagMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      configAPI.set('auto_tagging_enabled', String(enabled), '是否在文章生成时自动打标签'),
+    onSuccess: (_, enabled) => {
+      toast.success(enabled ? '自动标签已开启' : '自动标签已关闭')
+      queryClient.invalidateQueries({ queryKey: ['config', 'auto_tagging_enabled'] })
+    },
+    onError: (error: Error) => {
+      toast.error('切换失败', { description: error.message })
+    },
+  })
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: Tag['status'] }) =>
       tagAPI.updateStatus(id, status),
@@ -86,17 +109,30 @@ export default function AdminTagsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">标签管理</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            queryClient.invalidateQueries({ queryKey: ['admin-tags'] })
-            queryClient.invalidateQueries({ queryKey: ['admin-tag-stats'] })
-          }}
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          刷新
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="auto-tag"
+              checked={autoTagEnabled}
+              onCheckedChange={(checked) => toggleAutoTagMutation.mutate(checked)}
+              disabled={toggleAutoTagMutation.isPending}
+            />
+            <Label htmlFor="auto-tag" className="text-sm cursor-pointer">
+              自动标签
+            </Label>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['admin-tags'] })
+              queryClient.invalidateQueries({ queryKey: ['admin-tag-stats'] })
+            }}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            刷新
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
