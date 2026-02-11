@@ -52,14 +52,16 @@ type Tagger struct {
 	llmRouter   *llm.Router
 	tagRepo     *repository.TagRepository
 	articleRepo *repository.ArticleRepository
+	configRepo  *repository.ConfigRepository
 }
 
 // NewTagger creates a new tagger service
-func NewTagger(router *llm.Router, tagRepo *repository.TagRepository, articleRepo *repository.ArticleRepository) *Tagger {
+func NewTagger(router *llm.Router, tagRepo *repository.TagRepository, articleRepo *repository.ArticleRepository, configRepo *repository.ConfigRepository) *Tagger {
 	return &Tagger{
 		llmRouter:   router,
 		tagRepo:     tagRepo,
 		articleRepo: articleRepo,
+		configRepo:  configRepo,
 	}
 }
 
@@ -81,6 +83,15 @@ type TagPromptData struct {
 
 // TagArticle tags an article using the tag registry and LLM
 func (t *Tagger) TagArticle(ctx context.Context, article *model.Article) error {
+	// Check if auto-tagging is enabled via config
+	if t.configRepo != nil {
+		cfg, err := t.configRepo.Get("auto_tagging_enabled")
+		if err == nil && string(cfg.Value) == `"false"` {
+			log.Printf("Auto-tagging disabled via config, skipping article '%s'", article.Title)
+			return nil
+		}
+	}
+
 	themeID := "web3_basics" // default
 	if article.ThemeID != nil && *article.ThemeID != "" {
 		themeID = *article.ThemeID

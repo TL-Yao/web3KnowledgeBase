@@ -63,7 +63,8 @@ func main() {
 	// Create tagger
 	tagRepo := repository.NewTagRepository(db)
 	articleRepo := repository.NewArticleRepository(db)
-	tagger := service.NewTagger(llmRouter, tagRepo, articleRepo)
+	configRepo := repository.NewConfigRepository(db)
+	tagger := service.NewTagger(llmRouter, tagRepo, articleRepo, configRepo)
 
 	// Tag each article
 	ctx := context.Background()

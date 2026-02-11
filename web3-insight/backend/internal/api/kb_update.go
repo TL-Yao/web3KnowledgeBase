@@ -42,7 +42,7 @@ func NewKBUpdateHandler(db *gorm.DB, cfg *config.Config) *KBUpdateHandler {
 	keywordPool := service.NewKeywordPoolService(keywordRepo, prompts)
 	// Initialize LLM router and tagger
 	llmRouter := llm.NewRouterFromConfig(&cfg.LLM)
-	tagger := service.NewTagger(llmRouter, tagRepo, articleRepo)
+	tagger := service.NewTagger(llmRouter, tagRepo, articleRepo, configRepo)
 	articleGen := service.NewArticleGeneratorService(articleRepo, tagger, prompts)
 
 	orchestrator := service.NewKBUpdateOrchestrator(keywordPool, articleGen, keywordRepo, jobRepo, themeRepo, configRepo, prompts)

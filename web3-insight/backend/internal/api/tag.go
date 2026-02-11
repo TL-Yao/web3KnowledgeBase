@@ -164,7 +164,8 @@ func (h *TagHandler) BulkTag(c *gin.Context) {
 
 	// Create tagger
 	llmRouter := llm.NewRouterFromConfig(h.llmConfig)
-	tagger := service.NewTagger(llmRouter, h.tagRepo, h.articleRepo)
+	configRepo := repository.NewConfigRepository(h.db)
+	tagger := service.NewTagger(llmRouter, h.tagRepo, h.articleRepo, configRepo)
 
 	// Tag in background, return immediately
 	total := len(articles)
