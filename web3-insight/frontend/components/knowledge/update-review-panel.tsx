@@ -17,6 +17,7 @@ interface UpdateReviewPanelProps {
   onCancel: () => void
   isApplying: boolean
   isRegenerating: boolean
+  variant?: 'overlay' | 'inline'
 }
 
 export function UpdateReviewPanel({
@@ -30,14 +31,21 @@ export function UpdateReviewPanel({
   onCancel,
   isApplying,
   isRegenerating,
+  variant = 'inline',
 }: UpdateReviewPanelProps) {
   const changes = diffLines(originalContent, updatedContent)
   const hasChanges = changes.some(part => part.added || part.removed)
 
-  return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
-      <div className="fixed inset-4 md:inset-8 bg-background border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden">
-        {/* Header */}
+  const isOverlay = variant === 'overlay'
+
+  const panel = (
+    <div className={cn(
+      "flex flex-col overflow-hidden",
+      isOverlay
+        ? "fixed inset-4 md:inset-8 bg-background border border-border rounded-lg shadow-2xl"
+        : "h-full"
+    )}>
+      {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <FileText className="w-5 h-5 text-primary" />
@@ -165,7 +173,16 @@ export function UpdateReviewPanel({
             {isApplying ? '应用中...' : '应用更新'}
           </Button>
         </div>
-      </div>
     </div>
   )
+
+  if (isOverlay) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+        {panel}
+      </div>
+    )
+  }
+
+  return panel
 }

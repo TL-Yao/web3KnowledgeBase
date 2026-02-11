@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MainLayout } from '@/components/layout/main-layout'
 import { ArticleView } from '@/components/knowledge/article-view'
-import { FloatingChat } from '@/components/chat/floating-chat'
+import { ChatSidebar } from '@/components/chat/chat-sidebar'
+import { SidebarToggle } from '@/components/chat/sidebar-toggle'
+import { ResizeHandle } from '@/components/ui/resize-handle'
 import { UpdateReviewPanel } from '@/components/knowledge/update-review-panel'
 import { Button } from '@/components/ui/button'
 import { articleAPI } from '@/lib/api'
@@ -14,13 +16,58 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import type { Message } from '@/hooks/use-chat'
 
+const SIDEBAR_MIN = 320
+const SIDEBAR_MAX = 600
+const SIDEBAR_DEFAULT = 400
+
 export default function ArticlePage() {
   const params = useParams()
   const slug = params.slug as string
   const queryClient = useQueryClient()
 
   const [isApplying, setIsApplying] = useState(false)
+  const [clearTrigger, setClearTrigger] = useState(0)
   const lastMessagesRef = useRef<Message[]>([])
+
+  // Sidebar state with localStorage persistence (SSR-safe)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT)
+  const [isDragging, setIsDragging] = useState(false)
+
+  useEffect(() => {
+    const savedOpen = localStorage.getItem('chat-sidebar-open')
+    if (savedOpen === 'false') setIsSidebarOpen(false)
+    const savedWidth = localStorage.getItem('chat-sidebar-width')
+    if (savedWidth) setSidebarWidth(parseInt(savedWidth, 10))
+  }, [])
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen(prev => {
+      const next = !prev
+      localStorage.setItem('chat-sidebar-open', String(next))
+      return next
+    })
+  }, [])
+
+  const handleResize = useCallback((delta: number) => {
+    setSidebarWidth(prev => {
+      // Dragging left (negative delta) = wider sidebar
+      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, prev - delta))
+      return next
+    })
+  }, [])
+
+  const handleResizeEnd = useCallback(() => {
+    setSidebarWidth(prev => {
+      localStorage.setItem('chat-sidebar-width', String(prev))
+      return prev
+    })
+  }, [])
+
+  const handleResizeReset = useCallback(() => {
+    setSidebarWidth(SIDEBAR_DEFAULT)
+    localStorage.setItem('chat-sidebar-width', String(SIDEBAR_DEFAULT))
+  }, [])
 
   const [updateState, setUpdateState] = useState<{
     isGenerating: boolean
@@ -49,7 +96,7 @@ export default function ArticlePage() {
     slug: article.slug,
     title: article.title,
     content: article.content,
-    contentHtml: article.contentHtml || '', // API doesn't provide HTML, component will fall back to content
+    contentHtml: article.contentHtml || '',
     summary: article.summary,
     category: {
       id: article.category?.id || 'uncategorized',
@@ -77,7 +124,6 @@ export default function ArticlePage() {
     )
   }
 
-  // Handle error state first - show error message when backend fails
   if (isError) {
     return (
       <MainLayout>
@@ -104,7 +150,6 @@ export default function ArticlePage() {
     )
   }
 
-  // Handle not found state - article doesn't exist
   if (!displayArticle) {
     return (
       <MainLayout>
@@ -134,6 +179,11 @@ export default function ArticlePage() {
   const handleGenerateUpdate = async (messages: Message[]) => {
     lastMessagesRef.current = messages
     setUpdateState(prev => ({ ...prev, isGenerating: true }))
+    // Auto-open sidebar so user sees conversation context alongside diff
+    if (!isSidebarOpen) {
+      setIsSidebarOpen(true)
+      localStorage.setItem('chat-sidebar-open', 'true')
+    }
     try {
       const result = await articleAPI.generateUpdate(displayArticle!.id, {
         conversationHistory: messages.map(m => ({ role: m.role, content: m.content }))
@@ -165,6 +215,7 @@ export default function ArticlePage() {
       })
       toast.success('文章已更新')
       setUpdateState({ isGenerating: false, isReviewOpen: false, updatedContent: null, changeSummary: null, model: null })
+      setClearTrigger(prev => prev + 1)
       queryClient.invalidateQueries({ queryKey: ['article', slug] })
       queryClient.invalidateQueries({ queryKey: ['article-versions', displayArticle!.id] })
     } catch {
@@ -180,28 +231,54 @@ export default function ArticlePage() {
 
   return (
     <MainLayout>
-      <ArticleView article={displayArticle} />
-      <FloatingChat
-        articleId={displayArticle.id}
-        articleTitle={displayArticle.title}
-        onGenerateUpdate={handleGenerateUpdate}
-        isGeneratingUpdate={updateState.isGenerating}
-      />
+      <div className="flex h-full relative">
+        {/* Article content or UpdateReviewPanel */}
+        <div className="flex-1 min-w-0 overflow-auto">
+          {updateState.isReviewOpen && updateState.updatedContent ? (
+            <UpdateReviewPanel
+              variant="inline"
+              articleTitle={displayArticle.title}
+              originalContent={displayArticle.content}
+              updatedContent={updateState.updatedContent}
+              changeSummary={updateState.changeSummary!}
+              model={updateState.model!}
+              onApply={handleApplyUpdate}
+              onRegenerate={handleRegenerate}
+              onCancel={handleCancelReview}
+              isApplying={isApplying}
+              isRegenerating={updateState.isGenerating}
+            />
+          ) : (
+            <ArticleView article={displayArticle} />
+          )}
+        </div>
 
-      {updateState.isReviewOpen && updateState.updatedContent && (
-        <UpdateReviewPanel
+        {/* Resize handle */}
+        {isSidebarOpen && (
+          <ResizeHandle
+            onResize={handleResize}
+            onResizeEnd={handleResizeEnd}
+            onReset={handleResizeReset}
+            onDragChange={setIsDragging}
+          />
+        )}
+
+        {/* Chat sidebar */}
+        <ChatSidebar
+          articleId={displayArticle.id}
           articleTitle={displayArticle.title}
-          originalContent={displayArticle.content}
-          updatedContent={updateState.updatedContent}
-          changeSummary={updateState.changeSummary!}
-          model={updateState.model!}
-          onApply={handleApplyUpdate}
-          onRegenerate={handleRegenerate}
-          onCancel={handleCancelReview}
-          isApplying={isApplying}
-          isRegenerating={updateState.isGenerating}
+          isOpen={isSidebarOpen}
+          onToggle={toggleSidebar}
+          onGenerateUpdate={handleGenerateUpdate}
+          isGeneratingUpdate={updateState.isGenerating}
+          width={sidebarWidth}
+          isDragging={isDragging}
+          clearTrigger={clearTrigger}
         />
-      )}
+
+        {/* Toggle button when sidebar is closed */}
+        {!isSidebarOpen && <SidebarToggle onClick={toggleSidebar} />}
+      </div>
     </MainLayout>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Minus, Send, Trash2, Sparkles, Loader2 } from 'lucide-react'
+import { MessageCircle, X, Send, Trash2, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -9,26 +9,45 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { ChatMessage } from './chat-message'
 import { useChat, Message } from '@/hooks/use-chat'
 
-interface FloatingChatProps {
+interface ChatSidebarProps {
   articleId: string
   articleTitle: string
+  isOpen: boolean
+  onToggle: () => void
   onGenerateUpdate?: (messages: Message[]) => void
   isGeneratingUpdate?: boolean
+  width: number
+  isDragging?: boolean
+  clearTrigger?: number
 }
 
-export function FloatingChat({ articleId, articleTitle, onGenerateUpdate, isGeneratingUpdate }: FloatingChatProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isMinimized, setIsMinimized] = useState(false)
+export function ChatSidebar({
+  articleId,
+  articleTitle,
+  isOpen,
+  onToggle,
+  onGenerateUpdate,
+  isGeneratingUpdate,
+  width,
+  isDragging,
+  clearTrigger,
+}: ChatSidebarProps) {
   const [input, setInput] = useState('')
-  const [position, setPosition] = useState({ x: 20, y: 20 }) // from bottom-right
   const { messages, isLoading, currentResponse, sendMessage, clearMessages } = useChat(articleId)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  // Clear messages when parent signals (e.g. after applying update)
+  const clearTriggerRef = useRef(clearTrigger)
+  useEffect(() => {
+    if (clearTrigger !== undefined && clearTrigger !== clearTriggerRef.current) {
+      clearTriggerRef.current = clearTrigger
+      clearMessages()
+    }
+  }, [clearTrigger, clearMessages])
 
   // Auto scroll to bottom
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, currentResponse])
 
   const handleSubmit = () => {
@@ -43,75 +62,47 @@ export function FloatingChat({ articleId, articleTitle, onGenerateUpdate, isGene
     }
   }
 
-  // Keyboard shortcut to toggle
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault()
-        setIsOpen(prev => !prev)
-        setIsMinimized(false)
+        onToggle()
       }
       if (e.key === 'Escape' && isOpen) {
-        setIsMinimized(true)
+        const tag = document.activeElement?.tagName
+        if (tag === 'TEXTAREA' || tag === 'INPUT') {
+          (document.activeElement as HTMLElement).blur()
+        } else {
+          onToggle()
+        }
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [isOpen])
-
-  if (!isOpen) {
-    return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
-        title="打开问答 (⌘/)"
-      >
-        <MessageCircle className="w-5 h-5" />
-      </button>
-    )
-  }
-
-  if (isMinimized) {
-    return (
-      <button
-        onClick={() => setIsMinimized(false)}
-        className="fixed bottom-6 right-6 px-4 py-2 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center gap-2 hover:bg-primary/90 transition-colors"
-      >
-        <MessageCircle className="w-4 h-4" />
-        <span className="text-sm">问答窗口</span>
-      </button>
-    )
-  }
+  }, [isOpen, onToggle])
 
   return (
     <div
-      className="fixed bg-background border border-border rounded-lg shadow-xl flex flex-col overflow-hidden"
-      style={{
-        bottom: position.y,
-        right: position.x,
-        width: 380,
-        height: 500,
-        maxHeight: '70vh'
-      }}
+      className={cn(
+        "h-full flex flex-col border-l border-border bg-background overflow-hidden shrink-0",
+        !isDragging && "transition-[width] duration-200 ease-out"
+      )}
+      style={{ width: isOpen ? width : 0 }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <MessageCircle className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium">关于本文的问答</span>
+          <span className="text-sm font-medium whitespace-nowrap">关于本文的问答</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setIsMinimized(true)}>
-            <Minus className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setIsOpen(false)}>
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
+        <Button variant="ghost" size="icon" className="w-7 h-7" onClick={onToggle}>
+          <X className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 min-h-0 p-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 min-h-0 p-4">
         {messages.length === 0 && !currentResponse && (
           <div className="text-center text-muted-foreground text-sm py-8">
             <p>对「{articleTitle}」有疑问？</p>
@@ -140,10 +131,11 @@ export function FloatingChat({ articleId, articleTitle, onGenerateUpdate, isGene
             <span>思考中...</span>
           </div>
         )}
+        <div ref={bottomRef} />
       </ScrollArea>
 
       {/* Toolbar */}
-      <div className="px-4 py-2 border-t border-border flex items-center gap-2">
+      <div className="px-4 py-2 border-t border-border flex items-center gap-2 shrink-0">
         {messages.length >= 2 && onGenerateUpdate && (
           <Button
             variant="default"
@@ -157,7 +149,7 @@ export function FloatingChat({ articleId, articleTitle, onGenerateUpdate, isGene
             ) : (
               <Sparkles className="w-3 h-3 mr-1" />
             )}
-            {isGeneratingUpdate ? '生成中...' : '生成文章更新'}
+            {isGeneratingUpdate ? '更新中...' : '更新文章（基于对话）'}
           </Button>
         )}
         <div className="flex-1" />
@@ -168,7 +160,7 @@ export function FloatingChat({ articleId, articleTitle, onGenerateUpdate, isGene
       </div>
 
       {/* Input */}
-      <div className="p-4 pt-0">
+      <div className="p-3 pt-0 shrink-0">
         <div className="relative">
           <Textarea
             value={input}
@@ -187,6 +179,7 @@ export function FloatingChat({ articleId, articleTitle, onGenerateUpdate, isGene
             <Send className="w-4 h-4" />
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground mt-1">⌘↵ 发送 · ⌘/ 切换面板</p>
       </div>
     </div>
   )

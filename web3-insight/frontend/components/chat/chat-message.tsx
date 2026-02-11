@@ -1,3 +1,5 @@
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import { User, Bot } from 'lucide-react'
 
@@ -31,14 +33,33 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
       </div>
 
       <div className={cn(
-        "flex-1 text-sm",
+        "flex-1 text-xs",
         isUser && "text-right"
       )}>
         <div className={cn(
           "inline-block px-3 py-2 rounded-lg max-w-[85%]",
           isUser ? "bg-primary text-primary-foreground" : "bg-muted"
         )}>
-          {message.content}
+          {isUser ? (
+            message.content
+          ) : (
+            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none
+                            prose-p:my-1 prose-ul:my-1 prose-ol:my-1
+                            prose-li:my-0.5 prose-headings:my-2
+                            prose-pre:my-2 prose-code:text-xs">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                disallowedElements={['img']}
+                components={{
+                  a: ({ href, children }) => (
+                    <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                  ),
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          )}
           {isStreaming && (
             <span className="inline-block w-1.5 h-4 bg-current ml-0.5 animate-pulse" />
           )}
