@@ -105,6 +105,7 @@ web3-insight/
 ├── frontend/
 │   ├── app/              # Next.js pages (knowledge, research, admin)
 │   ├── components/       # React components (ui, layout, knowledge, admin, chat)
+│   ├── hooks/            # Custom hooks (useChat, useFeatureFlag)
 │   └── lib/              # API client, WebSocket, utilities
 ├── scripts/              # Ops scripts (start, stop, status)
 ├── docker-compose.yml    # PostgreSQL + Redis
@@ -123,6 +124,11 @@ web3-insight/
 | DELETE | /api/articles/:id | Delete article (cascades keyword cleanup) |
 | PATCH | /api/articles/:id/archive | Toggle article archived status |
 | PUT | /api/articles/:id/tags | Replace article tags |
+| POST | /api/articles/:id/generate-update | Generate article update from conversation |
+| POST | /api/articles/:id/apply-update | Apply generated update (creates version snapshot) |
+| GET | /api/articles/:id/versions | List article version history |
+| POST | /api/articles/:id/versions/:versionId/rollback | Rollback to a previous version |
+| POST | /api/articles/:id/regenerate | Regenerate article content |
 | GET | /api/articles/:id/related | Find related articles (vector similarity) |
 | GET | /api/categories | List categories |
 | GET | /api/categories/tree | Get category tree |
@@ -182,7 +188,7 @@ web3-insight/
 ### Chat
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| WS | /ws/chat | AI chat via WebSocket |
+| WS | /ws/chat | AI chat via WebSocket (multi-turn with history) |
 
 ## KB Auto-Update
 
@@ -214,6 +220,18 @@ Articles support lifecycle management through the knowledge base UI:
 - **Delete:** Permanently delete articles with confirmation dialog. Cleans up keyword references.
 - **Tag editing:** Inline tag editor on article detail page with autocomplete from the tag registry. Supports add, remove, and free-text entry.
 - **Archived filter:** Checkbox on knowledge list page to show/hide archived articles (hidden by default).
+
+## AI Chat & Article Refinement
+
+The article detail page includes a floating chat widget for AI-powered Q&A and targeted article updates.
+
+**Chat:** Multi-turn conversation about any article. Messages persist in localStorage across sessions. Supports selected text context and keyboard shortcuts (⌘/ to toggle, Esc to minimize).
+
+**Article Update Generation:** After chatting, click "生成文章更新" to generate a targeted update based on the conversation. The system sends the full article content + conversation history to the LLM (Claude Sonnet, with Haiku fallback), which produces a refined article following "targeted additions, not rewrites" principles.
+
+**Diff Review:** Generated updates are shown in a full-screen diff viewer with line-by-line comparison (green=added, red=removed), collapsible unchanged blocks, and change summary. Users can apply, regenerate, or cancel.
+
+**Version History:** Every update creates a version snapshot before applying changes. The version history panel (expandable on article detail page) shows all past versions with rollback capability. Rolling back also saves the current content first, so no data is ever lost.
 
 ## Tagging System
 

@@ -107,7 +107,8 @@ web3-insight/
 │   │   │   ├── theme_sync.go     # 主题同步 (config→DB)
 │   │   │   ├── tagger.go         # 文章自动标签 (Sonnet + balanced_v1 prompt)
 │   │   │   ├── eval_tagger.go    # 标签质量评估指标
-│   │   │   └── bench_tagger.go   # 标签 Benchmark 运行引擎
+│   │   │   ├── bench_tagger.go   # 标签 Benchmark 运行引擎
+│   │   │   └── article_updater.go # 文章对话更新生成 (LLM定向补充)
 │   │   └── worker/               # 异步任务 (Asynq)
 │   └── scripts/
 │       └── clear_data.sql        # 数据清理 SQL
@@ -124,11 +125,14 @@ web3-insight/
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui 基础组件
 │   │   ├── layout/               # 布局 (Sidebar, Header, MainLayout)
-│   │   ├── knowledge/            # 知识库组件 (ArticleList, CategoryTree, ArticleView)
+│   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, TagEditor, UpdateReviewPanel, VersionHistory)
 │   │   ├── research/             # 调研组件 (ExplorerResearch, ErrorBoundary)
 │   │   ├── admin/                # 管理组件 (ModelConfig, TaskMonitor, SystemStatus, SourceConfig, ArticleImport)
 │   │   ├── chat/                 # 聊天组件 (FloatingChat, ChatMessage)
 │   │   └── providers/            # QueryProvider
+│   ├── hooks/
+│   │   ├── use-chat.ts           # 聊天 Hook (多轮对话, localStorage 持久化)
+│   │   └── use-feature-flag.ts   # Feature Flag Hook
 │   ├── lib/
 │   │   ├── api.ts                # 所有 API 类型定义和客户端方法
 │   │   ├── websocket.ts          # WebSocket 客户端
@@ -171,6 +175,10 @@ web3-insight/
 | 知识库 | 手动标签编辑 (自动补全) | TagEditor | PUT /api/articles/:id/tags |
 | 知识库 | 标签搜索 (自动补全) | TagEditor | GET /api/tags/search |
 | 知识库 | 已归档文章过滤 | Checkbox on KnowledgePage | GET /api/articles?archived= |
+| 聊天 | 多轮对话 + 上下文历史 | FloatingChat + useChat | WS /ws/chat (history support) |
+| 知识库 | AI 文章更新生成 | FloatingChat → UpdateReviewPanel | POST /api/articles/:id/generate-update |
+| 知识库 | 文章更新审阅 (diff 视图) | UpdateReviewPanel | POST /api/articles/:id/apply-update |
+| 知识库 | 版本历史 + 回滚 | VersionHistory | GET /api/articles/:id/versions, POST /:id/versions/:versionId/rollback |
 
 ## Model Fallback Pattern
 
