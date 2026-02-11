@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { ArticleList } from '@/components/knowledge/article-list'
-import { CategoryTree } from '@/components/knowledge/category-tree'
+import { TagSidebar } from '@/components/knowledge/tag-sidebar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, X } from 'lucide-react'
@@ -13,19 +13,8 @@ function KnowledgeContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const categoryId = searchParams.get('category') || ''
   const activeTag = searchParams.get('tag') || ''
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
-
-  const handleCategorySelect = (id: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (id) {
-      params.set('category', id)
-    } else {
-      params.delete('category')
-    }
-    router.push(`/knowledge?${params.toString()}`)
-  }
 
   const handleTagClick = (tag: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -62,17 +51,9 @@ function KnowledgeContent() {
 
   return (
     <div className="flex h-[calc(100vh-64px)]">
-      {/* Left Sidebar - Category Tree - Hidden on mobile */}
+      {/* Left Sidebar - Tag Navigation - Hidden on mobile */}
       <div className="hidden md:block w-64 border-r border-border bg-card">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-lg">分类导航</h2>
-        </div>
-        <div className="overflow-y-auto h-[calc(100%-57px)]">
-          <CategoryTree
-            selectedId={categoryId}
-            onSelect={handleCategorySelect}
-          />
-        </div>
+        <TagSidebar activeTag={activeTag} onTagClick={handleTagClick} />
       </div>
 
       {/* Right Content - Articles */}
@@ -105,7 +86,6 @@ function KnowledgeContent() {
         {/* Article List */}
         <div className="flex-1 overflow-hidden p-6">
           <ArticleList
-            categoryId={categoryId}
             searchQuery={searchParams.get('q') || ''}
             activeTag={activeTag}
             onTagClick={handleTagClick}

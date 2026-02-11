@@ -42,6 +42,7 @@ export interface Article {
   tags: string[]
   sourceUrls?: string[]
   sourceLanguage?: string
+  sourceKeyword?: string
   modelUsed?: string
   viewCount?: number
   status?: string
@@ -601,8 +602,19 @@ export interface TagStats {
   universalTags: number
 }
 
+export interface TagInUse {
+  name: string
+  articleCount: number
+}
+
+export interface TagInUseResponse {
+  tags: TagInUse[]
+}
+
 // Tag API
 export const tagAPI = {
+  getInUse: () => fetchAPI<TagInUseResponse>('/api/tags/in-use'),
+
   list: (params?: { status?: string; page?: number; limit?: number; q?: string }) => {
     const searchParams = new URLSearchParams()
     if (params?.status) searchParams.set('status', params.status)
