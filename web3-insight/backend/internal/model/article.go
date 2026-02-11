@@ -28,6 +28,7 @@ type Article struct {
 	Embedding        *pgvector.Vector `gorm:"type:vector(1536)" json:"-"`
 	CreatedAt        time.Time       `json:"createdAt"`
 	UpdatedAt        time.Time       `json:"updatedAt"`
+	SourceKeyword    string          `gorm:"-" json:"sourceKeyword,omitempty"`
 }
 
 func (Article) TableName() string {

@@ -36,7 +36,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 	return &Server{
 		config:             cfg,
 		db:                 db,
-		articleHandler:     NewArticleHandler(articleRepo),
+		articleHandler:     NewArticleHandler(articleRepo, db),
 		categoryHandler:    NewCategoryHandler(categoryRepo),
 		configHandler:      NewConfigHandler(configRepo),
 		taskHandler:        NewTaskHandler(taskRepo),

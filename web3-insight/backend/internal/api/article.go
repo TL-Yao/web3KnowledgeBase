@@ -8,14 +8,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/user/web3-insight/internal/model"
 	"github.com/user/web3-insight/internal/repository"
+	"gorm.io/gorm"
 )
 
 type ArticleHandler struct {
 	repo *repository.ArticleRepository
+	db   *gorm.DB
 }
 
-func NewArticleHandler(repo *repository.ArticleRepository) *ArticleHandler {
-	return &ArticleHandler{repo: repo}
+func NewArticleHandler(repo *repository.ArticleRepository, db *gorm.DB) *ArticleHandler {
+	return &ArticleHandler{repo: repo, db: db}
 }
 
 // ListArticles godoc
@@ -72,6 +74,30 @@ func (h *ArticleHandler) List(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Populate SourceKeyword for each article via batch keyword lookup
+	if len(result.Articles) > 0 {
+		articleIDs := make([]uuid.UUID, len(result.Articles))
+		for i, a := range result.Articles {
+			articleIDs[i] = a.ID
+		}
+
+		var keywords []model.Keyword
+		h.db.Where("article_id IN ?", articleIDs).Find(&keywords)
+
+		kwMap := make(map[uuid.UUID]string, len(keywords))
+		for _, kw := range keywords {
+			if kw.ArticleID != nil {
+				kwMap[*kw.ArticleID] = kw.Keyword
+			}
+		}
+
+		for i := range result.Articles {
+			if kw, ok := kwMap[result.Articles[i].ID]; ok {
+				result.Articles[i].SourceKeyword = kw
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, result)
