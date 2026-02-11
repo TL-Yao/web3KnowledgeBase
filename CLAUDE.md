@@ -239,8 +239,6 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 - QA should NOT skip browser testing or fall back to API-only testing — browser E2E testing is required
 - After the user fixes the connection, QA resumes browser testing
 
-**Known Limitation**: Chrome MCP tools only work from the main Claude Code session. Team subagents (spawned via Task tool) cannot access Chrome MCP — all calls return "Browser extension is not connected." Browser E2E testing must be performed by the team leader (main session) directly, not delegated to qa-engineer or other teammates.
-
 ## Key Patterns & Lessons
 
 - **GVM workaround**: Always use `/usr/local/go/bin/go -C /path` instead of `cd && go`
