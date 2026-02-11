@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/user/web3-insight/internal/llm"
@@ -18,13 +19,14 @@ const articleUpdateSystemPrompt = `你是Web3知识库的文章编辑专家。�
 3. **读者友好**：最终文章是给读者看的，不是给对话者看的。不要出现"根据讨论"、"如前所述"等元叙述。
 4. **保持完整性**：输出必须是完整的文章（不是片段或补丁）。包含所有原始内容加上新增/修改的部分。
 5. **格式一致**：使用与原文相同的Markdown格式级别（标题层级、列表风格、代码块格式等）。
+6. **不输出元数据**：输出的文章正文不要包含标题行。<article-title> 标签中的标题仅供参考，不要在正文中重复。直接从文章正文内容开始。
 
 ## 输出格式
 
 使用以下定界符格式输出（不要使用JSON）：
 
 ===UPDATED_CONTENT_START===
-（完整的更新后文章内容，Markdown格式）
+（完整的更新后文章正文内容，Markdown格式。不要包含标题行。）
 ===UPDATED_CONTENT_END===
 
 ===CHANGE_SUMMARY_START===
@@ -83,8 +85,10 @@ func buildUpdatePrompt(article *model.Article, history []llm.Message) string {
 	var sb strings.Builder
 
 	sb.WriteString("## 原始文章\n\n")
-	sb.WriteString("标题：" + article.Title + "\n\n")
+	sb.WriteString("<article-title>" + article.Title + "</article-title>\n\n")
+	sb.WriteString("<article-content>\n")
 	sb.WriteString(article.Content)
+	sb.WriteString("\n</article-content>")
 	sb.WriteString("\n\n## 用户与AI助手的对话\n\n")
 
 	for _, msg := range history {
@@ -114,5 +118,13 @@ func parseUpdateResponse(response string) (updatedContent, changeSummary string,
 		changeSummary = "文章内容已更新"
 	}
 
-	return strings.TrimSpace(updatedContent), strings.TrimSpace(changeSummary), nil
+	updatedContent = stripLeadingTitle(strings.TrimSpace(updatedContent))
+	return updatedContent, strings.TrimSpace(changeSummary), nil
+}
+
+// stripLeadingTitle removes a leading "标题：...\n" line that the LLM sometimes echoes back
+var leadingTitleRe = regexp.MustCompile(`^标题[：:].+\n{1,2}`)
+
+func stripLeadingTitle(content string) string {
+	return leadingTitleRe.ReplaceAllString(content, "")
 }
