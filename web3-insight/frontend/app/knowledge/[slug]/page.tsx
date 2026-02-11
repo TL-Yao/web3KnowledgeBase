@@ -166,6 +166,7 @@ export default function ArticlePage() {
       toast.success('文章已更新')
       setUpdateState({ isGenerating: false, isReviewOpen: false, updatedContent: null, changeSummary: null, model: null })
       queryClient.invalidateQueries({ queryKey: ['article', slug] })
+      queryClient.invalidateQueries({ queryKey: ['article-versions', displayArticle!.id] })
     } catch {
       toast.error('应用更新失败')
     } finally {

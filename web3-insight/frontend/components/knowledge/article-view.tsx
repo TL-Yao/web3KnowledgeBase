@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { TagEditor } from '@/components/knowledge/tag-editor'
+import { VersionHistory } from '@/components/knowledge/version-history'
 import { Edit, RefreshCw, MoreHorizontal, ExternalLink, Clock, Archive, ArchiveRestore, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -205,6 +206,9 @@ export function ArticleView({ article }: ArticleViewProps) {
           生成模型: {article.modelUsed}
         </div>
       )}
+
+      {/* Version History */}
+      <VersionHistory articleId={article.id} articleSlug={article.slug} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

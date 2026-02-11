@@ -154,6 +154,11 @@ export const articleAPI = {
 
   listVersions: (id: string) =>
     fetchAPI<{ versions: ArticleVersion[] }>(`/api/articles/${id}/versions`),
+
+  rollback: (id: string, versionId: string) =>
+    fetchAPI<{ article: Article; message: string }>(`/api/articles/${id}/versions/${versionId}/rollback`, {
+      method: 'POST',
+    }),
 }
 
 // Categories API
