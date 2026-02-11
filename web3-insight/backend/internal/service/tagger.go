@@ -15,43 +15,36 @@ import (
 	"github.com/user/web3-insight/internal/repository"
 )
 
-const tagPromptTemplate = `你是一个Web3知识库标签专家。请为以下文章选择最合适的标签。
+// TagPromptTemplate is the default tagging prompt template used by the tagger.
+const TagPromptTemplate = `你是Web3知识库标签专家。请从标签列表中为文章选择最合适的标签。
 
-## 选标规则（重要）
-1. 仅当文章的**核心主题**是关于某标签时才选择，**不要**仅因文章提及就选择
-2. **必须**从专题标签中选择至少2个（这些是最精准的标签）
-3. 通用标签最多选3个，仅选择与文章核心高度相关的
-4. 每篇文章必须选择至少4个标签，确保充分描述文章内容
-5. **禁止自创标签**，必须从下方标签列表中逐字复制标签名。不在列表中的词（如PoW、宏观经济、算法稳定币等）不可使用
-6. 如果专题标签不够4个，请用通用标签补齐
+## 核心规则
+1. 选择恰好4-5个标签
+2. 从专题标签中选至少2个（优先级最高）
+3. 通用标签仅选与文章核心主题直接相关的（最多2个）
+4. 必须从列表中逐字复制，禁止创造新标签
+5. 仅选文章核心主题对应的标签，顺带提及的不选
 
-## 注意区分（以下情况不应选择该标签）
-- 文章讲"闪电贷原理" → 不应选"以太坊"（以太坊只是运行平台，不是文章主题）
-- 文章讲"ETF入门" → 不应选"DeFi"（DeFi只是顺带提及的对比）
-- 文章讲"Terra崩盘" → 不应选"以太坊"（Terra不是以太坊生态）
+## 判断标准
+- "核心主题" = 文章专门讨论、解释或分析的概念
+- "顺带提及" = 仅作为背景、类比或运行环境提到
+- 例：闪电贷文章 → 不选"以太坊"（仅是运行平台）
+- 例：ETF入门 → 不选"DeFi"（仅对比提及）
 
-## 正确示例
-- 文章讨论"以太坊2.0的PoS共识机制升级" → 应选"以太坊"、"共识机制"（都是核心主题）
-- 文章介绍"Uniswap V3的集中流动性机制" → 应选"AMM"、"DEX"、"集中流动性"、"流动性池"
-
-## 专题标签 —— 优先从这里选择
+## 专题标签（至少选2个）
 {{range .ThemeTags}}- {{.Name}}
 {{end}}
 
-## 通用标签 —— 仅当与文章核心高度相关时选择（最多3个）
+## 通用标签（最多选2个，须与核心高度相关）
 {{range .UniversalTags}}- {{.Name}}
 {{end}}
 
-## 文章信息
+## 文章
 标题：{{.Title}}
 摘要：{{.Summary}}
-{{if .ContentExcerpt}}
-正文节选：
-{{.ContentExcerpt}}
-{{end}}
+{{if .ContentExcerpt}}正文节选：{{.ContentExcerpt}}{{end}}
 
-## 输出要求
-选择4-6个标签，返回JSON格式（不要包含markdown代码块标记）：
+输出JSON（不加代码块）：
 {"tags": ["标签1", "标签2", "标签3", "标签4"]}`
 
 // Tagger handles automatic article tagging using the tag registry
@@ -76,8 +69,8 @@ type TaggingResult struct {
 	NewTagSuggestions []string `json:"newTagSuggestions"`
 }
 
-// tagPromptData holds template variables for the tagging prompt
-type tagPromptData struct {
+// TagPromptData holds template variables for the tagging prompt
+type TagPromptData struct {
 	ThemeName      string
 	ThemeTags      []model.Tag
 	UniversalTags  []model.Tag
@@ -120,7 +113,7 @@ func (t *Tagger) TagArticle(ctx context.Context, article *model.Article) error {
 	}
 
 	// Parse response
-	result, err := parseTaggingResponse(response)
+	result, err := ParseTaggingResponse(response)
 	if err != nil {
 		return fmt.Errorf("failed to parse tagging response (model: %s): %w", modelUsed, err)
 	}
@@ -145,7 +138,7 @@ func (t *Tagger) TagArticle(ctx context.Context, article *model.Article) error {
 	var validatedTags []string
 	for _, tagName := range result.Tags {
 		tagName = strings.TrimSpace(tagName)
-		canonical := resolveTag(tagName, canonicalTag)
+		canonical := ResolveTag(tagName, canonicalTag)
 		if canonical != "" {
 			if !seen[canonical] {
 				validatedTags = append(validatedTags, canonical)
@@ -190,9 +183,9 @@ func (t *Tagger) TagArticle(ctx context.Context, article *model.Article) error {
 	return nil
 }
 
-// resolveTag attempts to match a tag name against the canonical registry.
+// ResolveTag attempts to match a tag name against the canonical registry.
 // Handles: exact match, case-insensitive, parenthetical suffix stripping (e.g. "AMM (AMM)" -> "AMM").
-func resolveTag(tagName string, canonicalTag map[string]string) string {
+func ResolveTag(tagName string, canonicalTag map[string]string) string {
 	lower := strings.ToLower(tagName)
 
 	// Direct match
@@ -218,7 +211,13 @@ func resolveTag(tagName string, canonicalTag map[string]string) string {
 
 // buildTagPrompt renders the tagging prompt template
 func (t *Tagger) buildTagPrompt(article *model.Article, themeID string, universalTags, themeTags []model.Tag) (string, error) {
-	tmpl, err := template.New("tagging").Parse(tagPromptTemplate)
+	return BuildTagPromptFromTemplate(TagPromptTemplate, article, themeID, universalTags, themeTags)
+}
+
+// BuildTagPromptFromTemplate renders a tagging prompt using a custom template string.
+// This allows benchmark methods to use different prompt templates while reusing the same data logic.
+func BuildTagPromptFromTemplate(templateStr string, article *model.Article, themeID string, universalTags, themeTags []model.Tag) (string, error) {
+	tmpl, err := template.New("tagging").Parse(templateStr)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse tag prompt template: %w", err)
 	}
@@ -228,13 +227,12 @@ func (t *Tagger) buildTagPrompt(article *model.Article, themeID string, universa
 		summary = truncateString(article.Content, 2000)
 	}
 
-	// Include content excerpt for better context (first 2000 chars of content)
 	contentExcerpt := ""
 	if article.Content != "" {
 		contentExcerpt = truncateString(article.Content, 2000)
 	}
 
-	data := tagPromptData{
+	data := TagPromptData{
 		ThemeName:      themeID,
 		ThemeTags:      themeTags,
 		UniversalTags:  universalTags,
@@ -251,8 +249,8 @@ func (t *Tagger) buildTagPrompt(article *model.Article, themeID string, universa
 	return buf.String(), nil
 }
 
-// parseTaggingResponse extracts the tagging result from LLM response
-func parseTaggingResponse(response string) (*TaggingResult, error) {
+// ParseTaggingResponse extracts the tagging result from LLM response
+func ParseTaggingResponse(response string) (*TaggingResult, error) {
 	response = strings.TrimSpace(response)
 
 	// Remove markdown code blocks

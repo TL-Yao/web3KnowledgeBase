@@ -40,6 +40,6 @@ task_types:
   - id: "tagging"
     name: "文章标签"
     description: "从标签库中为文章选择相关标签"
-    default_primary: "claude-haiku-4-5-20251001"
-    default_fallback: "qwen2.5:32b"
+    default_primary: "claude-sonnet-4-20250514"
+    default_fallback: "claude-haiku-4-5-20251001"
     required_capability: "summarization"
