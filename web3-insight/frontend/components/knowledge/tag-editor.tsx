@@ -89,6 +89,22 @@ export function TagEditor({ articleId, initialTags, onTagClick }: TagEditorProps
     setIsAdding(false)
   }
 
+  const createAndAddTag = async (name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed || tags.includes(trimmed)) return
+    try {
+      await tagAPI.create({ name: trimmed })
+      addTag(trimmed)
+      toast.success(`标签「${trimmed}」已创建`)
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message?.includes('already exists')) {
+        addTag(trimmed)
+      } else {
+        toast.error('创建标签失败')
+      }
+    }
+  }
+
   const removeTag = (name: string) => {
     const newTags = tags.filter(t => t !== name)
     setTags(newTags)
@@ -101,7 +117,7 @@ export function TagEditor({ articleId, initialTags, onTagClick }: TagEditorProps
       if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
         addTag(suggestions[highlightedIndex].name)
       } else if (inputValue.trim()) {
-        addTag(inputValue)
+        createAndAddTag(inputValue)
       }
     } else if (e.key === 'Escape') {
       setIsAdding(false)
@@ -179,9 +195,12 @@ export function TagEditor({ articleId, initialTags, onTagClick }: TagEditorProps
                   </button>
                 ))
               ) : (
-                <div className="px-3 py-2 text-xs text-muted-foreground">
-                  无匹配标签 — 按回车添加
-                </div>
+                <button
+                  onClick={() => createAndAddTag(inputValue)}
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent transition-colors"
+                >
+                  创建标签「{inputValue.trim()}」
+                </button>
               )}
             </div>
           )}

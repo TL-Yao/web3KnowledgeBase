@@ -204,9 +204,12 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		tags := api.Group("/tags")
 		{
 			tags.GET("", tagHandler.List)
+			tags.POST("", tagHandler.Create)
 			tags.GET("/search", tagHandler.Search)
 			tags.GET("/in-use", tagHandler.GetInUse)
 			tags.GET("/stats", tagHandler.GetStats)
+			tags.PUT("/:id", tagHandler.Update)
+			tags.DELETE("/:id", tagHandler.Delete)
 			tags.PUT("/:id/status", tagHandler.UpdateStatus)
 			tags.POST("/:id/approve", tagHandler.ApprovePending)
 			tags.POST("/bulk-tag", tagHandler.BulkTag)

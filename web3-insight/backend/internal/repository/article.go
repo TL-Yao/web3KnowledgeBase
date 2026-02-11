@@ -129,6 +129,23 @@ func (r *ArticleRepository) UpdateTags(id uuid.UUID, tags []string) error {
 		Update("tags", pq.StringArray(tags)).Error
 }
 
+// RenameTag replaces oldName with newName in all articles' tag arrays
+func (r *ArticleRepository) RenameTag(oldName, newName string) error {
+	return r.db.Exec(
+		"UPDATE articles SET tags = array_replace(tags, ?, ?) WHERE ? = ANY(tags)",
+		oldName, newName, oldName,
+	).Error
+}
+
+// RemoveTag removes a tag name from all articles' tag arrays and returns affected count
+func (r *ArticleRepository) RemoveTag(name string) (int64, error) {
+	result := r.db.Exec(
+		"UPDATE articles SET tags = array_remove(tags, ?) WHERE ? = ANY(tags)",
+		name, name,
+	)
+	return result.RowsAffected, result.Error
+}
+
 func (r *ArticleRepository) IncrementViewCount(id uuid.UUID) error {
 	return r.db.Model(&model.Article{}).Where("id = ?", id).UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
 }

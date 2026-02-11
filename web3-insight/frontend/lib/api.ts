@@ -639,6 +639,24 @@ export interface TagInUseResponse {
   tags: TagInUse[]
 }
 
+export interface CreateTagRequest {
+  name: string
+  nameEn?: string
+  themeId?: string | null
+}
+
+export interface UpdateTagRequest {
+  name?: string
+  nameEn?: string
+  themeId?: string | null
+}
+
+export interface DeleteTagResponse {
+  message: string
+  name: string
+  articlesAffected: number
+}
+
 // Tag API
 export const tagAPI = {
   getInUse: () => fetchAPI<TagInUseResponse>('/api/tags/in-use'),
@@ -662,6 +680,23 @@ export const tagAPI = {
     fetchAPI<Tag>(`/api/tags/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
+    }),
+
+  create: (data: CreateTagRequest) =>
+    fetchAPI<Tag>('/api/tags', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: UpdateTagRequest) =>
+    fetchAPI<Tag>(`/api/tags/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    fetchAPI<DeleteTagResponse>(`/api/tags/${id}`, {
+      method: 'DELETE',
     }),
 }
 

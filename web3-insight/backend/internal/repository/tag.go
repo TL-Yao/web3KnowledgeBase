@@ -88,6 +88,16 @@ func (r *TagRepository) BatchCreate(tags []model.Tag) error {
 	}).Create(&tags).Error
 }
 
+// Update saves changes to an existing tag
+func (r *TagRepository) Update(tag *model.Tag) error {
+	return r.db.Save(tag).Error
+}
+
+// Delete removes a tag by ID
+func (r *TagRepository) Delete(id uuid.UUID) error {
+	return r.db.Delete(&model.Tag{}, "id = ?", id).Error
+}
+
 // UpdateStatus updates a tag's status
 func (r *TagRepository) UpdateStatus(name string, status string) error {
 	return r.db.Model(&model.Tag{}).Where("name = ?", name).Update("status", status).Error

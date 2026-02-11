@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -184,6 +185,146 @@ func (h *TagHandler) Search(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"tags": results})
+}
+
+type CreateTagRequest struct {
+	Name    string  `json:"name" binding:"required,max=100"`
+	NameEn  string  `json:"nameEn"`
+	ThemeID *string `json:"themeId"`
+}
+
+func (h *TagHandler) Create(c *gin.Context) {
+	var req CreateTagRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tag name is required"})
+		return
+	}
+
+	existing, _ := h.tagRepo.FindByName(req.Name)
+	if existing != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "tag already exists", "tag": existing})
+		return
+	}
+
+	tag := &model.Tag{
+		Name:   req.Name,
+		NameEn: strings.TrimSpace(req.NameEn),
+		ThemeID: req.ThemeID,
+		Status: "active",
+	}
+
+	if err := h.tagRepo.Create(tag); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create tag"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, tag)
+}
+
+type UpdateTagRequest struct {
+	Name    *string `json:"name"`
+	NameEn  *string `json:"nameEn"`
+	ThemeID *string `json:"themeId"`
+}
+
+func (h *TagHandler) Update(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid tag id"})
+		return
+	}
+
+	tag, err := h.tagRepo.FindByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tag not found"})
+		return
+	}
+
+	var req UpdateTagRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	oldName := tag.Name
+
+	if req.Name != nil {
+		newName := strings.TrimSpace(*req.Name)
+		if newName == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "name cannot be empty"})
+			return
+		}
+		if len(newName) > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "name too long (max 100 chars)"})
+			return
+		}
+		if newName != tag.Name {
+			existing, _ := h.tagRepo.FindByName(newName)
+			if existing != nil {
+				c.JSON(http.StatusConflict, gin.H{"error": "tag name already exists"})
+				return
+			}
+			tag.Name = newName
+		}
+	}
+	if req.NameEn != nil {
+		tag.NameEn = strings.TrimSpace(*req.NameEn)
+	}
+	if req.ThemeID != nil {
+		if *req.ThemeID == "" {
+			tag.ThemeID = nil
+		} else {
+			tag.ThemeID = req.ThemeID
+		}
+	}
+
+	if err := h.tagRepo.Update(tag); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update tag"})
+		return
+	}
+
+	if tag.Name != oldName {
+		if err := h.articleRepo.RenameTag(oldName, tag.Name); err != nil {
+			log.Printf("WARNING: tag renamed but article cascade failed: %v", err)
+		}
+	}
+
+	c.JSON(http.StatusOK, tag)
+}
+
+func (h *TagHandler) Delete(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid tag id"})
+		return
+	}
+
+	tag, err := h.tagRepo.FindByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tag not found"})
+		return
+	}
+
+	affected, err := h.articleRepo.RemoveTag(tag.Name)
+	if err != nil {
+		log.Printf("WARNING: failed to remove tag from articles: %v", err)
+	}
+
+	if err := h.tagRepo.Delete(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete tag"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":          "Tag deleted",
+		"name":             tag.Name,
+		"articlesAffected": affected,
+	})
 }
 
 // BulkTag tags all untagged articles (or all with force=true query param)
