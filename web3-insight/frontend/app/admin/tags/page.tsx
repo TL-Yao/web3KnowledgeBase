@@ -69,14 +69,15 @@ export default function AdminTagsPage() {
     staleTime: 60000,
   })
 
-  const { data: autoTagConfig } = useQuery({
+  const { data: autoTagConfig, isError: autoTagConfigError } = useQuery({
     queryKey: ['config', 'auto_tagging_enabled'],
     queryFn: () => configAPI.get('auto_tagging_enabled'),
     staleTime: 30000,
     retry: false,
   })
 
-  const autoTagEnabled = autoTagConfig?.value !== 'false'
+  // Default to ON when config doesn't exist (404) or fetch fails
+  const autoTagEnabled = autoTagConfigError ? true : autoTagConfig?.value !== 'false'
 
   const toggleAutoTagMutation = useMutation({
     mutationFn: (enabled: boolean) =>
