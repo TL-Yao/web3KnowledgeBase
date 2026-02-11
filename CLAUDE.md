@@ -166,6 +166,11 @@ web3-insight/
 | 标签 | 标签评估管道 | - | eval-tagger CLI |
 | 标签 | 标签 Benchmark 评估工具 | - | bench-tagger CLI + bench_tagger.go |
 | 基础 | CORS 中间件 | - | middleware.go |
+| 知识库 | 文章归档/取消归档 | ArticleView (dropdown) | PATCH /api/articles/:id/archive |
+| 知识库 | 文章删除 (确认对话框) | ArticleView + AlertDialog | DELETE /api/articles/:id |
+| 知识库 | 手动标签编辑 (自动补全) | TagEditor | PUT /api/articles/:id/tags |
+| 知识库 | 标签搜索 (自动补全) | TagEditor | GET /api/tags/search |
+| 知识库 | 已归档文章过滤 | Checkbox on KnowledgePage | GET /api/articles?archived= |
 
 ## Model Fallback Pattern
 

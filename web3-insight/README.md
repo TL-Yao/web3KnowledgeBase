@@ -84,8 +84,14 @@ This starts: PostgreSQL, Redis, Backend API (port 8080), Worker, Frontend (port 
 ```
 web3-insight/
 ├── backend/
-│   ├── cmd/              # Entry points (server, worker, cleardata)
-│   ├── config/           # YAML configs (models.yaml, routing.yaml)
+│   ├── cmd/              # Entry points
+│   │   ├── server/       # API server
+│   │   ├── worker/       # Async task worker
+│   │   ├── bulk-tag/     # Batch article tagging CLI
+│   │   ├── eval-tagger/  # Tag quality evaluation CLI
+│   │   ├── bench-tagger/ # Tag benchmark CLI
+│   │   └── seed-articles/# Test article generator
+│   ├── config/           # YAML configs (models, routing, prompts, tags)
 │   └── internal/
 │       ├── api/          # HTTP handlers and router
 │       ├── config/       # Config loading (Viper)
@@ -94,7 +100,7 @@ web3-insight/
 │       ├── llm/          # LLM clients (Ollama, Claude, OpenAI)
 │       ├── model/        # GORM data models
 │       ├── repository/   # Data access layer
-│       ├── service/      # Business logic (model selector, chat, search)
+│       ├── service/      # Business logic (model selector, chat, tagger, etc.)
 │       └── worker/       # Async task definitions (Asynq)
 ├── frontend/
 │   ├── app/              # Next.js pages (knowledge, research, admin)
@@ -110,15 +116,29 @@ web3-insight/
 ### Knowledge Base
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | /api/articles | List articles (paginated) |
-| GET | /api/articles/:id | Get article detail |
+| GET | /api/articles | List articles (paginated, filterable by archived/tag/search) |
+| GET | /api/articles/:id | Get article detail (by ID or slug) |
 | POST | /api/articles | Create article |
-| PUT | /api/articles/:id | Update article |
-| DELETE | /api/articles/:id | Delete article |
+| PUT | /api/articles/:id | Update article (supports archived field) |
+| DELETE | /api/articles/:id | Delete article (cascades keyword cleanup) |
+| PATCH | /api/articles/:id/archive | Toggle article archived status |
+| PUT | /api/articles/:id/tags | Replace article tags |
+| GET | /api/articles/:id/related | Find related articles (vector similarity) |
 | GET | /api/categories | List categories |
 | GET | /api/categories/tree | Get category tree |
 | GET | /api/search | Keyword search |
 | GET | /api/search/semantic | Semantic search |
+
+### Tags
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/tags | List tags (filter by status/theme) |
+| GET | /api/tags/search | Tag autocomplete search |
+| GET | /api/tags/in-use | Tags in use with article counts |
+| GET | /api/tags/stats | Tag statistics |
+| PUT | /api/tags/:id/status | Update tag status |
+| POST | /api/tags/:id/approve | Approve pending tag |
+| POST | /api/tags/bulk-tag | Bulk-tag all articles |
 
 ### Explorer Research
 | Method | Endpoint | Description |
@@ -142,11 +162,16 @@ web3-insight/
 ### KB Auto-Update
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | /api/kb-update/trigger | Trigger knowledge base update |
-| GET | /api/kb-update/status/:jobId | Get update job status |
-| GET | /api/kb-update/history | List update history (paginated) |
+| POST | /api/kb/update/trigger | Trigger knowledge base update |
+| GET | /api/kb/update/jobs | List update history |
+| GET | /api/kb/update/jobs/:job_id | Get update job status |
 | POST | /api/kb/keywords/init | Initialize keyword pool |
 | GET | /api/kb/keywords/stats | Get keyword pool stats |
+| GET | /api/kb/themes | List themes |
+| GET | /api/kb/themes/active | Get active theme |
+| PUT | /api/kb/themes/:id/activate | Set active theme |
+| GET | /api/kb/config | Get KB config |
+| PUT | /api/kb/config/batch-size | Update batch size |
 | GET | /api/kb/scheduler/status | Get scheduler status |
 | POST | /api/kb/scheduler/start | Start auto-update scheduler |
 | POST | /api/kb/scheduler/stop | Stop auto-update scheduler |
@@ -158,24 +183,47 @@ web3-insight/
 
 ## KB Auto-Update
 
-The system includes an automated knowledge base update feature that generates Web3 technical articles using Claude Code CLI.
+The system includes an automated knowledge base update feature that generates Web3 technical articles using Claude Code CLI, organized by configurable themes.
 
 **How it works:**
-1. A keyword pool (target: 200) is maintained and auto-replenished when below 30
-2. Every 4 hours (or manually triggered), 3 keywords are picked for article generation
-3. Each keyword is sent to Claude Code CLI (`--print` mode) which researches and writes a Chinese technical article
-4. Articles are saved to the knowledge base automatically
+1. Themes are defined in `config/prompts.yaml` (9 themes, synced to DB on startup)
+2. Each theme has a keyword pool (auto-replenished when below threshold)
+3. Every 4 hours (or manually triggered), keywords are picked from the active theme for article generation
+4. Each keyword is sent to Claude Code CLI (`--print` mode) which researches and writes a Chinese technical article
+5. Articles are saved, auto-tagged, and added to the knowledge base
 
 **Key components:**
 - `ClaudeExecutor` - Claude Code CLI wrapper with per-call session isolation
-- `KeywordPoolService` - Keyword pool management with auto-replenishment
+- `KeywordPoolService` - Theme-aware keyword pool management with auto-replenishment
 - `ArticleGeneratorService` - Article generation with 60-min timeout and delimiter-based output parsing
 - `KBUpdateOrchestrator` - Job orchestration with locking and orphaned job cleanup
 - `KBScheduler` - Cron-based scheduler (`0 */4 * * *`)
 
 **Reliability:** Job locking (409 on duplicate), orphaned job cleanup (>30 min), process group termination, per-article failure isolation.
 
-**Frontend:** Admin page at `/admin/kb-update` with manual trigger, keyword pool stats, live progress polling, and update history.
+**Frontend:** Admin page at `/admin/kb-update` with theme management, manual trigger, keyword pool stats, live progress polling, and update history.
+
+## Article Management
+
+Articles support lifecycle management through the knowledge base UI:
+
+- **Archive/Unarchive:** Toggle archived status from article detail page. Archived articles are hidden from the default list view but accessible via filter.
+- **Delete:** Permanently delete articles with confirmation dialog. Cleans up keyword references.
+- **Tag editing:** Inline tag editor on article detail page with autocomplete from the tag registry. Supports add, remove, and free-text entry.
+- **Archived filter:** Checkbox on knowledge list page to show/hide archived articles (hidden by default).
+
+## Tagging System
+
+Articles are automatically tagged using LLM (Claude Sonnet) against a curated tag registry (92 tags across 9 themes, defined in `config/tags.yaml`).
+
+**Auto-tagging:** When new articles are created via KB update, the tagger assigns 3-7 tags from the registry. Tags are validated for registry compliance, with keyword-based fallback for minimum tag count.
+
+**Manual editing:** Article detail pages include an inline tag editor with autocomplete search against the tag registry.
+
+**CLI tools:**
+- `cmd/bulk-tag` — Batch-tag all untagged (or all with `--force`) articles
+- `cmd/eval-tagger` — Evaluate tagging quality metrics (F1, registry rate, distribution)
+- `cmd/bench-tagger` — Benchmark different model+prompt combinations
 
 ## Development
 
