@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,9 +41,6 @@ import {
 import {
   Tag as TagIcon,
   Search,
-  CheckCircle2,
-  Clock,
-  XCircle,
   Loader2,
   RefreshCw,
   Plus,
@@ -73,22 +69,8 @@ function getThemeLabel(themeId: string | null): string {
   return found ? found.label : themeId
 }
 
-function getStatusBadge(status: Tag['status']) {
-  switch (status) {
-    case 'active':
-      return <Badge className="bg-green-500"><CheckCircle2 className="w-3 h-3 mr-1" />已激活</Badge>
-    case 'pending':
-      return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />待审核</Badge>
-    case 'deprecated':
-      return <Badge variant="outline" className="text-muted-foreground"><XCircle className="w-3 h-3 mr-1" />已弃用</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
-
 export default function AdminTagsPage() {
   const queryClient = useQueryClient()
-  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
   // Dialog state
@@ -102,9 +84,8 @@ export default function AdminTagsPage() {
   const [formThemeId, setFormThemeId] = useState('')
 
   const { data: tagsData, isLoading } = useQuery({
-    queryKey: ['admin-tags', statusFilter, searchQuery],
+    queryKey: ['admin-tags', searchQuery],
     queryFn: () => tagAPI.list({
-      status: statusFilter === 'all' ? undefined : statusFilter,
       q: searchQuery || undefined,
       limit: 100,
     }),
@@ -142,18 +123,6 @@ export default function AdminTagsPage() {
     },
     onError: (error: Error) => {
       toast.error('切换失败', { description: error.message })
-    },
-  })
-
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Tag['status'] }) =>
-      tagAPI.updateStatus(id, status),
-    onSuccess: () => {
-      toast.success('标签状态已更新')
-      invalidateTagQueries()
-    },
-    onError: (error: Error) => {
-      toast.error('更新失败', { description: error.message })
     },
   })
 
@@ -274,7 +243,7 @@ export default function AdminTagsPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">总标签数</CardTitle>
@@ -293,14 +262,6 @@ export default function AdminTagsPage() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">待审核</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{stats.pendingTags}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">通用标签</CardTitle>
             </CardHeader>
             <CardContent>
@@ -310,7 +271,7 @@ export default function AdminTagsPage() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Tag List */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">标签列表</CardTitle>
@@ -326,17 +287,6 @@ export default function AdminTagsPage() {
                 className="pl-9"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="active">已激活</SelectItem>
-                <SelectItem value="pending">待审核</SelectItem>
-                <SelectItem value="deprecated">已弃用</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {isLoading ? (
@@ -351,7 +301,6 @@ export default function AdminTagsPage() {
                   <TableHead>标签</TableHead>
                   <TableHead>英文名</TableHead>
                   <TableHead>主题</TableHead>
-                  <TableHead>状态</TableHead>
                   <TableHead>推荐次数</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>
@@ -369,7 +318,6 @@ export default function AdminTagsPage() {
                     <TableCell className="text-muted-foreground text-sm">
                       {getThemeLabel(tag.themeId)}
                     </TableCell>
-                    <TableCell>{getStatusBadge(tag.status)}</TableCell>
                     <TableCell>{tag.suggestCount}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -380,37 +328,6 @@ export default function AdminTagsPage() {
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
-                        {tag.status === 'pending' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateStatusMutation.mutate({ id: tag.id, status: 'active' })}
-                            disabled={updateStatusMutation.isPending}
-                          >
-                            激活
-                          </Button>
-                        )}
-                        {tag.status === 'active' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-muted-foreground"
-                            onClick={() => updateStatusMutation.mutate({ id: tag.id, status: 'deprecated' })}
-                            disabled={updateStatusMutation.isPending}
-                          >
-                            弃用
-                          </Button>
-                        )}
-                        {tag.status === 'deprecated' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateStatusMutation.mutate({ id: tag.id, status: 'active' })}
-                            disabled={updateStatusMutation.isPending}
-                          >
-                            重新激活
-                          </Button>
-                        )}
                         <Button
                           size="sm"
                           variant="ghost"
