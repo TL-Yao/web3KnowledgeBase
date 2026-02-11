@@ -9,6 +9,7 @@ import { Clock, AlertCircle, Inbox, X, Tag, Key } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { articleAPI, Article as APIArticle } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 interface Article {
   id: string
@@ -17,6 +18,7 @@ interface Article {
   summary: string
   tags: string[]
   sourceKeyword?: string
+  archived?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -29,6 +31,7 @@ function transformArticle(article: APIArticle): Article {
     summary: article.summary,
     tags: article.tags || [],
     sourceKeyword: article.sourceKeyword,
+    archived: article.archived,
     createdAt: article.createdAt,
     updatedAt: article.updatedAt,
   }
@@ -37,17 +40,19 @@ function transformArticle(article: APIArticle): Article {
 interface ArticleListProps {
   searchQuery?: string
   activeTag?: string
+  archived?: 'true' | 'false' | 'all'
   onTagClick?: (tag: string) => void
 }
 
-export function ArticleList({ searchQuery, activeTag, onTagClick }: ArticleListProps) {
+export function ArticleList({ searchQuery, activeTag, archived, onTagClick }: ArticleListProps) {
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['articles', searchQuery, activeTag],
+    queryKey: ['articles', searchQuery, activeTag, archived],
     queryFn: async () => {
       const response = await articleAPI.list({
         tag: activeTag,
         q: searchQuery,
         limit: 20,
+        archived,
       })
       return response.articles.map(transformArticle)
     },
@@ -120,10 +125,20 @@ export function ArticleList({ searchQuery, activeTag, onTagClick }: ArticleListP
         <div className="space-y-4">
           {articles.map((article) => (
             <Link key={article.id} href={`/knowledge/${article.slug}`}>
-              <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+              <Card className={cn(
+                "hover:bg-muted/50 transition-colors cursor-pointer",
+                article.archived && "opacity-60 bg-muted/50"
+              )}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{article.title}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg">{article.title}</CardTitle>
+                      {article.archived && (
+                        <Badge variant="secondary" className="bg-amber-100 text-amber-800 text-xs">
+                          已归档
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0 ml-4">
                       <Clock className="w-3 h-3" />
                       {formatDistanceToNow(new Date(article.updatedAt), {

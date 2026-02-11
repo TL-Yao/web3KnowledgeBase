@@ -7,6 +7,7 @@ import { ArticleList } from '@/components/knowledge/article-list'
 import { TagSidebar } from '@/components/knowledge/tag-sidebar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Search, X } from 'lucide-react'
 
 function KnowledgeContent() {
@@ -15,6 +16,7 @@ function KnowledgeContent() {
 
   const activeTag = searchParams.get('tag') || ''
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
+  const [hideArchived, setHideArchived] = useState(true)
 
   const handleTagClick = (tag: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -81,6 +83,19 @@ function KnowledgeContent() {
             </div>
             <Button onClick={handleSearch}>搜索</Button>
           </div>
+          <div className="flex items-center gap-2 mt-2">
+            <Checkbox
+              id="hide-archived"
+              checked={hideArchived}
+              onCheckedChange={(checked) => setHideArchived(checked === true)}
+            />
+            <label
+              htmlFor="hide-archived"
+              className="text-sm text-muted-foreground cursor-pointer select-none"
+            >
+              隐藏已归档文章
+            </label>
+          </div>
         </div>
 
         {/* Article List */}
@@ -88,6 +103,7 @@ function KnowledgeContent() {
           <ArticleList
             searchQuery={searchParams.get('q') || ''}
             activeTag={activeTag}
+            archived={hideArchived ? 'false' : 'all'}
             onTagClick={handleTagClick}
           />
         </div>

@@ -37,6 +37,7 @@ export default function ArticlePage() {
     tags: article.tags,
     sourceUrls: article.sourceUrls || [],
     modelUsed: article.modelUsed || '',
+    archived: article.archived,
     createdAt: article.createdAt,
     updatedAt: article.updatedAt,
   } : null

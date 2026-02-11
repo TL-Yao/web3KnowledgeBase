@@ -26,6 +26,10 @@ export async function fetchAPI<T>(
     throw new APIError(res.status, errorText)
   }
 
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as T
+  }
+
   return res.json()
 }
 
@@ -46,6 +50,7 @@ export interface Article {
   modelUsed?: string
   viewCount?: number
   status?: string
+  archived?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -63,6 +68,7 @@ export interface ArticleListParams {
   page?: number
   limit?: number
   q?: string
+  archived?: 'true' | 'false' | 'all'
 }
 
 // Article API
@@ -74,6 +80,7 @@ export const articleAPI = {
     if (params?.page) searchParams.set('page', String(params.page))
     if (params?.limit) searchParams.set('page_size', String(params.limit))
     if (params?.q) searchParams.set('q', params.q)
+    if (params?.archived) searchParams.set('archived', params.archived)
 
     const query = searchParams.toString()
     return fetchAPI<ArticleListResponse>(`/api/articles${query ? `?${query}` : ''}`)
@@ -96,6 +103,17 @@ export const articleAPI = {
   delete: (id: string) =>
     fetchAPI<void>(`/api/articles/${id}`, {
       method: 'DELETE',
+    }),
+
+  toggleArchive: (id: string) =>
+    fetchAPI<Article>(`/api/articles/${id}/archive`, {
+      method: 'PATCH',
+    }),
+
+  updateTags: (id: string, tags: string[]) =>
+    fetchAPI<Article>(`/api/articles/${id}/tags`, {
+      method: 'PUT',
+      body: JSON.stringify({ tags }),
     }),
 }
 
@@ -602,6 +620,16 @@ export interface TagStats {
   universalTags: number
 }
 
+export interface TagSearchResult {
+  name: string
+  nameEn: string
+  themeId: string | null
+}
+
+export interface TagSearchResponse {
+  tags: TagSearchResult[]
+}
+
 export interface TagInUse {
   name: string
   articleCount: number
@@ -614,6 +642,9 @@ export interface TagInUseResponse {
 // Tag API
 export const tagAPI = {
   getInUse: () => fetchAPI<TagInUseResponse>('/api/tags/in-use'),
+
+  search: (q: string, limit?: number) =>
+    fetchAPI<TagSearchResponse>(`/api/tags/search?q=${encodeURIComponent(q)}&limit=${limit || 10}`),
 
   list: (params?: { status?: string; page?: number; limit?: number; q?: string }) => {
     const searchParams = new URLSearchParams()
