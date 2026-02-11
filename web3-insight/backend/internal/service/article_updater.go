@@ -122,8 +122,8 @@ func parseUpdateResponse(response string) (updatedContent, changeSummary string,
 	return updatedContent, strings.TrimSpace(changeSummary), nil
 }
 
-// stripLeadingTitle removes a leading "标题：...\n" line that the LLM sometimes echoes back
-var leadingTitleRe = regexp.MustCompile(`^标题[：:].+\n{1,2}`)
+// stripLeadingTitle removes a leading "标题：...\n" or "# Title\n" line that the LLM sometimes echoes back
+var leadingTitleRe = regexp.MustCompile(`^(标题[：:].+|#\s+.+)\n{1,2}`)
 
 func stripLeadingTitle(content string) string {
 	return leadingTitleRe.ReplaceAllString(content, "")
