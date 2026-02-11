@@ -55,8 +55,6 @@ export function ArticleView({ article }: ArticleViewProps) {
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-              <span>{article.category?.name}</span>
-              <span>·</span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {article.updatedAt && formatDistanceToNow(new Date(article.updatedAt), {
