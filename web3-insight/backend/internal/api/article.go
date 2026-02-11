@@ -480,3 +480,69 @@ func (h *ArticleHandler) ApplyUpdate(c *gin.Context) {
 		"message": "Article updated successfully",
 	})
 }
+
+func (h *ArticleHandler) ListVersions(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid article ID"})
+		return
+	}
+
+	versions, err := h.repo.ListVersions(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list versions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"versions": versions})
+}
+
+func (h *ArticleHandler) Rollback(c *gin.Context) {
+	articleID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid article ID"})
+		return
+	}
+
+	versionID, err := uuid.Parse(c.Param("versionId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid version ID"})
+		return
+	}
+
+	article, err := h.repo.GetByID(articleID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "article not found"})
+		return
+	}
+
+	version, err := h.repo.GetVersion(versionID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
+		return
+	}
+
+	if version.ArticleID != articleID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "version does not belong to this article"})
+		return
+	}
+
+	// Save current content as a new version before rollback (never lose data)
+	_, err = h.repo.CreateVersion(articleID, article.Content, "rollback", "回滚前自动保存")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save current version"})
+		return
+	}
+
+	// Restore article content from the target version
+	article.Content = version.Content
+	if err := h.repo.Update(article); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to rollback article"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"article": article,
+		"message": "Article rolled back successfully",
+	})
+}

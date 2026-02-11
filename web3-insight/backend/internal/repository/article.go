@@ -148,6 +148,26 @@ func (r *ArticleRepository) CreateVersion(articleID uuid.UUID, content, editedBy
 	return version, r.db.Create(version).Error
 }
 
+// ListVersions returns versions for an article (without content to keep response light)
+func (r *ArticleRepository) ListVersions(articleID uuid.UUID) ([]model.ArticleVersion, error) {
+	var versions []model.ArticleVersion
+	err := r.db.Select("id, article_id, edited_by, change_summary, created_at").
+		Where("article_id = ?", articleID).
+		Order("created_at DESC").
+		Find(&versions).Error
+	return versions, err
+}
+
+// GetVersion returns a single version by ID (with content for rollback)
+func (r *ArticleRepository) GetVersion(id uuid.UUID) (*model.ArticleVersion, error) {
+	var version model.ArticleVersion
+	err := r.db.Where("id = ?", id).First(&version).Error
+	if err != nil {
+		return nil, err
+	}
+	return &version, nil
+}
+
 // RemoveTag removes a tag name from all articles' tag arrays and returns affected count
 func (r *ArticleRepository) RemoveTag(name string) (int64, error) {
 	result := r.db.Exec(
