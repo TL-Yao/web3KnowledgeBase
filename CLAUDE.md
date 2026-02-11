@@ -232,6 +232,13 @@ cd /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/frontend && npm
 
 Chrome browser automation is available via `claude-in-chrome` extension. Use proactively for visual verification after UI changes. Always call `tabs_context_mcp` first.
 
+### Chrome MCP Connection Issue Protocol
+
+- When QA encounters Chrome MCP browser extension disconnection during testing, they should STOP immediately and report to the team leader
+- The team leader will notify the user to fix the Chrome connection (run `/chrome` command)
+- QA should NOT skip browser testing or fall back to API-only testing — browser E2E testing is required
+- After the user fixes the connection, QA resumes browser testing
+
 ## Key Patterns & Lessons
 
 - **GVM workaround**: Always use `/usr/local/go/bin/go -C /path` instead of `cd && go`
