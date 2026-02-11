@@ -46,6 +46,7 @@ web3-insight/
 │   │   ├── cleardata/main.go     # 数据清理工具
 │   │   ├── bulk-tag/main.go      # 批量标签工具 (标记未打标文章)
 │   │   ├── eval-tagger/main.go   # 标签质量评估 CLI
+│   │   ├── bench-tagger/main.go  # 标签 Benchmark 评估 CLI
 │   │   └── seed-articles/main.go # 测试文章生成脚本
 │   ├── config/
 │   │   ├── models.yaml           # 模型注册表 (本地/云端模型定义)
@@ -104,8 +105,9 @@ web3-insight/
 │   │   │   ├── kb_update_orchestrator.go # KB更新编排器
 │   │   │   ├── kb_scheduler.go   # KB更新调度器
 │   │   │   ├── theme_sync.go     # 主题同步 (config→DB)
-│   │   │   ├── tagger.go         # 文章自动标签 (LLM + 注册表验证)
-│   │   │   └── eval_tagger.go    # 标签质量评估指标
+│   │   │   ├── tagger.go         # 文章自动标签 (Sonnet + balanced_v1 prompt)
+│   │   │   ├── eval_tagger.go    # 标签质量评估指标
+│   │   │   └── bench_tagger.go   # 标签 Benchmark 运行引擎
 │   │   └── worker/               # 异步任务 (Asynq)
 │   └── scripts/
 │       └── clear_data.sql        # 数据清理 SQL
@@ -159,8 +161,10 @@ web3-insight/
 | 基础 | 错误边界 | ExplorerErrorBoundary | - |
 | 管理 | 知识库自动更新 (主题驱动) | KBUpdatePage | /api/kb (trigger, jobs, keywords, scheduler, themes, config) |
 | 管理 | 标签管理 (注册表+生命周期) | TagsPage | /api/tags (list, stats, status, approve) |
-| 标签 | 文章自动标签 (LLM Haiku) | - | tagger.go (TagArticle) |
+| 标签 | 文章自动标签 (Sonnet + balanced_v1) | - | tagger.go (TagArticle) |
+| 标签 | 自动标签开关 (config toggle) | Switch on TagsPage | PUT /api/config/auto_tagging_enabled |
 | 标签 | 标签评估管道 | - | eval-tagger CLI |
+| 标签 | 标签 Benchmark 评估工具 | - | bench-tagger CLI + bench_tagger.go |
 | 基础 | CORS 中间件 | - | middleware.go |
 
 ## Model Fallback Pattern
@@ -252,7 +256,12 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 
 ## Tagging Quality Metrics (Success Matrix)
 
-Evaluated on 27 articles (2026-02-10). Tagger uses Claude Haiku with tag registry validation + keyword fallback.
+**Current production config**: Claude Sonnet 4 + balanced_v1 prompt (upgraded from Haiku + default prompt on 2026-02-11).
+Fallback model: Claude Haiku 4.5 (previously qwen2.5:32b).
+
+Benchmark result (Sonnet + balanced_v1): Macro-F1 ~79.6%, Registry Rate ~92%, Avg Tags ~4.3 (vs baseline Haiku: F1 72.6%, Reg 74.6%, Avg 3.6).
+
+Evaluated on 27 articles (2026-02-10). Previous eval uses Haiku with tag registry validation + keyword fallback.
 
 | 指标 | 目标 | 实际 | 状态 | 说明 |
 |------|------|------|------|------|
@@ -272,14 +281,33 @@ Evaluated on 27 articles (2026-02-10). Tagger uses Claude Haiku with tag registr
 /usr/local/go/bin/go run -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend ./cmd/eval-tagger --export review.md
 ```
 
+**Benchmark 命令:**
+```bash
+/usr/local/go/bin/go run -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend ./cmd/bench-tagger
+/usr/local/go/bin/go run -C /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/backend ./cmd/bench-tagger --method sonnet-balanced-v1 --verbose
+```
+
 **批量标签 API:**
 ```bash
 curl -X POST "http://localhost:8080/api/tags/bulk-tag?force=true"
 ```
 
-### Tagging Lessons (2026-02-10)
+**自动标签开关:**
+```bash
+# 查询状态
+curl http://localhost:8080/api/config/auto_tagging_enabled
+# 关闭
+curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Type: application/json" -d '{"value":"false"}'
+# 开启
+curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Type: application/json" -d '{"value":"true"}'
+```
 
-- **LLM tag compliance**: Even with explicit "only choose from this list" prompts, Claude Haiku generates off-registry tags ~15% of the time. The `resolveTag()` function handles case-insensitive matching and parenthetical stripping. Code-level validation filters these out to achieve 100% compliance.
+### Tagging Lessons (2026-02-10, updated 2026-02-11)
+
+- **Model capability > prompt engineering**: Sonnet vs Haiku on same prompt shows 5-8pp F1 difference. Registry compliance jumps from ~75% to ~92%. Model's instruction-following ability is the biggest lever.
+- **Benchmark-driven optimization**: 12 method combinations (4 models × 6 prompts) tested via bench-tagger CLI. balanced_v1 + Sonnet won on F1 (79.6%) while keeping cost under $0.01/article.
+- **Auto-tagging toggle**: Uses `configs` table key `auto_tagging_enabled`. Frontend sends string "true"/"false", backend stores as JSON `"true"`/`"false"` (with quotes from json.Marshal). Check uses `string(cfg.Value) == \`"false"\``.
+- **LLM tag compliance**: Even with explicit "only choose from this list" prompts, Claude Haiku generates off-registry tags ~15% of the time. The `ResolveTag()` function handles case-insensitive matching and parenthetical stripping. Code-level validation filters these out to achieve 100% compliance.
 - **Keyword fallback for minimum tags**: After LLM tag validation, if fewer than 3 tags remain, auto-supplement from universal tags by keyword matching against article title/summary. This raised in-range from 89% to 96%.
 - **Config env expansion**: `config.yaml` uses `${ANTHROPIC_API_KEY}` syntax. Config loader now calls `os.ExpandEnv()` automatically. CLI tools no longer need manual expansion.
 - **Reuse/orphan metrics require scale**: With only 27 articles, tag reuse metrics are inherently low. These targets (>80% reuse, <15% orphan) are meaningful only at 50+ articles.
