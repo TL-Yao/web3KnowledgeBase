@@ -71,6 +71,30 @@ export interface ArticleListParams {
   archived?: 'true' | 'false' | 'all'
 }
 
+// Article Update Types
+export interface GenerateUpdateRequest {
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>
+}
+
+export interface GenerateUpdateResponse {
+  updatedContent: string
+  changeSummary: string
+  model: string
+}
+
+export interface ApplyUpdateRequest {
+  updatedContent: string
+  changeSummary: string
+}
+
+export interface ArticleVersion {
+  id: string
+  articleId: string
+  editedBy: string
+  changeSummary: string
+  createdAt: string
+}
+
 // Article API
 export const articleAPI = {
   list: (params?: ArticleListParams) => {
@@ -115,6 +139,21 @@ export const articleAPI = {
       method: 'PUT',
       body: JSON.stringify({ tags }),
     }),
+
+  generateUpdate: (id: string, data: GenerateUpdateRequest) =>
+    fetchAPI<GenerateUpdateResponse>(`/api/articles/${id}/generate-update`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  applyUpdate: (id: string, data: ApplyUpdateRequest) =>
+    fetchAPI<{ article: Article; version: ArticleVersion }>(`/api/articles/${id}/apply-update`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  listVersions: (id: string) =>
+    fetchAPI<{ versions: ArticleVersion[] }>(`/api/articles/${id}/versions`),
 }
 
 // Categories API

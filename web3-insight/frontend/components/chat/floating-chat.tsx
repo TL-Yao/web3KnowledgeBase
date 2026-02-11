@@ -1,20 +1,22 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Minus, Send, Save, Trash2 } from 'lucide-react'
+import { MessageCircle, X, Minus, Send, Trash2, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ChatMessage } from './chat-message'
-import { useChat } from '@/hooks/use-chat'
+import { useChat, Message } from '@/hooks/use-chat'
 
 interface FloatingChatProps {
   articleId: string
   articleTitle: string
+  onGenerateUpdate?: (messages: Message[]) => void
+  isGeneratingUpdate?: boolean
 }
 
-export function FloatingChat({ articleId, articleTitle }: FloatingChatProps) {
+export function FloatingChat({ articleId, articleTitle, onGenerateUpdate, isGeneratingUpdate }: FloatingChatProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [input, setInput] = useState('')
@@ -142,10 +144,23 @@ export function FloatingChat({ articleId, articleTitle }: FloatingChatProps) {
 
       {/* Toolbar */}
       <div className="px-4 py-2 border-t border-border flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="text-xs">
-          <Save className="w-3 h-3 mr-1" />
-          保存对话
-        </Button>
+        {messages.length >= 2 && onGenerateUpdate && (
+          <Button
+            variant="default"
+            size="sm"
+            className="text-xs"
+            onClick={() => onGenerateUpdate(messages)}
+            disabled={isLoading || isGeneratingUpdate}
+          >
+            {isGeneratingUpdate ? (
+              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+            ) : (
+              <Sparkles className="w-3 h-3 mr-1" />
+            )}
+            {isGeneratingUpdate ? '生成中...' : '生成文章更新'}
+          </Button>
+        )}
+        <div className="flex-1" />
         <Button variant="ghost" size="sm" className="text-xs" onClick={clearMessages}>
           <Trash2 className="w-3 h-3 mr-1" />
           清空

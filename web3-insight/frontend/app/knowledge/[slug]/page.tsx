@@ -1,18 +1,40 @@
 'use client'
 
+import { useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MainLayout } from '@/components/layout/main-layout'
 import { ArticleView } from '@/components/knowledge/article-view'
 import { FloatingChat } from '@/components/chat/floating-chat'
+import { UpdateReviewPanel } from '@/components/knowledge/update-review-panel'
 import { Button } from '@/components/ui/button'
 import { articleAPI } from '@/lib/api'
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
 import Link from 'next/link'
+import type { Message } from '@/hooks/use-chat'
 
 export default function ArticlePage() {
   const params = useParams()
   const slug = params.slug as string
+  const queryClient = useQueryClient()
+
+  const [isApplying, setIsApplying] = useState(false)
+  const lastMessagesRef = useRef<Message[]>([])
+
+  const [updateState, setUpdateState] = useState<{
+    isGenerating: boolean
+    isReviewOpen: boolean
+    updatedContent: string | null
+    changeSummary: string | null
+    model: string | null
+  }>({
+    isGenerating: false,
+    isReviewOpen: false,
+    updatedContent: null,
+    changeSummary: null,
+    model: null,
+  })
 
   const { data: article, isLoading, isError, refetch } = useQuery({
     queryKey: ['article', slug],
@@ -109,13 +131,76 @@ export default function ArticlePage() {
     )
   }
 
+  const handleGenerateUpdate = async (messages: Message[]) => {
+    lastMessagesRef.current = messages
+    setUpdateState(prev => ({ ...prev, isGenerating: true }))
+    try {
+      const result = await articleAPI.generateUpdate(displayArticle!.id, {
+        conversationHistory: messages.map(m => ({ role: m.role, content: m.content }))
+      })
+      setUpdateState({
+        isGenerating: false,
+        isReviewOpen: true,
+        updatedContent: result.updatedContent,
+        changeSummary: result.changeSummary,
+        model: result.model,
+      })
+    } catch {
+      toast.error('生成更新失败')
+      setUpdateState(prev => ({ ...prev, isGenerating: false }))
+    }
+  }
+
+  const handleRegenerate = () => {
+    handleGenerateUpdate(lastMessagesRef.current)
+  }
+
+  const handleApplyUpdate = async () => {
+    if (!updateState.updatedContent || !updateState.changeSummary) return
+    setIsApplying(true)
+    try {
+      await articleAPI.applyUpdate(displayArticle!.id, {
+        updatedContent: updateState.updatedContent,
+        changeSummary: updateState.changeSummary,
+      })
+      toast.success('文章已更新')
+      setUpdateState({ isGenerating: false, isReviewOpen: false, updatedContent: null, changeSummary: null, model: null })
+      queryClient.invalidateQueries({ queryKey: ['article', slug] })
+    } catch {
+      toast.error('应用更新失败')
+    } finally {
+      setIsApplying(false)
+    }
+  }
+
+  const handleCancelReview = () => {
+    setUpdateState({ isGenerating: false, isReviewOpen: false, updatedContent: null, changeSummary: null, model: null })
+  }
+
   return (
     <MainLayout>
       <ArticleView article={displayArticle} />
       <FloatingChat
         articleId={displayArticle.id}
         articleTitle={displayArticle.title}
+        onGenerateUpdate={handleGenerateUpdate}
+        isGeneratingUpdate={updateState.isGenerating}
       />
+
+      {updateState.isReviewOpen && updateState.updatedContent && (
+        <UpdateReviewPanel
+          articleTitle={displayArticle.title}
+          originalContent={displayArticle.content}
+          updatedContent={updateState.updatedContent}
+          changeSummary={updateState.changeSummary!}
+          model={updateState.model!}
+          onApply={handleApplyUpdate}
+          onRegenerate={handleRegenerate}
+          onCancel={handleCancelReview}
+          isApplying={isApplying}
+          isRegenerating={updateState.isGenerating}
+        />
+      )}
     </MainLayout>
   )
 }
