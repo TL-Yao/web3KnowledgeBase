@@ -133,6 +133,9 @@ web3-insight/
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | /api/tags | List tags (filter by status/theme) |
+| POST | /api/tags | Create tag |
+| PUT | /api/tags/:id | Update tag (name, nameEn, theme) |
+| DELETE | /api/tags/:id | Delete tag (cascades removal from articles) |
 | GET | /api/tags/search | Tag autocomplete search |
 | GET | /api/tags/in-use | Tags in use with article counts |
 | GET | /api/tags/stats | Tag statistics |

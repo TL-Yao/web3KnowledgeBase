@@ -160,7 +160,7 @@ web3-insight/
 | 基础 | Feature Flags | DisabledFeature | - |
 | 基础 | 错误边界 | ExplorerErrorBoundary | - |
 | 管理 | 知识库自动更新 (主题驱动) | KBUpdatePage | /api/kb (trigger, jobs, keywords, scheduler, themes, config) |
-| 管理 | 标签管理 (注册表+生命周期) | TagsPage | /api/tags (list, stats, status, approve) |
+| 管理 | 标签管理 (CRUD+注册表+生命周期) | TagsPage | /api/tags (list, create, update, delete, stats, status, approve) |
 | 标签 | 文章自动标签 (Sonnet + balanced_v1) | - | tagger.go (TagArticle) |
 | 标签 | 自动标签开关 (config toggle) | Switch on TagsPage | PUT /api/config/auto_tagging_enabled |
 | 标签 | 标签评估管道 | - | eval-tagger CLI |
