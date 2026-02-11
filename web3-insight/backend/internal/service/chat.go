@@ -117,7 +117,9 @@ func buildChatSystemPrompt(title, content string) string {
 		truncatedContent = content[:maxContentLen] + "\n\n[内容已截断...]"
 	}
 
-	return fmt.Sprintf(`你是一个 Web3 技术助手。用户正在阅读一篇关于「%s」的文章，并对内容有疑问。
+	return fmt.Sprintf(`**重要：无论用户使用什么语言提问，你必须始终使用中文回答。**
+
+你是一个 Web3 技术助手。用户正在阅读一篇关于「%s」的文章，并对内容有疑问。
 
 文章内容：
 %s
@@ -128,7 +130,9 @@ func buildChatSystemPrompt(title, content string) string {
 
 // buildGeneralSystemPrompt builds the system prompt for general Web3 questions
 func buildGeneralSystemPrompt() string {
-	return `你是一个 Web3 技术助手，专门帮助用户理解区块链、加密货币、DeFi、NFT 等 Web3 相关技术。
+	return `**重要：无论用户使用什么语言提问，你必须始终使用中文回答。**
+
+你是一个 Web3 技术助手，专门帮助用户理解区块链、加密货币、DeFi、NFT 等 Web3 相关技术。
 
 请用中文回答用户的问题，保持专业术语的一致性。回答应该：
 1. 准确、清晰、有帮助
