@@ -125,13 +125,14 @@ web3-insight/
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui 基础组件
 │   │   ├── layout/               # 布局 (Sidebar, Header, MainLayout)
-│   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, TagEditor, UpdateReviewPanel, VersionHistory)
+│   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, TagEditor, UpdateReviewPanel[inline/overlay], VersionHistory)
 │   │   ├── research/             # 调研组件 (ExplorerResearch, ErrorBoundary)
 │   │   ├── admin/                # 管理组件 (ModelConfig, TaskMonitor, SystemStatus, SourceConfig, ArticleImport)
-│   │   ├── chat/                 # 聊天组件 (FloatingChat, ChatMessage)
+│   │   ├── chat/                 # 聊天组件 (ChatSidebar, ChatMessage, SidebarToggle)
 │   │   └── providers/            # QueryProvider
 │   ├── hooks/
 │   │   ├── use-chat.ts           # 聊天 Hook (多轮对话, localStorage 持久化)
+│   │   ├── use-resize.ts         # 拖拽调整大小 Hook (rAF 节流)
 │   │   └── use-feature-flag.ts   # Feature Flag Hook
 │   ├── lib/
 │   │   ├── api.ts                # 所有 API 类型定义和客户端方法
@@ -153,7 +154,7 @@ web3-insight/
 | 知识库 | 文章列表/详情/CRUD | ArticleList, ArticleView | GET/POST/PUT/DELETE /api/articles |
 | 知识库 | 分类管理/树结构 | CategoryTree | GET /api/categories, /api/categories/tree |
 | 知识库 | 全局搜索 + 语义搜索 | SearchInput | GET /api/search, /api/search/semantic |
-| 聊天 | AI 实时对话 | FloatingChat | WS /ws/chat |
+| 聊天 | AI 实时对话 (可调宽侧边栏) | ChatSidebar, SidebarToggle, ResizeHandle | WS /ws/chat |
 | 调研 | Explorer 管理 + 功能对比 | ExplorerResearch | /api/explorers (含 compare, stats, features) |
 | 管理 | 系统状态 | SystemStatus | GET /health |
 | 管理 | 任务监控 | TaskMonitor | GET /api/tasks, /api/tasks/stats |
@@ -175,9 +176,11 @@ web3-insight/
 | 知识库 | 手动标签编辑 (自动补全) | TagEditor | PUT /api/articles/:id/tags |
 | 知识库 | 标签搜索 (自动补全) | TagEditor | GET /api/tags/search |
 | 知识库 | 已归档文章过滤 | Checkbox on KnowledgePage | GET /api/articles?archived= |
-| 聊天 | 多轮对话 + 上下文历史 | FloatingChat + useChat | WS /ws/chat (history support) |
-| 知识库 | AI 文章更新生成 | FloatingChat → UpdateReviewPanel | POST /api/articles/:id/generate-update |
-| 知识库 | 文章更新审阅 (diff 视图) | UpdateReviewPanel | POST /api/articles/:id/apply-update |
+| 聊天 | 多轮对话 + 上下文历史 | ChatSidebar + useChat | WS /ws/chat (history support) |
+| 聊天 | Markdown 渲染 (助手消息) | ChatMessage (ReactMarkdown + remarkGfm) | - |
+| 聊天 | 侧边栏拖拽调整宽度 (320-600px) | ResizeHandle + useResize | - |
+| 知识库 | AI 文章更新生成 | ChatSidebar → UpdateReviewPanel | POST /api/articles/:id/generate-update |
+| 知识库 | 文章更新审阅 (inline diff 视图) | UpdateReviewPanel (inline/overlay variants) | POST /api/articles/:id/apply-update |
 | 知识库 | 版本历史 + 回滚 | VersionHistory | GET /api/articles/:id/versions, POST /:id/versions/:versionId/rollback |
 
 ## Model Fallback Pattern

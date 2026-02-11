@@ -105,7 +105,7 @@ web3-insight/
 ├── frontend/
 │   ├── app/              # Next.js pages (knowledge, research, admin)
 │   ├── components/       # React components (ui, layout, knowledge, admin, chat)
-│   ├── hooks/            # Custom hooks (useChat, useFeatureFlag)
+│   ├── hooks/            # Custom hooks (useChat, useResize, useFeatureFlag)
 │   └── lib/              # API client, WebSocket, utilities
 ├── scripts/              # Ops scripts (start, stop, status)
 ├── docker-compose.yml    # PostgreSQL + Redis
@@ -223,13 +223,13 @@ Articles support lifecycle management through the knowledge base UI:
 
 ## AI Chat & Article Refinement
 
-The article detail page includes a floating chat widget for AI-powered Q&A and targeted article updates.
+The article detail page includes a resizable right sidebar for AI-powered Q&A and targeted article updates.
 
-**Chat:** Multi-turn conversation about any article. Messages persist in localStorage across sessions. Supports selected text context and keyboard shortcuts (⌘/ to toggle, Esc to minimize).
+**Chat Sidebar:** Resizable sidebar (320-600px, drag to resize, double-click handle to reset) with multi-turn conversation about any article. Messages persist in localStorage across sessions. Assistant responses render as markdown (headers, lists, code blocks, tables via ReactMarkdown + remarkGfm). Keyboard shortcuts: ⌘/ to toggle, Esc to close, ⌘↵ to send.
 
 **Article Update Generation:** After chatting, click "生成文章更新" to generate a targeted update based on the conversation. The system sends the full article content + conversation history to the LLM (Claude Sonnet, with Haiku fallback), which produces a refined article following "targeted additions, not rewrites" principles.
 
-**Diff Review:** Generated updates are shown in a full-screen diff viewer with line-by-line comparison (green=added, red=removed), collapsible unchanged blocks, and change summary. Users can apply, regenerate, or cancel.
+**Inline Diff Review:** Generated updates are shown in an inline diff panel (replacing the article content area, with the chat sidebar still visible for context). Line-by-line comparison (green=added, red=removed), collapsible unchanged blocks, and change summary. Users can apply, regenerate, or cancel. Falls back to overlay mode on smaller screens.
 
 **Version History:** Every update creates a version snapshot before applying changes. The version history panel (expandable on article detail page) shows all past versions with rollback capability. Rolling back also saves the current content first, so no data is ever lost.
 
