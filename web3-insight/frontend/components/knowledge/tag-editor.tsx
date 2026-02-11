@@ -145,7 +145,7 @@ export function TagEditor({ articleId, initialTags, onTagClick }: TagEditorProps
         <Badge
           key={tag}
           variant="secondary"
-          className="gap-1 pr-1 cursor-pointer hover:bg-primary/20 transition-colors"
+          className="group gap-1 pr-1 cursor-pointer hover:bg-primary/20 transition-colors"
         >
           <span onClick={() => onTagClick?.(tag)}>{tag}</span>
           <button
@@ -153,7 +153,7 @@ export function TagEditor({ articleId, initialTags, onTagClick }: TagEditorProps
               e.stopPropagation()
               removeTag(tag)
             }}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+            className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <X className="w-3 h-3" />
           </button>
