@@ -108,6 +108,19 @@ func (r *TagRepository) IncrementSuggestCount(name string) (int, error) {
 	return tag.SuggestCount, nil
 }
 
+// TagInUse represents a tag name with its article usage count
+type TagInUse struct {
+	Name         string `json:"name"`
+	ArticleCount int    `json:"articleCount"`
+}
+
+// FindInUseWithCounts returns tags currently used by articles with their article counts
+func (r *TagRepository) FindInUseWithCounts() ([]TagInUse, error) {
+	var results []TagInUse
+	err := r.db.Raw(`SELECT unnest(tags) AS name, count(*) AS article_count FROM articles WHERE tags IS NOT NULL AND array_length(tags, 1) > 0 GROUP BY 1 ORDER BY article_count DESC, name ASC`).Scan(&results).Error
+	return results, err
+}
+
 // GetStats returns aggregate tag statistics
 func (r *TagRepository) GetStats() (map[string]int64, error) {
 	stats := make(map[string]int64)

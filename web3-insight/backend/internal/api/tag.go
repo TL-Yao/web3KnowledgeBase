@@ -142,6 +142,16 @@ func (h *TagHandler) ApprovePending(c *gin.Context) {
 	})
 }
 
+// GetInUse returns tags currently in use by articles with article counts
+func (h *TagHandler) GetInUse(c *gin.Context) {
+	tags, err := h.tagRepo.FindInUseWithCounts()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tags in use"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"tags": tags})
+}
+
 // BulkTag tags all untagged articles (or all with force=true query param)
 func (h *TagHandler) BulkTag(c *gin.Context) {
 	force := c.Query("force") == "true"
