@@ -23,8 +23,9 @@ func NewRouter() *Router {
 	}
 }
 
-// NewRouterFromConfig creates a router initialized from config
-func NewRouterFromConfig(cfg *config.LLMConfig) *Router {
+// NewRouterFromConfig creates a router initialized from config with dynamic key resolution.
+// The keyFunc parameter provides API keys at request time instead of baking them in at construction.
+func NewRouterFromConfig(cfg *config.LLMConfig, claudeKeyFunc, openaiKeyFunc func() string) *Router {
 	r := NewRouter()
 
 	// Register Ollama adapters if configured
@@ -32,22 +33,19 @@ func NewRouterFromConfig(cfg *config.LLMConfig) *Router {
 		r.RegisterAdapter(cfg.DefaultLocal, NewOllamaAdapter(cfg.OllamaHost, cfg.DefaultLocal))
 	}
 
-	// Register Claude adapter if enabled
-	if cfg.Claude.Enabled && cfg.Claude.APIKey != "" {
-		r.RegisterAdapter(cfg.Claude.DefaultModel, NewClaudeAdapter(cfg.Claude.APIKey, cfg.Claude.DefaultModel))
-		// Register named adapters for model selector (chat model override)
-		r.RegisterAdapter("claude-haiku-4-5", NewClaudeAdapter(cfg.Claude.APIKey, "claude-haiku-4-5-20251001"))
-		r.RegisterAdapter("claude-sonnet-4-5", NewClaudeAdapter(cfg.Claude.APIKey, "claude-sonnet-4-5-20250929"))
-		r.RegisterAdapter("claude-opus-4-6", NewClaudeAdapter(cfg.Claude.APIKey, "claude-opus-4-6"))
-		// Legacy alias for simpler tasks
-		r.RegisterAdapter("claude-haiku", NewClaudeAdapter(cfg.Claude.APIKey, "claude-3-haiku-20240307"))
+	// Register Claude adapters if enabled (key availability checked dynamically)
+	if cfg.Claude.Enabled {
+		r.RegisterAdapter(cfg.Claude.DefaultModel, NewClaudeAdapter(claudeKeyFunc, cfg.Claude.DefaultModel))
+		r.RegisterAdapter("claude-haiku-4-5", NewClaudeAdapter(claudeKeyFunc, "claude-haiku-4-5-20251001"))
+		r.RegisterAdapter("claude-sonnet-4-5", NewClaudeAdapter(claudeKeyFunc, "claude-sonnet-4-5-20250929"))
+		r.RegisterAdapter("claude-opus-4-6", NewClaudeAdapter(claudeKeyFunc, "claude-opus-4-6"))
+		r.RegisterAdapter("claude-haiku", NewClaudeAdapter(claudeKeyFunc, "claude-3-haiku-20240307"))
 	}
 
-	// Register OpenAI adapter if enabled
-	if cfg.OpenAI.Enabled && cfg.OpenAI.APIKey != "" {
-		r.RegisterAdapter(cfg.OpenAI.DefaultModel, NewOpenAIAdapter(cfg.OpenAI.APIKey, cfg.OpenAI.DefaultModel))
-		// Also register mini model
-		r.RegisterAdapter("gpt-4o-mini", NewOpenAIAdapter(cfg.OpenAI.APIKey, "gpt-4o-mini"))
+	// Register OpenAI adapters if enabled (key availability checked dynamically)
+	if cfg.OpenAI.Enabled {
+		r.RegisterAdapter(cfg.OpenAI.DefaultModel, NewOpenAIAdapter(openaiKeyFunc, cfg.OpenAI.DefaultModel))
+		r.RegisterAdapter("gpt-4o-mini", NewOpenAIAdapter(openaiKeyFunc, "gpt-4o-mini"))
 	}
 
 	// Set up default routes based on config

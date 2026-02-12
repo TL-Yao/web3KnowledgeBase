@@ -14,6 +14,7 @@ import (
 type Server struct {
 	config             *config.Config
 	db                 *gorm.DB
+	keyProvider        *service.KeyProvider
 	articleHandler     *ArticleHandler
 	categoryHandler    *CategoryHandler
 	configHandler      *ConfigHandler
@@ -21,25 +22,31 @@ type Server struct {
 	searchHandler      *SearchHandler
 	chatHandler        *ChatHandler
 	modelConfigHandler *ModelConfigHandler
+	apiKeyHandler      *ApiKeyHandler
 }
 
-func NewServer(cfg *config.Config, db *gorm.DB) *Server {
+func NewServer(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyProvider) *Server {
 	// Initialize repositories
 	articleRepo := repository.NewArticleRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
 	configRepo := repository.NewConfigRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
 
+	// Build key functions from the shared KeyProvider
+	claudeKeyFunc := func() string { return keyProvider.GetKey("anthropic") }
+	openaiKeyFunc := func() string { return keyProvider.GetKey("openai") }
+
 	// Initialize services
-	chatService := service.NewChatService(db, &cfg.LLM)
+	chatService := service.NewChatService(db, &cfg.LLM, claudeKeyFunc, openaiKeyFunc)
 	semanticSearchService := service.NewSemanticSearchService(articleRepo, &cfg.LLM)
-	llmRouter := llm.NewRouterFromConfig(&cfg.LLM)
+	llmRouter := llm.NewRouterFromConfig(&cfg.LLM, claudeKeyFunc, openaiKeyFunc)
 	articleUpdater := service.NewArticleUpdater(llmRouter)
 	cliUpdater := service.NewCLIArticleUpdater()
 
 	return &Server{
 		config:             cfg,
 		db:                 db,
+		keyProvider:        keyProvider,
 		articleHandler:     NewArticleHandler(articleRepo, db, articleUpdater, cliUpdater),
 		categoryHandler:    NewCategoryHandler(categoryRepo),
 		configHandler:      NewConfigHandler(configRepo),
@@ -47,6 +54,7 @@ func NewServer(cfg *config.Config, db *gorm.DB) *Server {
 		searchHandler:      NewSearchHandlerWithSemantic(articleRepo, categoryRepo, semanticSearchService),
 		chatHandler:        NewChatHandler(chatService),
 		modelConfigHandler: NewModelConfigHandler(configRepo, cfg.Models, cfg.Routing),
+		apiKeyHandler:      NewApiKeyHandler(configRepo, keyProvider),
 	}
 }
 
@@ -66,14 +74,14 @@ func NewRouter(cfg *config.Config) *gin.Engine {
 	return router
 }
 
-func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
+func NewRouterWithDB(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyProvider) *gin.Engine {
 	router := gin.Default()
 
 	// CORS middleware
 	router.Use(corsMiddleware())
 
 	// Initialize server with handlers
-	server := NewServer(cfg, db)
+	server := NewServer(cfg, db, keyProvider)
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -207,10 +215,15 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			models.GET("/tasks", server.modelConfigHandler.GetTaskTypes)
 			models.GET("/selections", server.modelConfigHandler.GetUserSelections)
 			models.PUT("/selections", server.modelConfigHandler.UpdateUserSelections)
+
+			// API Key Management
+			models.GET("/keys", server.apiKeyHandler.ListKeys)
+			models.PUT("/keys", server.apiKeyHandler.SaveKeys)
+			models.POST("/keys/test", server.apiKeyHandler.TestKey)
 		}
 
 		// Tags
-		tagHandler := NewTagHandler(db, &cfg.LLM)
+		tagHandler := NewTagHandler(db, &cfg.LLM, server.keyProvider)
 		tags := api.Group("/tags")
 		{
 			tags.GET("", tagHandler.List)
@@ -226,7 +239,7 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		}
 
 		// Knowledge Base Update
-		kbUpdateHandler := NewKBUpdateHandler(db, cfg)
+		kbUpdateHandler := NewKBUpdateHandler(db, cfg, server.keyProvider)
 		kb := api.Group("/kb")
 		{
 			// Update operations

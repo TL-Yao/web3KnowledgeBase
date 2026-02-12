@@ -17,9 +17,9 @@ type ChatService struct {
 }
 
 // NewChatService creates a new chat service
-func NewChatService(db *gorm.DB, llmCfg *config.LLMConfig) *ChatService {
+func NewChatService(db *gorm.DB, llmCfg *config.LLMConfig, claudeKeyFunc, openaiKeyFunc func() string) *ChatService {
 	return &ChatService{
-		llmRouter:   llm.NewRouterFromConfig(llmCfg),
+		llmRouter:   llm.NewRouterFromConfig(llmCfg, claudeKeyFunc, openaiKeyFunc),
 		articleRepo: repository.NewArticleRepository(db),
 	}
 }

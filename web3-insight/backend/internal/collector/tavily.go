@@ -11,16 +11,16 @@ import (
 
 // TavilyProvider implements SearchProvider for Tavily API
 type TavilyProvider struct {
-	apiKey  string
+	keyFunc func() string
 	enabled bool
 	client  *http.Client
 }
 
 // NewTavilyProvider creates a new Tavily provider
-func NewTavilyProvider(apiKey string, enabled bool) *TavilyProvider {
+func NewTavilyProvider(keyFunc func() string, enabled bool) *TavilyProvider {
 	return &TavilyProvider{
-		apiKey:  apiKey,
-		enabled: enabled && apiKey != "",
+		keyFunc: keyFunc,
+		enabled: enabled,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -28,7 +28,7 @@ func NewTavilyProvider(apiKey string, enabled bool) *TavilyProvider {
 }
 
 func (t *TavilyProvider) Name() string    { return "tavily" }
-func (t *TavilyProvider) IsEnabled() bool { return t.enabled }
+func (t *TavilyProvider) IsEnabled() bool { return t.enabled && t.keyFunc() != "" }
 
 // TavilyRequest represents the request to Tavily API
 type TavilyRequest struct {
@@ -65,7 +65,7 @@ func (t *TavilyProvider) Search(ctx context.Context, query string, maxResults in
 	}
 
 	req := TavilyRequest{
-		APIKey:        t.apiKey,
+		APIKey:        t.keyFunc(),
 		Query:         query,
 		SearchDepth:   "basic",
 		IncludeAnswer: true,

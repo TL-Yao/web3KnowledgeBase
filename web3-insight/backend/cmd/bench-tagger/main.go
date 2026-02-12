@@ -21,6 +21,7 @@ import (
 	"github.com/user/web3-insight/internal/database"
 	"github.com/user/web3-insight/internal/llm"
 	"github.com/user/web3-insight/internal/model"
+	"github.com/user/web3-insight/internal/repository"
 	"github.com/user/web3-insight/internal/service"
 	"gorm.io/gorm"
 )
@@ -48,6 +49,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
+
+	// Initialize key provider for dynamic API key resolution
+	configRepo := repository.NewConfigRepository(db)
+	keyProvider := service.NewKeyProvider(configRepo)
+	claudeKeyFunc := func() string { return keyProvider.GetKey("anthropic") }
+	openaiKeyFunc := func() string { return keyProvider.GetKey("openai") }
 
 	// Handle export-gt mode
 	if *exportGT != "" {
@@ -139,7 +146,7 @@ func main() {
 		}
 
 		// Check adapter availability
-		router := llm.NewRouterFromConfig(&cfg.LLM)
+		router := llm.NewRouterFromConfig(&cfg.LLM, claudeKeyFunc, openaiKeyFunc)
 		fmt.Println("\nAdapter availability:")
 		for _, m := range selectedMethods {
 			_, ok := router.GetAdapter(m.Model)
@@ -153,7 +160,7 @@ func main() {
 	}
 
 	// Create LLM router
-	router := llm.NewRouterFromConfig(&cfg.LLM)
+	router := llm.NewRouterFromConfig(&cfg.LLM, claudeKeyFunc, openaiKeyFunc)
 
 	// Create benchmark runner
 	runner := service.NewBenchmarkRunner(router, tagsConfig, *promptsDir)

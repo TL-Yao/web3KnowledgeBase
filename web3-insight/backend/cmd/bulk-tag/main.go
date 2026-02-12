@@ -52,13 +52,16 @@ func main() {
 
 	fmt.Printf("Found %d articles to tag.\n\n", len(articles))
 
-	// Initialize LLM router
-	llmRouter := llm.NewRouterFromConfig(&cfg.LLM)
+	// Initialize key provider and LLM router
+	configRepo := repository.NewConfigRepository(db)
+	keyProvider := service.NewKeyProvider(configRepo)
+	claudeKeyFunc := func() string { return keyProvider.GetKey("anthropic") }
+	openaiKeyFunc := func() string { return keyProvider.GetKey("openai") }
+	llmRouter := llm.NewRouterFromConfig(&cfg.LLM, claudeKeyFunc, openaiKeyFunc)
 
 	// Create tagger
 	tagRepo := repository.NewTagRepository(db)
 	articleRepo := repository.NewArticleRepository(db)
-	configRepo := repository.NewConfigRepository(db)
 	tagger := service.NewTagger(llmRouter, tagRepo, articleRepo, configRepo)
 
 	// Tag each article

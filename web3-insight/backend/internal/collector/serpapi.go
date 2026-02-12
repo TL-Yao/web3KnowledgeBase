@@ -11,16 +11,16 @@ import (
 
 // SerpAPIProvider implements SearchProvider for SerpAPI
 type SerpAPIProvider struct {
-	apiKey  string
+	keyFunc func() string
 	enabled bool
 	client  *http.Client
 }
 
 // NewSerpAPIProvider creates a new SerpAPI provider
-func NewSerpAPIProvider(apiKey string, enabled bool) *SerpAPIProvider {
+func NewSerpAPIProvider(keyFunc func() string, enabled bool) *SerpAPIProvider {
 	return &SerpAPIProvider{
-		apiKey:  apiKey,
-		enabled: enabled && apiKey != "",
+		keyFunc: keyFunc,
+		enabled: enabled,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -28,7 +28,7 @@ func NewSerpAPIProvider(apiKey string, enabled bool) *SerpAPIProvider {
 }
 
 func (s *SerpAPIProvider) Name() string    { return "serpapi" }
-func (s *SerpAPIProvider) IsEnabled() bool { return s.enabled }
+func (s *SerpAPIProvider) IsEnabled() bool { return s.enabled && s.keyFunc() != "" }
 
 // SerpAPIResponse represents the response from SerpAPI
 type SerpAPIResponse struct {
@@ -57,7 +57,7 @@ func (s *SerpAPIProvider) Search(ctx context.Context, query string, maxResults i
 	// Build URL
 	u, _ := url.Parse("https://serpapi.com/search.json")
 	q := u.Query()
-	q.Set("api_key", s.apiKey)
+	q.Set("api_key", s.keyFunc())
 	q.Set("q", query)
 	q.Set("engine", "google")
 	q.Set("num", fmt.Sprintf("%d", maxResults))

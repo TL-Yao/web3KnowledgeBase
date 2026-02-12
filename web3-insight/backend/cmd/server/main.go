@@ -7,6 +7,7 @@ import (
 	"github.com/user/web3-insight/internal/api"
 	"github.com/user/web3-insight/internal/config"
 	"github.com/user/web3-insight/internal/database"
+	"github.com/user/web3-insight/internal/repository"
 	"github.com/user/web3-insight/internal/service"
 )
 
@@ -50,7 +51,19 @@ func main() {
 	}
 	log.Println("Tag sync completed")
 
-	router := api.NewRouterWithDB(cfg, db)
+	// Initialize API key provider (DB-backed with caching)
+	configRepo := repository.NewConfigRepository(db)
+	keyProvider := service.NewKeyProvider(configRepo)
+
+	// Seed API keys from env vars on first run (does not overwrite existing DB values)
+	service.SeedAPIKeysFromEnv(configRepo, map[string]string{
+		"anthropic": "ANTHROPIC_API_KEY",
+		"openai":    "OPENAI_API_KEY",
+		"tavily":    "TAVILY_API_KEY",
+		"serpapi":   "SERPAPI_API_KEY",
+	})
+
+	router := api.NewRouterWithDB(cfg, db, keyProvider)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("Server starting on %s", addr)

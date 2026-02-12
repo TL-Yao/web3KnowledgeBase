@@ -19,6 +19,7 @@ All file operations (create, delete, modify, read, execute) MUST be confined to 
 **Secrets & API Keys:**
 - NEVER read, print, log, or expose any API keys, tokens, or secrets (e.g., `ANTHROPIC_API_KEY`, `.env` files)
 - NEVER include API keys in code, commits, logs, or any output
+- NEVER read, query, or expose API keys from the database `configs` table (keys like `api_key.anthropic`, `api_key.openai`, etc.)
 - Only reference environment variables by name (e.g., `os.Getenv("ANTHROPIC_API_KEY")`), never by value
 - This applies to ALL agents, teammates, and subprocesses
 
@@ -68,6 +69,7 @@ web3-insight/
 │   │   │   ├── task.go           # 任务监控
 │   │   │   ├── kb_update.go      # 知识库更新 API (主题、关键词、调度)
 │   │   │   ├── tag.go            # 标签管理 API
+│   │   │   ├── api_key.go        # API Key 管理 (列表/保存/测试)
 │   │   │   ├── chat_ws.go        # WebSocket 聊天
 │   │   │   └── middleware.go     # CORS 中间件
 │   │   ├── config/               # 配置加载 (Viper)
@@ -110,7 +112,8 @@ web3-insight/
 │   │   │   ├── bench_tagger.go   # 标签 Benchmark 运行引擎
 │   │   │   ├── article_updater.go # 文章对话更新生成 (LLM定向补充)
 │   │   │   ├── cli_article_updater.go # CLI文章更新 (订阅认证, 零成本)
-│   │   │   └── claude_executor.go # Claude CLI 执行器 (env过滤, 进程组管理)
+│   │   │   ├── claude_executor.go # Claude CLI 执行器 (env过滤, 进程组管理)
+│   │   │   └── key_provider.go   # API Key 提供者 (DB-backed, 30s缓存)
 │   │   └── worker/               # 异步任务 (Asynq)
 │   └── scripts/
 │       └── clear_data.sql        # 数据清理 SQL
@@ -186,6 +189,7 @@ web3-insight/
 | 知识库 | 版本历史 + 回滚 | VersionHistory | GET /api/articles/:id/versions, POST /:id/versions/:versionId/rollback |
 | 知识库 | CLI 文章更新 (订阅认证, API fallback) | ChatSidebar → UpdateReviewPanel | POST /api/articles/:id/generate-update (cli_article_updater.go → claude_executor.go) |
 | 聊天 | 模型选择器 (Haiku/Sonnet/Opus, 默认 Sonnet) | Select in ChatSidebar header + useChat | WS /ws/chat (model field → resolveModelName → adapter) |
+| 管理 | API Key DB存储 + 管理API (动态keyFunc) | - | GET/PUT /api/models/keys, POST /api/models/keys/test |
 
 ## Model Fallback Pattern
 
@@ -201,7 +205,9 @@ if result.IsFallback {
 }
 ```
 
-Configuration: `backend/config/models.yaml` (registry) + `backend/config/routing.yaml` (routing) + DB `configs` table (user selections)
+Configuration: `backend/config/models.yaml` (registry) + `backend/config/routing.yaml` (routing) + DB `configs` table (user selections + API keys)
+
+**API Key Resolution:** All LLM adapters use `keyFunc func() string` pattern. Keys are resolved at request time from `KeyProvider` (DB-backed, 30s cache). Env vars are seeded to DB on first boot via `SeedAPIKeysFromEnv()`. DB keys: `api_key.anthropic`, `api_key.openai`, `api_key.tavily`, `api_key.serpapi`.
 
 ## Service Management
 

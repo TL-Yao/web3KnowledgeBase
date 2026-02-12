@@ -23,14 +23,16 @@ type TagHandler struct {
 	tagRepo     *repository.TagRepository
 	articleRepo *repository.ArticleRepository
 	llmConfig   *config.LLMConfig
+	keyProvider *service.KeyProvider
 }
 
-func NewTagHandler(db *gorm.DB, llmCfg *config.LLMConfig) *TagHandler {
+func NewTagHandler(db *gorm.DB, llmCfg *config.LLMConfig, kp *service.KeyProvider) *TagHandler {
 	return &TagHandler{
 		db:          db,
 		tagRepo:     repository.NewTagRepository(db),
 		articleRepo: repository.NewArticleRepository(db),
 		llmConfig:   llmCfg,
+		keyProvider: kp,
 	}
 }
 
@@ -348,7 +350,9 @@ func (h *TagHandler) BulkTag(c *gin.Context) {
 	}
 
 	// Create tagger
-	llmRouter := llm.NewRouterFromConfig(h.llmConfig)
+	claudeKeyFunc := func() string { return h.keyProvider.GetKey("anthropic") }
+	openaiKeyFunc := func() string { return h.keyProvider.GetKey("openai") }
+	llmRouter := llm.NewRouterFromConfig(h.llmConfig, claudeKeyFunc, openaiKeyFunc)
 	configRepo := repository.NewConfigRepository(h.db)
 	tagger := service.NewTagger(llmRouter, h.tagRepo, h.articleRepo, configRepo)
 

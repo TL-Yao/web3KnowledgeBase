@@ -15,16 +15,16 @@ const claudeAPIVersion = "2023-06-01"
 
 // ClaudeAdapter implements LLMAdapter for Anthropic Claude models
 type ClaudeAdapter struct {
-	apiKey string
-	model  string
-	client *http.Client
+	keyFunc func() string
+	model   string
+	client  *http.Client
 }
 
-// NewClaudeAdapter creates a new Claude adapter
-func NewClaudeAdapter(apiKey, model string) *ClaudeAdapter {
+// NewClaudeAdapter creates a new Claude adapter with a dynamic key function
+func NewClaudeAdapter(keyFunc func() string, model string) *ClaudeAdapter {
 	return &ClaudeAdapter{
-		apiKey: apiKey,
-		model:  model,
+		keyFunc: keyFunc,
+		model:   model,
 		client: &http.Client{
 			Timeout: 5 * time.Minute,
 		},
@@ -86,7 +86,7 @@ func (c *ClaudeAdapter) GenerateChat(messages []Message, opts *GenerateOptions) 
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", c.apiKey)
+	req.Header.Set("x-api-key", c.keyFunc())
 	req.Header.Set("anthropic-version", claudeAPIVersion)
 
 	resp, err := c.client.Do(req)
@@ -164,7 +164,7 @@ func (c *ClaudeAdapter) GenerateChatStream(messages []Message, opts *GenerateOpt
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("x-api-key", c.apiKey)
+		req.Header.Set("x-api-key", c.keyFunc())
 		req.Header.Set("anthropic-version", claudeAPIVersion)
 
 		resp, err := c.client.Do(req)
@@ -235,7 +235,7 @@ func (c *ClaudeAdapter) convertMessages(messages []Message) []map[string]string 
 
 // IsAvailable checks if the Claude API is configured
 func (c *ClaudeAdapter) IsAvailable() bool {
-	return c.apiKey != ""
+	return c.keyFunc() != ""
 }
 
 // EstimateCost estimates the cost based on Claude pricing

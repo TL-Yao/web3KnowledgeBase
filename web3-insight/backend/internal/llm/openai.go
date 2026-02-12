@@ -14,16 +14,16 @@ const openaiAPIURL = "https://api.openai.com/v1/chat/completions"
 
 // OpenAIAdapter implements LLMAdapter for OpenAI models
 type OpenAIAdapter struct {
-	apiKey string
-	model  string
-	client *http.Client
+	keyFunc func() string
+	model   string
+	client  *http.Client
 }
 
-// NewOpenAIAdapter creates a new OpenAI adapter
-func NewOpenAIAdapter(apiKey, model string) *OpenAIAdapter {
+// NewOpenAIAdapter creates a new OpenAI adapter with a dynamic key function
+func NewOpenAIAdapter(keyFunc func() string, model string) *OpenAIAdapter {
 	return &OpenAIAdapter{
-		apiKey: apiKey,
-		model:  model,
+		keyFunc: keyFunc,
+		model:   model,
 		client: &http.Client{
 			Timeout: 5 * time.Minute,
 		},
@@ -86,7 +86,7 @@ func (o *OpenAIAdapter) GenerateChat(messages []Message, opts *GenerateOptions) 
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+o.apiKey)
+	req.Header.Set("Authorization", "Bearer "+o.keyFunc())
 
 	resp, err := o.client.Do(req)
 	if err != nil {
@@ -165,7 +165,7 @@ func (o *OpenAIAdapter) GenerateChatStream(messages []Message, opts *GenerateOpt
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+o.apiKey)
+		req.Header.Set("Authorization", "Bearer "+o.keyFunc())
 
 		resp, err := o.client.Do(req)
 		if err != nil {
@@ -243,7 +243,7 @@ func (o *OpenAIAdapter) convertMessages(messages []Message, systemPrompt string)
 
 // IsAvailable checks if the OpenAI API is configured
 func (o *OpenAIAdapter) IsAvailable() bool {
-	return o.apiKey != ""
+	return o.keyFunc() != ""
 }
 
 // EstimateCost estimates the cost based on OpenAI pricing

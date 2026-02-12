@@ -27,7 +27,7 @@ type KBUpdateHandler struct {
 	prompts      *config.PromptsConfig
 }
 
-func NewKBUpdateHandler(db *gorm.DB, cfg *config.Config) *KBUpdateHandler {
+func NewKBUpdateHandler(db *gorm.DB, cfg *config.Config, kp *service.KeyProvider) *KBUpdateHandler {
 	prompts := cfg.Prompts
 
 	// Initialize repositories
@@ -41,7 +41,9 @@ func NewKBUpdateHandler(db *gorm.DB, cfg *config.Config) *KBUpdateHandler {
 	// Initialize services
 	keywordPool := service.NewKeywordPoolService(keywordRepo, prompts)
 	// Initialize LLM router and tagger
-	llmRouter := llm.NewRouterFromConfig(&cfg.LLM)
+	claudeKeyFunc := func() string { return kp.GetKey("anthropic") }
+	openaiKeyFunc := func() string { return kp.GetKey("openai") }
+	llmRouter := llm.NewRouterFromConfig(&cfg.LLM, claudeKeyFunc, openaiKeyFunc)
 	tagger := service.NewTagger(llmRouter, tagRepo, articleRepo, configRepo)
 	articleGen := service.NewArticleGeneratorService(articleRepo, tagger, prompts)
 
