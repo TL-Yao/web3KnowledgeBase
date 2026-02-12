@@ -350,6 +350,13 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 - **CLI → API fallback pattern**: `ArticleHandler.GenerateUpdate()` tries `cliUpdater` first, falls back to `updater` (API-based) on any error. Both are injected separately in `NewArticleHandler()`. Log the fallback reason for debugging.
 - **Ref pattern for stale closures**: Frontend `useChat` hook uses `modelRef.current` (not `model` state) inside `sendMessage` callback to avoid stale closure over React state. Same pattern for `messagesRef`.
 
+### Config Consolidation Lessons (2026-02-12)
+
+- **Shared config path resolution**: All CLI tools (eval-tagger, bench-tagger, seed-articles, bulk-tag) should use `config.FindConfigFile()` and `config.LoadTagsFromConfigDir()` instead of duplicating path-search logic. This eliminated ~50 lines of duplicated code across 3 files.
+- **Sensitive vs non-sensitive config separation**: Only `backend/config/config.yaml` contains secrets (API keys, DB password). The other 4 YAML files (models, routing, prompts, tags) are non-sensitive and safe for Claude Code to read. `.claudeignore` and `settings.local.json` deny rules block only `config.yaml`.
+- **Config env expansion is centralized**: `config.Load()` calls `os.ExpandEnv()` on API keys (lines 110-111 of config.go). CLI tools should NOT duplicate this — `bulk-tag` had redundant expansion that was removed.
+- **Hardcoded DSN is a code smell**: `seed-articles` had a hardcoded DB connection string. Always use `config.Load()` + `database.Connect()` — it respects config file values and env var expansion.
+
 ## Plan Completion Protocol
 
 After completing any implementation plan:
