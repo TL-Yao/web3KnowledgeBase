@@ -80,7 +80,7 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, prompt string) (*ClaudeRes
 		cmd.Env = filterEnv(os.Environ(), "ANTHROPIC_API_KEY")
 	}
 
-	// Ensure cleanup happens even if context is cancelled
+	// Safety-net cleanup after CombinedOutput returns
 	defer func() {
 		if cmd.Process != nil {
 			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
@@ -88,11 +88,26 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, prompt string) (*ClaudeRes
 		}
 	}()
 
+	// Kill the entire process group as soon as context fires.
+	// This unblocks CombinedOutput() which waits for pipe EOF —
+	// without this, child processes keep pipes open and CombinedOutput hangs.
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-ctx.Done():
+			if cmd.Process != nil {
+				syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			}
+		case <-done:
+		}
+	}()
+
 	output, err := cmd.CombinedOutput()
 
-	if ctx.Err() == context.DeadlineExceeded {
-		log.Printf("TIMEOUT: Forcefully killed Claude process (session: %s) after timeout", e.sessionID)
-		return nil, fmt.Errorf("command timeout: context deadline exceeded")
+	if ctx.Err() != nil {
+		log.Printf("Context done: %v — killed Claude process (session: %s)", ctx.Err(), e.sessionID)
+		return nil, fmt.Errorf("command aborted: %w", ctx.Err())
 	}
 
 	if err != nil {

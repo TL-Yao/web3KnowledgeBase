@@ -4,6 +4,7 @@ import { diffLines } from 'diff'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { X, RefreshCw, Check, Loader2, FileText } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 interface UpdateReviewPanelProps {
@@ -66,9 +67,17 @@ export function UpdateReviewPanel({
               <span className="text-muted-foreground">更新说明：</span>
               <span className="font-medium">{changeSummary}</span>
             </div>
-            <div className="text-muted-foreground">
-              模型：{model}
-            </div>
+            {model && (
+              /cli/i.test(model) ? (
+                <Badge variant="outline" className="border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">
+                  {model}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-400">
+                  API
+                </Badge>
+              )
+            )}
           </div>
         </div>
 

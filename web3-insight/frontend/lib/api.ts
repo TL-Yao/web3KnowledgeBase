@@ -3,9 +3,12 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
 
 export class APIError extends Error {
-  constructor(public status: number, message: string) {
+  public type?: string
+
+  constructor(public status: number, message: string, type?: string) {
     super(message)
     this.name = 'APIError'
+    this.type = type
   }
 }
 
@@ -23,7 +26,12 @@ export async function fetchAPI<T>(
 
   if (!res.ok) {
     const errorText = await res.text().catch(() => 'Unknown error')
-    throw new APIError(res.status, errorText)
+    let errorType: string | undefined
+    try {
+      const parsed = JSON.parse(errorText)
+      errorType = parsed.type
+    } catch {}
+    throw new APIError(res.status, errorText, errorType)
   }
 
   if (res.status === 204 || res.headers.get('content-length') === '0') {
@@ -80,6 +88,19 @@ export interface GenerateUpdateResponse {
   updatedContent: string
   changeSummary: string
   model: string
+  noChange?: boolean
+  noChangeReason?: string
+}
+
+export interface GenerateUpdateAsyncResponse {
+  jobId: string
+}
+
+export interface UpdateJobStatus {
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  result?: GenerateUpdateResponse
+  error?: string
+  errorType?: string
 }
 
 export interface ApplyUpdateRequest {
@@ -140,10 +161,23 @@ export const articleAPI = {
       body: JSON.stringify({ tags }),
     }),
 
-  generateUpdate: (id: string, data: GenerateUpdateRequest) =>
-    fetchAPI<GenerateUpdateResponse>(`/api/articles/${id}/generate-update`, {
+  generateUpdate: (id: string, data: GenerateUpdateRequest, options?: { method?: 'cli' | 'api'; model?: string }) => {
+    const params = new URLSearchParams()
+    if (options?.method) params.set('method', options.method)
+    if (options?.model) params.set('model', options.model)
+    const query = params.toString()
+    return fetchAPI<GenerateUpdateAsyncResponse>(`/api/articles/${id}/generate-update${query ? `?${query}` : ''}`, {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  },
+
+  getUpdateStatus: (id: string, jobId: string) =>
+    fetchAPI<UpdateJobStatus>(`/api/articles/${id}/update-status?jobId=${jobId}`),
+
+  cancelUpdate: (id: string, jobId: string) =>
+    fetchAPI<void>(`/api/articles/${id}/cancel-update?jobId=${jobId}`, {
+      method: 'POST',
     }),
 
   applyUpdate: (id: string, data: ApplyUpdateRequest) =>

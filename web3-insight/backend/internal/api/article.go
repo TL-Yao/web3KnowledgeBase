@@ -2,10 +2,13 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -16,15 +19,82 @@ import (
 	"gorm.io/gorm"
 )
 
+// updateJob tracks an async article update generation
+type updateJob struct {
+	ID        string                `json:"jobId"`
+	Status    string                `json:"status"` // "running", "completed", "failed", "cancelled"
+	Result    *service.UpdateResult `json:"result,omitempty"`
+	Error     string                `json:"error,omitempty"`
+	ErrorType string                `json:"errorType,omitempty"`
+	CreatedAt time.Time             `json:"createdAt"`
+	cancel    context.CancelFunc
+}
+
+// updateJobStore is an in-memory store for update jobs with auto-cleanup
+type updateJobStore struct {
+	mu   sync.RWMutex
+	jobs map[string]*updateJob
+}
+
+func newUpdateJobStore() *updateJobStore {
+	s := &updateJobStore{jobs: make(map[string]*updateJob)}
+	// Background cleanup of expired jobs (older than 30 min)
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			s.cleanup(30 * time.Minute)
+		}
+	}()
+	return s
+}
+
+func (s *updateJobStore) create(cancel context.CancelFunc) *updateJob {
+	job := &updateJob{
+		ID:        uuid.New().String(),
+		Status:    "running",
+		CreatedAt: time.Now(),
+		cancel:    cancel,
+	}
+	s.mu.Lock()
+	s.jobs[job.ID] = job
+	s.mu.Unlock()
+	return job
+}
+
+func (s *updateJobStore) get(id string) *updateJob {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.jobs[id]
+}
+
+func (s *updateJobStore) cleanup(maxAge time.Duration) {
+	cutoff := time.Now().Add(-maxAge)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for id, job := range s.jobs {
+		if job.CreatedAt.Before(cutoff) {
+			delete(s.jobs, id)
+		}
+	}
+}
+
 type ArticleHandler struct {
 	repo       *repository.ArticleRepository
 	db         *gorm.DB
 	updater    *service.ArticleUpdater
 	cliUpdater *service.CLIArticleUpdater
+	jobStore   *updateJobStore
 }
 
 func NewArticleHandler(repo *repository.ArticleRepository, db *gorm.DB, updater *service.ArticleUpdater, cliUpdater *service.CLIArticleUpdater) *ArticleHandler {
-	return &ArticleHandler{repo: repo, db: db, updater: updater, cliUpdater: cliUpdater}
+	return &ArticleHandler{
+		repo:       repo,
+		db:         db,
+		updater:    updater,
+		cliUpdater: cliUpdater,
+		jobStore:   newUpdateJobStore(),
+	}
 }
 
 // ListArticles godoc
@@ -426,25 +496,121 @@ func (h *ArticleHandler) GenerateUpdate(c *gin.Context) {
 		messages[i] = llm.Message{Role: m.Role, Content: m.Content}
 	}
 
-	ctx := context.Background()
+	method := c.DefaultQuery("method", "cli")
+	cliModel := c.DefaultQuery("model", "sonnet")
 
-	// Try CLI updater first (subscription auth, $0 cost), fallback to API
-	if h.cliUpdater != nil {
-		result, err := h.cliUpdater.GenerateUpdate(ctx, article, messages)
-		if err == nil {
-			c.JSON(http.StatusOK, result)
+	// Create async job
+	ctx, cancel := context.WithCancel(context.Background())
+	job := h.jobStore.create(cancel)
+
+	go func() {
+		// Recover from panics so the job doesn't stay "running" forever
+		defer func() {
+			if r := recover(); r != nil {
+				h.jobStore.mu.Lock()
+				defer h.jobStore.mu.Unlock()
+				if job.Status == "running" {
+					job.Status = "failed"
+					job.Error = fmt.Sprintf("internal panic: %v", r)
+					if method != "api" {
+						job.ErrorType = "cli_failed"
+					}
+					log.Printf("Update job %s panicked (%s): %v", job.ID, method, r)
+				}
+			}
+		}()
+
+		var result *service.UpdateResult
+		var genErr error
+
+		if method == "api" {
+			result, genErr = h.updater.GenerateUpdate(ctx, article, messages)
+		} else if h.cliUpdater != nil {
+			result, genErr = h.cliUpdater.GenerateUpdate(ctx, article, messages, cliModel)
+		} else {
+			genErr = fmt.Errorf("CLI updater not available")
+		}
+
+		h.jobStore.mu.Lock()
+		defer h.jobStore.mu.Unlock()
+
+		if job.Status == "cancelled" {
 			return
 		}
-		log.Printf("CLI updater failed, falling back to API: %v", err)
-	}
 
-	result, err := h.updater.GenerateUpdate(ctx, article, messages)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate update: " + err.Error()})
+		if genErr != nil {
+			job.Status = "failed"
+			job.Error = genErr.Error()
+			if method != "api" {
+				job.ErrorType = "cli_failed"
+			}
+			log.Printf("Update job %s failed (%s): %v", job.ID, method, genErr)
+		} else {
+			job.Status = "completed"
+			job.Result = result
+			log.Printf("Update job %s completed (%s)", job.ID, method)
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, gin.H{"jobId": job.ID})
+}
+
+func (h *ArticleHandler) GetUpdateStatus(c *gin.Context) {
+	jobID := c.Query("jobId")
+	if jobID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "jobId is required"})
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	job := h.jobStore.get(jobID)
+	if job == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
+		return
+	}
+
+	h.jobStore.mu.RLock()
+	defer h.jobStore.mu.RUnlock()
+
+	resp := gin.H{"status": job.Status}
+	switch job.Status {
+	case "completed":
+		resp["result"] = job.Result
+	case "failed":
+		resp["error"] = job.Error
+		if job.ErrorType != "" {
+			resp["errorType"] = job.ErrorType
+		}
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+func (h *ArticleHandler) CancelUpdate(c *gin.Context) {
+	jobID := c.Query("jobId")
+	if jobID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "jobId is required"})
+		return
+	}
+
+	job := h.jobStore.get(jobID)
+	if job == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
+		return
+	}
+
+	h.jobStore.mu.Lock()
+	defer h.jobStore.mu.Unlock()
+
+	if job.Status != "running" {
+		c.JSON(http.StatusConflict, gin.H{"error": "job is not running", "status": job.Status})
+		return
+	}
+
+	job.cancel()
+	job.Status = "cancelled"
+	log.Printf("Update job %s cancelled", job.ID)
+
+	c.JSON(http.StatusOK, gin.H{"status": "cancelled"})
 }
 
 type ApplyUpdateRequest struct {

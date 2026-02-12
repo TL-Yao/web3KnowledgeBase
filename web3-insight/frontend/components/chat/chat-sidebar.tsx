@@ -1,21 +1,27 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, X, Send, Trash2, Sparkles, Loader2 } from 'lucide-react'
+import { MessageCircle, X, Send, Trash2, Sparkles, Loader2, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { ChatMessage } from './chat-message'
-import { useChat, Message, ChatModel } from '@/hooks/use-chat'
+import { useChat, type Message, type ChatModel } from '@/hooks/use-chat'
 
 interface ChatSidebarProps {
   articleId: string
   articleTitle: string
   isOpen: boolean
   onToggle: () => void
-  onGenerateUpdate?: (messages: Message[]) => void
+  onGenerateUpdate?: (messages: Message[], model: ChatModel) => void
   isGeneratingUpdate?: boolean
   width: number
   isDragging?: boolean
@@ -36,6 +42,7 @@ export function ChatSidebar({
   const [input, setInput] = useState('')
   const { messages, isLoading, currentResponse, sendMessage, clearMessages, model, setModel } = useChat(articleId)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const splitBtnRef = useRef<HTMLDivElement>(null)
 
   // Clear messages when parent signals (e.g. after applying update)
   const clearTriggerRef = useRef(clearTrigger)
@@ -150,20 +157,56 @@ export function ChatSidebar({
       {/* Toolbar */}
       <div className="px-3 py-1.5 border-t border-border flex items-center gap-2 shrink-0">
         {messages.length >= 2 && onGenerateUpdate && (
-          <Button
-            variant="default"
-            size="sm"
-            className="text-xs"
-            onClick={() => onGenerateUpdate(messages)}
-            disabled={isLoading || isGeneratingUpdate}
-          >
-            {isGeneratingUpdate ? (
-              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-            ) : (
-              <Sparkles className="w-3 h-3 mr-1" />
-            )}
-            {isGeneratingUpdate ? '更新中...' : '更新文章（基于对话）'}
-          </Button>
+          <DropdownMenu onOpenChange={(open) => {
+            if (open) {
+              requestAnimationFrame(() => {
+                const wrapper = document.querySelector('[data-radix-popper-content-wrapper]')
+                if (wrapper && splitBtnRef.current) {
+                  ;(wrapper as HTMLElement).style.minWidth = splitBtnRef.current.offsetWidth + 'px'
+                }
+              })
+            }
+          }}>
+            <div ref={splitBtnRef} className="inline-flex rounded-md">
+              <Button
+                variant="default"
+                size="sm"
+                className="text-xs rounded-r-none"
+                onClick={() => onGenerateUpdate(messages, 'opus')}
+                disabled={isLoading || isGeneratingUpdate}
+              >
+                {isGeneratingUpdate ? (
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3 h-3 mr-1" />
+                )}
+                {isGeneratingUpdate ? '更新中...' : '更新文章 (Opus)'}
+              </Button>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="px-1.5 rounded-l-none border-l border-primary-foreground/20"
+                  disabled={isLoading || isGeneratingUpdate}
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+            </div>
+            <DropdownMenuContent
+              align="end"
+              side="top"
+              sideOffset={4}
+            >
+              <DropdownMenuItem
+                className="text-xs py-2"
+                onClick={() => onGenerateUpdate(messages, 'sonnet')}
+              >
+                <Sparkles className="w-3 h-3 mr-1.5" />
+                更新文章 (Sonnet)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         <div className="flex-1" />
         <Button variant="ghost" size="sm" className="text-xs" onClick={clearMessages}>

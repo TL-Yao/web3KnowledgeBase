@@ -21,21 +21,27 @@ func NewCLIArticleUpdater() *CLIArticleUpdater {
 	return &CLIArticleUpdater{}
 }
 
-// GenerateUpdate generates a targeted article update using Claude Code CLI
+// GenerateUpdate generates a targeted article update using Claude Code CLI.
+// model can be "haiku", "sonnet", "opus", or empty (defaults to "sonnet").
 func (u *CLIArticleUpdater) GenerateUpdate(
 	ctx context.Context,
 	article *model.Article,
 	conversationHistory []llm.Message,
+	model string,
 ) (*UpdateResult, error) {
+	if model == "" {
+		model = "sonnet"
+	}
+
 	prompt := buildUpdatePrompt(article, conversationHistory)
 
 	executor := NewClaudeExecutorWithOptions(ClaudeExecutorOptions{
 		SystemPrompt: articleUpdateSystemPrompt,
 		StripAPIKey:  true,
-		Model:        "sonnet",
+		Model:        model,
 	})
 
-	log.Printf("CLI article updater: generating update for article %s (session: %s)", article.ID, executor.GetSessionID())
+	log.Printf("CLI article updater: generating update for article %s (model: %s, session: %s)", article.ID, model, executor.GetSessionID())
 
 	genCtx, cancel := context.WithTimeout(ctx, cliUpdateTimeout)
 	defer cancel()
@@ -47,16 +53,13 @@ func (u *CLIArticleUpdater) GenerateUpdate(
 
 	log.Printf("CLI article updater: completed for article %s, cost: $%.4f", article.ID, response.TotalCostUSD)
 
-	updatedContent, changeSummary, err := parseUpdateResponse(response.Result)
+	modelLabel := fmt.Sprintf("CLI · %s", strings.ToUpper(model[:1])+model[1:])
+	result, err := parseUpdateResult(response.Result, modelLabel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse CLI response: %w", err)
 	}
 
-	return &UpdateResult{
-		UpdatedContent: updatedContent,
-		ChangeSummary:  changeSummary,
-		Model:          "claude-cli (subscription)",
-	}, nil
+	return result, nil
 }
 
 // CLIAvailable checks if the Claude CLI is available on the system

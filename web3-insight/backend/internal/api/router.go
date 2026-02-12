@@ -96,6 +96,8 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB) *gin.Engine {
 			articles.PATCH("/:id/archive", server.articleHandler.ToggleArchive)
 			articles.PUT("/:id/tags", server.articleHandler.UpdateTags)
 			articles.POST("/:id/generate-update", server.articleHandler.GenerateUpdate)
+			articles.GET("/:id/update-status", server.articleHandler.GetUpdateStatus)
+			articles.POST("/:id/cancel-update", server.articleHandler.CancelUpdate)
 			articles.POST("/:id/apply-update", server.articleHandler.ApplyUpdate)
 			articles.GET("/:id/versions", server.articleHandler.ListVersions)
 			articles.POST("/:id/versions/:versionId/rollback", server.articleHandler.Rollback)

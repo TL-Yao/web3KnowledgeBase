@@ -9,12 +9,23 @@ import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { SidebarToggle } from '@/components/chat/sidebar-toggle'
 import { ResizeHandle } from '@/components/ui/resize-handle'
 import { UpdateReviewPanel } from '@/components/knowledge/update-review-panel'
+import { UpdateProgressOverlay } from '@/components/knowledge/update-progress-overlay'
 import { Button } from '@/components/ui/button'
 import { articleAPI } from '@/lib/api'
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import type { Message } from '@/hooks/use-chat'
+import type { Message, ChatModel } from '@/hooks/use-chat'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const SIDEBAR_MIN = 320
 const SIDEBAR_MAX = 600
@@ -28,6 +39,9 @@ export default function ArticlePage() {
   const [isApplying, setIsApplying] = useState(false)
   const [clearTrigger, setClearTrigger] = useState(0)
   const lastMessagesRef = useRef<Message[]>([])
+  const lastModelRef = useRef<ChatModel>('sonnet')
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const jobIdRef = useRef<string | null>(null)
 
   // Sidebar state with localStorage persistence (SSR-safe)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
@@ -69,6 +83,8 @@ export default function ArticlePage() {
     localStorage.setItem('chat-sidebar-width', String(SIDEBAR_DEFAULT))
   }, [])
 
+  const [showCliFailedDialog, setShowCliFailedDialog] = useState(false)
+
   const [updateState, setUpdateState] = useState<{
     isGenerating: boolean
     isReviewOpen: boolean
@@ -89,6 +105,58 @@ export default function ArticlePage() {
     retry: 1,
     staleTime: 30000,
   })
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+  }, [])
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => stopPolling()
+  }, [stopPolling])
+
+  const startPolling = useCallback((articleId: string, jobId: string) => {
+    stopPolling()
+    jobIdRef.current = jobId
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const status = await articleAPI.getUpdateStatus(articleId, jobId)
+
+        if (status.status === 'completed' && status.result) {
+          stopPolling()
+          jobIdRef.current = null
+          if (status.result.noChange) {
+            toast.info(status.result.noChangeReason || '对话内容未涉及文章的实质补充，无需更新')
+            setUpdateState(prev => ({ ...prev, isGenerating: false }))
+            return
+          }
+          setUpdateState({
+            isGenerating: false,
+            isReviewOpen: true,
+            updatedContent: status.result.updatedContent,
+            changeSummary: status.result.changeSummary,
+            model: status.result.model,
+          })
+        } else if (status.status === 'failed') {
+          stopPolling()
+          jobIdRef.current = null
+          if (status.errorType === 'cli_failed') {
+            setUpdateState(prev => ({ ...prev, isGenerating: false }))
+            setShowCliFailedDialog(true)
+            return
+          }
+          toast.error(status.error || '生成更新失败')
+          setUpdateState(prev => ({ ...prev, isGenerating: false }))
+        }
+      } catch {
+        // Polling fetch failed — keep retrying silently
+      }
+    }, 3000)
+  }, [stopPolling])
 
   // Transform API response to match ArticleView's expected format
   const displayArticle = article ? {
@@ -176,29 +244,59 @@ export default function ArticlePage() {
     )
   }
 
-  const handleGenerateUpdate = async (messages: Message[]) => {
+  const handleGenerateUpdate = async (messages: Message[], modelOrMethod?: ChatModel | 'cli' | 'api', method?: 'cli' | 'api') => {
+    // Called from chat sidebar: (messages, chatModel)
+    // Called from retry/API dialog: (messages, undefined, method)
+    let chatModel: ChatModel | undefined
+    let updateMethod: 'cli' | 'api' | undefined = method
+    if (modelOrMethod === 'cli' || modelOrMethod === 'api') {
+      updateMethod = modelOrMethod
+    } else if (modelOrMethod) {
+      chatModel = modelOrMethod
+    }
+
     lastMessagesRef.current = messages
+    if (chatModel) lastModelRef.current = chatModel
+    stopPolling()
+
     setUpdateState(prev => ({ ...prev, isGenerating: true }))
-    // Auto-open sidebar so user sees conversation context alongside diff
     if (!isSidebarOpen) {
       setIsSidebarOpen(true)
       localStorage.setItem('chat-sidebar-open', 'true')
     }
     try {
-      const result = await articleAPI.generateUpdate(displayArticle!.id, {
-        conversationHistory: messages.map(m => ({ role: m.role, content: m.content }))
-      })
-      setUpdateState({
-        isGenerating: false,
-        isReviewOpen: true,
-        updatedContent: result.updatedContent,
-        changeSummary: result.changeSummary,
-        model: result.model,
-      })
+      const { jobId } = await articleAPI.generateUpdate(
+        displayArticle!.id,
+        { conversationHistory: messages.map(m => ({ role: m.role, content: m.content })) },
+        { method: updateMethod, model: lastModelRef.current },
+      )
+      startPolling(displayArticle!.id, jobId)
     } catch {
       toast.error('生成更新失败')
       setUpdateState(prev => ({ ...prev, isGenerating: false }))
     }
+  }
+
+  const handleCancelGeneration = () => {
+    const jobId = jobIdRef.current
+    const articleId = displayArticle?.id
+    stopPolling()
+    jobIdRef.current = null
+    setUpdateState(prev => ({ ...prev, isGenerating: false }))
+    toast.info('已取消更新生成')
+    if (jobId && articleId) {
+      articleAPI.cancelUpdate(articleId, jobId).catch(() => {})
+    }
+  }
+
+  const handleRetryCli = () => {
+    setShowCliFailedDialog(false)
+    handleGenerateUpdate(lastMessagesRef.current, undefined, 'cli')
+  }
+
+  const handleUseApi = () => {
+    setShowCliFailedDialog(false)
+    handleGenerateUpdate(lastMessagesRef.current, undefined, 'api')
   }
 
   const handleRegenerate = () => {
@@ -233,7 +331,7 @@ export default function ArticlePage() {
     <MainLayout>
       <div className="flex h-full relative">
         {/* Article content or UpdateReviewPanel */}
-        <div className="flex-1 min-w-0 overflow-auto">
+        <div className="flex-1 min-w-0 overflow-auto relative">
           {updateState.isReviewOpen && updateState.updatedContent ? (
             <UpdateReviewPanel
               variant="inline"
@@ -251,6 +349,7 @@ export default function ArticlePage() {
           ) : (
             <ArticleView article={displayArticle} />
           )}
+          {updateState.isGenerating && <UpdateProgressOverlay onCancel={handleCancelGeneration} />}
         </div>
 
         {/* Resize handle */}
@@ -279,6 +378,28 @@ export default function ArticlePage() {
         {/* Toggle button when sidebar is closed */}
         {!isSidebarOpen && <SidebarToggle onClick={toggleSidebar} />}
       </div>
+
+      {/* CLI failure dialog */}
+      <AlertDialog open={showCliFailedDialog} onOpenChange={setShowCliFailedDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>CLI 生成失败</AlertDialogTitle>
+            <AlertDialogDescription>
+              本地 CLI 生成更新时出错。你可以重试，或切换到 API 生成（会产生少量费用）。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              className="border border-input bg-background text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground"
+              onClick={handleRetryCli}
+            >
+              重试
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleUseApi}>使用 API 生成（付费）</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   )
 }
