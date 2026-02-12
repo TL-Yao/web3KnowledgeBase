@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(backend/config/config.yaml)",
+      "Edit(backend/config/config.yaml)"
+    ]
+  }
+}
