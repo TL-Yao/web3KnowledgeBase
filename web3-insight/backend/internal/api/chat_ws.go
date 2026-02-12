@@ -40,6 +40,7 @@ type ChatRequest struct {
 	SelectedText string        `json:"selectedText,omitempty"`
 	SessionID    string        `json:"sessionId"`
 	History      []ChatMessage `json:"history,omitempty"`
+	Model        string        `json:"model,omitempty"` // Optional model override: "haiku", "sonnet", "opus"
 }
 
 // ChatResponse represents a response chunk sent to the client
@@ -117,9 +118,9 @@ func (h *ChatHandler) HandleWebSocket(c *gin.Context) {
 				userMsg = fmt.Sprintf("关于「%s」这部分内容：%s", req.SelectedText, req.Message)
 			}
 			llmMessages = append(llmMessages, llm.Message{Role: "user", Content: userMsg})
-			stream, model, err = h.chatService.ChatWithMessages(req.ArticleID, llmMessages)
+			stream, model, err = h.chatService.ChatWithMessagesAndModel(req.ArticleID, llmMessages, req.Model)
 		} else {
-			stream, model, err = h.chatService.Chat(req.ArticleID, req.Message, req.SelectedText)
+			stream, model, err = h.chatService.ChatWithModel(req.ArticleID, req.Message, req.SelectedText, req.Model)
 		}
 		if err != nil {
 			writeJSON(ChatResponse{Type: "error", Content: err.Error()})

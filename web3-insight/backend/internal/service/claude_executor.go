@@ -5,21 +5,39 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 
 	"github.com/google/uuid"
 )
 
+// ClaudeExecutorOptions configures ClaudeExecutor behavior
+type ClaudeExecutorOptions struct {
+	SystemPrompt   string // If set, passed via --system-prompt flag
+	StripAPIKey    bool   // If true, removes ANTHROPIC_API_KEY from env (forces subscription auth)
+	Model          string // Model override (default: "sonnet")
+}
+
 // ClaudeExecutor wraps Claude Code CLI execution
 type ClaudeExecutor struct {
 	sessionID string
+	opts      ClaudeExecutorOptions
 }
 
 // NewClaudeExecutor creates a new executor with a unique session ID
 func NewClaudeExecutor() *ClaudeExecutor {
 	return &ClaudeExecutor{
 		sessionID: uuid.New().String(),
+	}
+}
+
+// NewClaudeExecutorWithOptions creates a new executor with custom options
+func NewClaudeExecutorWithOptions(opts ClaudeExecutorOptions) *ClaudeExecutor {
+	return &ClaudeExecutor{
+		sessionID: uuid.New().String(),
+		opts:      opts,
 	}
 }
 
@@ -33,34 +51,47 @@ type ClaudeResponse struct {
 
 // Execute runs a prompt through Claude Code CLI
 func (e *ClaudeExecutor) Execute(ctx context.Context, prompt string) (*ClaudeResponse, error) {
-	cmd := exec.CommandContext(ctx, "claude",
+	model := e.opts.Model
+	if model == "" {
+		model = "sonnet"
+	}
+
+	args := []string{
 		"--print",
 		"--session-id", e.sessionID,
 		"--permission-mode", "bypassPermissions",
 		"--output-format", "json",
-		"--model", "sonnet",
-		prompt,
-	)
+		"--model", model,
+	}
+
+	if e.opts.SystemPrompt != "" {
+		args = append(args, "--system-prompt", e.opts.SystemPrompt)
+	}
+
+	args = append(args, prompt)
+
+	cmd := exec.CommandContext(ctx, "claude", args...)
 
 	// Set up process group for reliable killing
-	// This ensures we can kill the entire process tree
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	// Filter environment if StripAPIKey is set (forces subscription auth)
+	if e.opts.StripAPIKey {
+		cmd.Env = filterEnv(os.Environ(), "ANTHROPIC_API_KEY")
+	}
 
 	// Ensure cleanup happens even if context is cancelled
 	defer func() {
 		if cmd.Process != nil {
-			// Kill entire process group (negative PID = process group)
-			// This ensures all child processes are terminated
 			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-			cmd.Process.Kill() // Backup kill for main process
+			cmd.Process.Kill()
 		}
 	}()
 
 	output, err := cmd.CombinedOutput()
 
-	// Check if error was due to context timeout
 	if ctx.Err() == context.DeadlineExceeded {
-		log.Printf("⏱️ TIMEOUT: Forcefully killed Claude process (session: %s) after timeout", e.sessionID)
+		log.Printf("TIMEOUT: Forcefully killed Claude process (session: %s) after timeout", e.sessionID)
 		return nil, fmt.Errorf("command timeout: context deadline exceeded")
 	}
 
@@ -83,4 +114,16 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, prompt string) (*ClaudeRes
 // GetSessionID returns the executor's session ID
 func (e *ClaudeExecutor) GetSessionID() string {
 	return e.sessionID
+}
+
+// filterEnv returns a copy of env with entries matching the given key prefix removed
+func filterEnv(env []string, key string) []string {
+	prefix := key + "="
+	filtered := make([]string, 0, len(env))
+	for _, e := range env {
+		if !strings.HasPrefix(e, prefix) {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered
 }

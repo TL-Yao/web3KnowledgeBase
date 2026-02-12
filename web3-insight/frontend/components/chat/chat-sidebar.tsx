@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ChatMessage } from './chat-message'
-import { useChat, Message } from '@/hooks/use-chat'
+import { useChat, Message, ChatModel } from '@/hooks/use-chat'
 
 interface ChatSidebarProps {
   articleId: string
@@ -33,7 +34,7 @@ export function ChatSidebar({
   clearTrigger,
 }: ChatSidebarProps) {
   const [input, setInput] = useState('')
-  const { messages, isLoading, currentResponse, sendMessage, clearMessages } = useChat(articleId)
+  const { messages, isLoading, currentResponse, sendMessage, clearMessages, model, setModel } = useChat(articleId)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Clear messages when parent signals (e.g. after applying update)
@@ -94,11 +95,23 @@ export function ChatSidebar({
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <MessageCircle className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium whitespace-nowrap">关于本文的问答</span>
+          <span className="text-sm font-medium whitespace-nowrap">问答</span>
         </div>
-        <Button variant="ghost" size="icon" className="w-7 h-7" onClick={onToggle}>
-          <X className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Select value={model} onValueChange={(v) => setModel(v as ChatModel)}>
+            <SelectTrigger size="sm" className="h-7 text-xs gap-1 px-2 min-w-0 border-none shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="haiku">Haiku · 快速</SelectItem>
+              <SelectItem value="sonnet">Sonnet · 推荐</SelectItem>
+              <SelectItem value="opus">Opus · 最强</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={onToggle}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}

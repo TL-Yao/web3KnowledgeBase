@@ -27,23 +27,14 @@ func NewChatService(db *gorm.DB, llmCfg *config.LLMConfig) *ChatService {
 // Chat handles a chat request about an article
 // Returns a channel of streaming chunks, the model name used, and any error
 func (s *ChatService) Chat(articleID, message, selectedText string) (<-chan llm.StreamChunk, string, error) {
-	var systemPrompt string
+	return s.ChatWithModel(articleID, message, selectedText, "")
+}
 
-	// If articleID is provided, fetch article context
-	if articleID != "" {
-		id, err := uuid.Parse(articleID)
-		if err != nil {
-			return nil, "", fmt.Errorf("invalid article ID: %w", err)
-		}
-
-		article, err := s.articleRepo.GetByID(id)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to get article: %w", err)
-		}
-
-		systemPrompt = buildChatSystemPrompt(article.Title, article.Content)
-	} else {
-		systemPrompt = buildGeneralSystemPrompt()
+// ChatWithModel handles a chat request with optional model override
+func (s *ChatService) ChatWithModel(articleID, message, selectedText, modelOverride string) (<-chan llm.StreamChunk, string, error) {
+	systemPrompt, err := s.buildSystemPrompt(articleID)
+	if err != nil {
+		return nil, "", err
 	}
 
 	// Build user prompt
@@ -52,14 +43,22 @@ func (s *ChatService) Chat(articleID, message, selectedText string) (<-chan llm.
 		userPrompt = fmt.Sprintf("关于「%s」这部分内容：%s", selectedText, message)
 	}
 
-	// Configure generation options
 	opts := &llm.GenerateOptions{
 		SystemPrompt: systemPrompt,
 		MaxTokens:    2048,
 		Temperature:  0.7,
 	}
 
-	// Use router to stream response
+	// Use specific model if requested, otherwise use router
+	if modelOverride != "" {
+		adapterName := resolveModelName(modelOverride)
+		stream, err := s.llmRouter.GenerateStreamWithModel(adapterName, userPrompt, opts)
+		if err != nil {
+			return nil, "", fmt.Errorf("LLM generation failed with model %s: %w", adapterName, err)
+		}
+		return stream, adapterName, nil
+	}
+
 	stream, model, err := s.llmRouter.GenerateStream(llm.TaskChat, userPrompt, opts)
 	if err != nil {
 		return nil, "", fmt.Errorf("LLM generation failed: %w", err)
@@ -70,23 +69,14 @@ func (s *ChatService) Chat(articleID, message, selectedText string) (<-chan llm.
 
 // ChatWithMessages handles multi-turn chat with message history
 func (s *ChatService) ChatWithMessages(articleID string, messages []llm.Message) (<-chan llm.StreamChunk, string, error) {
-	var systemPrompt string
+	return s.ChatWithMessagesAndModel(articleID, messages, "")
+}
 
-	// If articleID is provided, fetch article context
-	if articleID != "" {
-		id, err := uuid.Parse(articleID)
-		if err != nil {
-			return nil, "", fmt.Errorf("invalid article ID: %w", err)
-		}
-
-		article, err := s.articleRepo.GetByID(id)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to get article: %w", err)
-		}
-
-		systemPrompt = buildChatSystemPrompt(article.Title, article.Content)
-	} else {
-		systemPrompt = buildGeneralSystemPrompt()
+// ChatWithMessagesAndModel handles multi-turn chat with optional model override
+func (s *ChatService) ChatWithMessagesAndModel(articleID string, messages []llm.Message, modelOverride string) (<-chan llm.StreamChunk, string, error) {
+	systemPrompt, err := s.buildSystemPrompt(articleID)
+	if err != nil {
+		return nil, "", err
 	}
 
 	opts := &llm.GenerateOptions{
@@ -95,12 +85,52 @@ func (s *ChatService) ChatWithMessages(articleID string, messages []llm.Message)
 		Temperature:  0.7,
 	}
 
+	// Use specific model if requested, otherwise use router
+	if modelOverride != "" {
+		adapterName := resolveModelName(modelOverride)
+		stream, err := s.llmRouter.GenerateChatStreamWithModel(adapterName, messages, opts)
+		if err != nil {
+			return nil, "", fmt.Errorf("LLM chat generation failed with model %s: %w", adapterName, err)
+		}
+		return stream, adapterName, nil
+	}
+
 	stream, model, err := s.llmRouter.GenerateChatStream(llm.TaskChat, messages, opts)
 	if err != nil {
 		return nil, "", fmt.Errorf("LLM chat generation failed: %w", err)
 	}
 
 	return stream, model, nil
+}
+
+// buildSystemPrompt resolves article context and returns the appropriate system prompt
+func (s *ChatService) buildSystemPrompt(articleID string) (string, error) {
+	if articleID != "" {
+		id, err := uuid.Parse(articleID)
+		if err != nil {
+			return "", fmt.Errorf("invalid article ID: %w", err)
+		}
+		article, err := s.articleRepo.GetByID(id)
+		if err != nil {
+			return "", fmt.Errorf("failed to get article: %w", err)
+		}
+		return buildChatSystemPrompt(article.Title, article.Content), nil
+	}
+	return buildGeneralSystemPrompt(), nil
+}
+
+// resolveModelName maps short model names to registered adapter names
+func resolveModelName(shortName string) string {
+	switch shortName {
+	case "haiku":
+		return "claude-haiku-4-5"
+	case "sonnet":
+		return "claude-sonnet-4-5"
+	case "opus":
+		return "claude-opus-4-6"
+	default:
+		return shortName
+	}
 }
 
 // GetAvailableModels returns the list of available LLM adapters

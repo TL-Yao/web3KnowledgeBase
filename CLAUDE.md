@@ -108,7 +108,9 @@ web3-insight/
 │   │   │   ├── tagger.go         # 文章自动标签 (Sonnet + balanced_v1 prompt)
 │   │   │   ├── eval_tagger.go    # 标签质量评估指标
 │   │   │   ├── bench_tagger.go   # 标签 Benchmark 运行引擎
-│   │   │   └── article_updater.go # 文章对话更新生成 (LLM定向补充)
+│   │   │   ├── article_updater.go # 文章对话更新生成 (LLM定向补充)
+│   │   │   ├── cli_article_updater.go # CLI文章更新 (订阅认证, 零成本)
+│   │   │   └── claude_executor.go # Claude CLI 执行器 (env过滤, 进程组管理)
 │   │   └── worker/               # 异步任务 (Asynq)
 │   └── scripts/
 │       └── clear_data.sql        # 数据清理 SQL
@@ -182,6 +184,8 @@ web3-insight/
 | 知识库 | AI 文章更新生成 | ChatSidebar → UpdateReviewPanel | POST /api/articles/:id/generate-update |
 | 知识库 | 文章更新审阅 (inline diff 视图) | UpdateReviewPanel (inline/overlay variants) | POST /api/articles/:id/apply-update |
 | 知识库 | 版本历史 + 回滚 | VersionHistory | GET /api/articles/:id/versions, POST /:id/versions/:versionId/rollback |
+| 知识库 | CLI 文章更新 (订阅认证, API fallback) | ChatSidebar → UpdateReviewPanel | POST /api/articles/:id/generate-update (cli_article_updater.go → claude_executor.go) |
+| 聊天 | 模型选择器 (Haiku/Sonnet/Opus, 默认 Sonnet) | Select in ChatSidebar header + useChat | WS /ws/chat (model field → resolveModelName → adapter) |
 
 ## Model Fallback Pattern
 
@@ -336,6 +340,15 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 - **Reuse/orphan metrics require scale**: With only 27 articles, tag reuse metrics are inherently low. These targets (>80% reuse, <15% orphan) are meaningful only at 50+ articles.
 - **Bulk tagging**: Use `POST /api/tags/bulk-tag?force=true` endpoint or `cmd/bulk-tag --force` CLI. API endpoint runs in background, CLI is synchronous.
 - **Tag auto-creation disabled**: The `handleNewTagSuggestion()` was causing DB pollution (196 auto-created tags). Now disabled - LLM suggestions are logged but not auto-created.
+
+### CLI Article Updater & Chat Model Selector Lessons (2026-02-12)
+
+- **Env filtering for subscription auth**: Strip `ANTHROPIC_API_KEY` from subprocess env with `filterEnv(os.Environ(), "ANTHROPIC_API_KEY")` using prefix matching (`key + "="`). This forces Claude CLI to use subscription auth ($0 cost). Pattern: `ClaudeExecutorOptions{StripAPIKey: true}`.
+- **Process cleanup after CombinedOutput**: `defer syscall.Kill(-pid, SIGKILL)` runs even after successful exit. Harmless (error ignored), but PID reuse is a theoretical risk. Guard with `cmd.ProcessState != nil` check if this becomes an issue.
+- **Model name resolution pattern**: Frontend sends short names ("haiku"/"sonnet"/"opus"), backend `resolveModelName()` maps to adapter names ("claude-haiku-4-5"/"claude-sonnet-4"/"claude-opus-4"). Frontend `formatModelName()` reverse-maps using `includes()` for display. Keep both maps in sync.
+- **Explicit model selection = no fallback**: When user explicitly selects a model via `GenerateStreamWithModel()`, failures return errors directly (no automatic fallback to another model). This is correct — user should know if their chosen model is unavailable.
+- **CLI → API fallback pattern**: `ArticleHandler.GenerateUpdate()` tries `cliUpdater` first, falls back to `updater` (API-based) on any error. Both are injected separately in `NewArticleHandler()`. Log the fallback reason for debugging.
+- **Ref pattern for stale closures**: Frontend `useChat` hook uses `modelRef.current` (not `model` state) inside `sendMessage` callback to avoid stale closure over React state. Same pattern for `messagesRef`.
 
 ## Plan Completion Protocol
 

@@ -32,14 +32,37 @@ function saveMessages(articleId: string, messages: Message[]) {
   }
 }
 
+export type ChatModel = 'haiku' | 'sonnet' | 'opus'
+
+const MODEL_STORAGE_KEY = 'chat-model'
+const DEFAULT_MODEL: ChatModel = 'sonnet'
+
+function loadModel(): ChatModel {
+  if (typeof window === 'undefined') return DEFAULT_MODEL
+  try {
+    const saved = localStorage.getItem(MODEL_STORAGE_KEY)
+    if (saved === 'haiku' || saved === 'sonnet' || saved === 'opus') return saved
+  } catch {}
+  return DEFAULT_MODEL
+}
+
 export function useChat(articleId: string) {
   const [messages, setMessages] = useState<Message[]>(() => loadMessages(articleId))
   const [isLoading, setIsLoading] = useState(false)
   const [currentResponse, setCurrentResponse] = useState('')
+  const [model, setModelState] = useState<ChatModel>(loadModel)
   const wsRef = useRef<WebSocket | null>(null)
   const sessionId = useRef(crypto.randomUUID())
   const currentResponseRef = useRef('')
   const messagesRef = useRef(messages)
+
+  const modelRef = useRef(model)
+
+  const setModel = useCallback((m: ChatModel) => {
+    setModelState(m)
+    modelRef.current = m
+    try { localStorage.setItem(MODEL_STORAGE_KEY, m) } catch {}
+  }, [])
 
   // Keep messagesRef in sync for use in sendMessage
   useEffect(() => {
@@ -98,6 +121,7 @@ export function useChat(articleId: string) {
       selectedText,
       sessionId: sessionId.current,
       history,
+      model: modelRef.current,
     }))
   }, [articleId, isLoading])
 
@@ -112,5 +136,7 @@ export function useChat(articleId: string) {
     currentResponse,
     sendMessage,
     clearMessages,
+    model,
+    setModel,
   }
 }

@@ -225,9 +225,9 @@ Articles support lifecycle management through the knowledge base UI:
 
 The article detail page includes a resizable right sidebar for AI-powered Q&A and targeted article updates.
 
-**Chat Sidebar:** Resizable sidebar (320-600px, drag to resize, double-click handle to reset) with multi-turn conversation about any article. Messages persist in localStorage across sessions. Assistant responses render as markdown (headers, lists, code blocks, tables via ReactMarkdown + remarkGfm). Keyboard shortcuts: ⌘/ to toggle, Esc to close, ⌘↵ to send.
+**Chat Sidebar:** Resizable sidebar (320-600px, drag to resize, double-click handle to reset) with multi-turn conversation about any article. Messages persist in localStorage across sessions. Assistant responses render as markdown (headers, lists, code blocks, tables via ReactMarkdown + remarkGfm). Keyboard shortcuts: ⌘/ to toggle, Esc to close, ⌘↵ to send. **Model selector** in the header lets users choose between Haiku (fast), Sonnet (recommended), or Opus (most capable), with the choice persisted in localStorage.
 
-**Article Update Generation:** After chatting, click "生成文章更新" to generate a targeted update based on the conversation. The system sends the full article content + conversation history to the LLM (Claude Sonnet, with Haiku fallback), which produces a refined article following "targeted additions, not rewrites" principles.
+**Article Update Generation:** After chatting, click "更新文章（基于对话）" to generate a targeted update based on the conversation. Uses Claude Code CLI with subscription auth ($0 cost) as primary path, with automatic fallback to API-based generation. The LLM produces a refined article following "targeted additions, not rewrites" principles.
 
 **Inline Diff Review:** Generated updates are shown in an inline diff panel (replacing the article content area, with the chat sidebar still visible for context). Line-by-line comparison (green=added, red=removed), collapsible unchanged blocks, and change summary. Users can apply, regenerate, or cancel. Falls back to overlay mode on smaller screens.
 

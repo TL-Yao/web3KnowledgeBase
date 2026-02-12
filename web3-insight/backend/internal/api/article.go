@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,13 +17,14 @@ import (
 )
 
 type ArticleHandler struct {
-	repo    *repository.ArticleRepository
-	db      *gorm.DB
-	updater *service.ArticleUpdater
+	repo       *repository.ArticleRepository
+	db         *gorm.DB
+	updater    *service.ArticleUpdater
+	cliUpdater *service.CLIArticleUpdater
 }
 
-func NewArticleHandler(repo *repository.ArticleRepository, db *gorm.DB, updater *service.ArticleUpdater) *ArticleHandler {
-	return &ArticleHandler{repo: repo, db: db, updater: updater}
+func NewArticleHandler(repo *repository.ArticleRepository, db *gorm.DB, updater *service.ArticleUpdater, cliUpdater *service.CLIArticleUpdater) *ArticleHandler {
+	return &ArticleHandler{repo: repo, db: db, updater: updater, cliUpdater: cliUpdater}
 }
 
 // ListArticles godoc
@@ -424,7 +426,19 @@ func (h *ArticleHandler) GenerateUpdate(c *gin.Context) {
 		messages[i] = llm.Message{Role: m.Role, Content: m.Content}
 	}
 
-	result, err := h.updater.GenerateUpdate(context.Background(), article, messages)
+	ctx := context.Background()
+
+	// Try CLI updater first (subscription auth, $0 cost), fallback to API
+	if h.cliUpdater != nil {
+		result, err := h.cliUpdater.GenerateUpdate(ctx, article, messages)
+		if err == nil {
+			c.JSON(http.StatusOK, result)
+			return
+		}
+		log.Printf("CLI updater failed, falling back to API: %v", err)
+	}
+
+	result, err := h.updater.GenerateUpdate(ctx, article, messages)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate update: " + err.Error()})
 		return

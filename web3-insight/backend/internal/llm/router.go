@@ -35,7 +35,11 @@ func NewRouterFromConfig(cfg *config.LLMConfig) *Router {
 	// Register Claude adapter if enabled
 	if cfg.Claude.Enabled && cfg.Claude.APIKey != "" {
 		r.RegisterAdapter(cfg.Claude.DefaultModel, NewClaudeAdapter(cfg.Claude.APIKey, cfg.Claude.DefaultModel))
-		// Also register haiku for simpler tasks
+		// Register named adapters for model selector (chat model override)
+		r.RegisterAdapter("claude-haiku-4-5", NewClaudeAdapter(cfg.Claude.APIKey, "claude-haiku-4-5-20251001"))
+		r.RegisterAdapter("claude-sonnet-4-5", NewClaudeAdapter(cfg.Claude.APIKey, "claude-sonnet-4-5-20250929"))
+		r.RegisterAdapter("claude-opus-4-6", NewClaudeAdapter(cfg.Claude.APIKey, "claude-opus-4-6"))
+		// Legacy alias for simpler tasks
 		r.RegisterAdapter("claude-haiku", NewClaudeAdapter(cfg.Claude.APIKey, "claude-3-haiku-20240307"))
 	}
 
@@ -327,6 +331,34 @@ func (r *Router) GenerateWithModel(modelName, prompt string, opts *GenerateOptio
 	}
 
 	return adapter.Generate(prompt, opts)
+}
+
+// GenerateStreamWithModel streams using a specific model (bypasses routing)
+func (r *Router) GenerateStreamWithModel(modelName, prompt string, opts *GenerateOptions) (<-chan StreamChunk, error) {
+	adapter, ok := r.adapters[modelName]
+	if !ok {
+		return nil, fmt.Errorf("model not found: %s", modelName)
+	}
+
+	if !adapter.IsAvailable() {
+		return nil, fmt.Errorf("model not available: %s", modelName)
+	}
+
+	return adapter.GenerateStream(prompt, opts)
+}
+
+// GenerateChatStreamWithModel streams chat using a specific model (bypasses routing)
+func (r *Router) GenerateChatStreamWithModel(modelName string, messages []Message, opts *GenerateOptions) (<-chan StreamChunk, error) {
+	adapter, ok := r.adapters[modelName]
+	if !ok {
+		return nil, fmt.Errorf("model not found: %s", modelName)
+	}
+
+	if !adapter.IsAvailable() {
+		return nil, fmt.Errorf("model not available: %s", modelName)
+	}
+
+	return adapter.GenerateChatStream(messages, opts)
 }
 
 // EstimateCost estimates the cost for a specific model

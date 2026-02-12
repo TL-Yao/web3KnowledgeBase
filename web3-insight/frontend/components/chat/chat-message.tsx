@@ -13,6 +13,14 @@ interface ChatMessageProps {
   isStreaming?: boolean
 }
 
+function formatModelName(model: string): string {
+  const lower = model.toLowerCase()
+  if (lower.includes('haiku')) return 'Haiku'
+  if (lower.includes('opus')) return 'Opus'
+  if (lower.includes('sonnet')) return 'Sonnet'
+  return model
+}
+
 export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
@@ -79,7 +87,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
         </div>
         {message.model && (
           <div className="text-[11px] text-muted-foreground mt-0.5">
-            {message.model}
+            {formatModelName(message.model)}
           </div>
         )}
       </div>
