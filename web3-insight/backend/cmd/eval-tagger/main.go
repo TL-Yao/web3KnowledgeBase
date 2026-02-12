@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/user/web3-insight/internal/config"
@@ -67,7 +66,7 @@ func main() {
 			}
 			fmt.Printf("Loaded %d tags from plain registry: %s\n\n", len(registryTags), *registryFile)
 		} else {
-			registryTags, err = loadTagsYAML()
+			registryTags, err = loadTagsFromConfig()
 			if err != nil {
 				fmt.Printf("Warning: could not load tags.yaml: %v (skipping registry check)\n\n", err)
 			} else {
@@ -93,25 +92,11 @@ func main() {
 	}
 }
 
-// loadTagsYAML loads all tag names from config/tags.yaml (universal + all themes)
-func loadTagsYAML() ([]string, error) {
-	// Try relative paths from working directory
-	candidates := []string{
-		"config/tags.yaml",
-		filepath.Join("..", "config", "tags.yaml"),
-		filepath.Join("..", "..", "config", "tags.yaml"),
-	}
-
-	var tagsConfig *config.TagsConfig
-	var loadErr error
-	for _, path := range candidates {
-		tagsConfig, loadErr = config.LoadTags(path)
-		if loadErr == nil {
-			break
-		}
-	}
-	if tagsConfig == nil {
-		return nil, fmt.Errorf("tags.yaml not found in any candidate path: %v", loadErr)
+// loadTagsFromConfig loads all tag names from config/tags.yaml using shared config loader
+func loadTagsFromConfig() ([]string, error) {
+	tagsConfig, err := config.LoadTagsFromConfigDir()
+	if err != nil {
+		return nil, err
 	}
 
 	// Collect all tag names and name_en (universal + all themes)

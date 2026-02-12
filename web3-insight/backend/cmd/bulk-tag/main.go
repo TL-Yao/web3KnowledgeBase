@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/user/web3-insight/internal/config"
@@ -34,10 +33,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-
-	// Expand env vars in API keys (config.yaml uses ${ANTHROPIC_API_KEY} syntax)
-	cfg.LLM.Claude.APIKey = os.ExpandEnv(cfg.LLM.Claude.APIKey)
-	cfg.LLM.OpenAI.APIKey = os.ExpandEnv(cfg.LLM.OpenAI.APIKey)
 
 	db, err := database.Connect(&cfg.Database)
 	if err != nil {

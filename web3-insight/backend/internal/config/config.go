@@ -113,8 +113,8 @@ func Load() (*Config, error) {
 	return &cfg, nil
 }
 
-// findConfigFile searches for a config file in standard paths
-func findConfigFile(filename string) (string, error) {
+// FindConfigFile searches for a config file in standard paths (./config, ../config, ../../config)
+func FindConfigFile(filename string) (string, error) {
 	configPaths := []string{"./config", "../config", "../../config"}
 	for _, basePath := range configPaths {
 		testPath := basePath + "/" + filename
@@ -123,6 +123,15 @@ func findConfigFile(filename string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("%s not found in config paths", filename)
+}
+
+// LoadTagsFromConfigDir finds and loads tags.yaml from standard config paths
+func LoadTagsFromConfigDir() (*TagsConfig, error) {
+	path, err := FindConfigFile("tags.yaml")
+	if err != nil {
+		return nil, err
+	}
+	return LoadTags(path)
 }
 
 // LoadAll loads all configuration files (config.yaml, models.yaml, routing.yaml)
@@ -135,7 +144,7 @@ func LoadAll() (*Config, error) {
 	}
 
 	// Find and load models.yaml
-	modelsPath, err := findConfigFile("models.yaml")
+	modelsPath, err := FindConfigFile("models.yaml")
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +156,7 @@ func LoadAll() (*Config, error) {
 	cfg.Models = models
 
 	// Find and load routing.yaml
-	routingPath, err := findConfigFile("routing.yaml")
+	routingPath, err := FindConfigFile("routing.yaml")
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +168,7 @@ func LoadAll() (*Config, error) {
 	cfg.Routing = routing
 
 	// Find and load prompts.yaml
-	promptsPath, err := findConfigFile("prompts.yaml")
+	promptsPath, err := FindConfigFile("prompts.yaml")
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +180,7 @@ func LoadAll() (*Config, error) {
 	cfg.Prompts = prompts
 
 	// Find and load tags.yaml (optional — tags are not required for basic operation)
-	tagsPath, err := findConfigFile("tags.yaml")
+	tagsPath, err := FindConfigFile("tags.yaml")
 	if err == nil {
 		tags, err := LoadTags(tagsPath)
 		if err != nil {

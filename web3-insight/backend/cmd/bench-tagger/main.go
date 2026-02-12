@@ -64,7 +64,7 @@ func main() {
 	}
 
 	// Load tags.yaml
-	tagsConfig, err := loadTagsConfig()
+	tagsConfig, err := config.LoadTagsFromConfigDir()
 	if err != nil {
 		log.Fatalf("Failed to load tags: %v", err)
 	}
@@ -191,20 +191,6 @@ func main() {
 	}
 }
 
-func loadTagsConfig() (*config.TagsConfig, error) {
-	candidates := []string{
-		"config/tags.yaml",
-		"../config/tags.yaml",
-		"../../config/tags.yaml",
-	}
-	for _, path := range candidates {
-		tc, err := config.LoadTags(path)
-		if err == nil {
-			return tc, nil
-		}
-	}
-	return nil, fmt.Errorf("tags.yaml not found in any config path")
-}
 
 func fetchArticlesByTitles(db *gorm.DB, gtMap map[string]service.GroundTruthEntry) ([]model.Article, error) {
 	titles := make([]string, 0, len(gtMap))

@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/user/web3-insight/internal/config"
+	"github.com/user/web3-insight/internal/database"
 )
 
 type Article struct {
@@ -60,8 +60,12 @@ type articleData struct {
 }
 
 func main() {
-	dsn := "host=localhost user=web3insight password=web3insight_dev dbname=web3insight port=5432 sslmode=disable"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	db, err := database.Connect(&cfg.Database)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
