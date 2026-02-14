@@ -78,16 +78,15 @@ web3-insight/
 │   │   │   ├── config.go         # 主配置
 │   │   │   ├── models.go         # 模型注册表解析
 │   │   │   ├── routing.go        # 路由配置解析
-│   │   │   └── prompts.go        # 主题提示词配置解析
+│   │   │   ├── prompts.go        # 主题提示词配置解析
+│   │   │   └── tags.go           # 标签注册表解析
 │   │   ├── collector/            # 数据采集
 │   │   │   ├── crawler.go        # 网页爬虫 (Colly)
 │   │   │   ├── rss.go            # RSS 订阅
 │   │   │   ├── search.go         # 搜索引擎
 │   │   │   ├── serpapi.go        # SerpAPI 集成
 │   │   │   └── tavily.go         # Tavily 集成
-│   │   ├── database/             # 数据库
-│   │   │   ├── connection.go     # 连接管理
-│   │   │   └── migrate.go        # 自动迁移 (GORM AutoMigrate)
+│   │   ├── database/             # 数据库 (connection.go, migrate.go)
 │   │   ├── llm/                  # LLM 客户端
 │   │   │   ├── ollama.go         # Ollama (本地)
 │   │   │   ├── claude.go         # Claude API
@@ -123,18 +122,17 @@ web3-insight/
 │   ├── app/                      # Next.js App Router 页面
 │   │   ├── page.tsx              # 首页
 │   │   ├── knowledge/            # 知识库 (文章列表+详情)
-│   │   ├── research/             # Explorer 调研
 │   │   └── admin/                # 管理后台
 │   │       ├── page.tsx          # 仪表板 (状态+任务)
-│   │       ├── config/page.tsx   # 模型配置
+│   │       ├── config/page.tsx   # 模型配置 + API 密钥
 │   │       ├── import/page.tsx   # 文章导入
+│   │       ├── tags/page.tsx     # 标签管理
 │   │       └── kb-update/page.tsx # 知识库更新 (主题管理+调度)
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui 基础组件
 │   │   ├── layout/               # 布局 (Sidebar, Header, MainLayout)
-│   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, TagEditor, UpdateReviewPanel[inline/overlay], VersionHistory)
-│   │   ├── research/             # 调研组件 (ExplorerResearch, ErrorBoundary)
-│   │   ├── admin/                # 管理组件 (ModelConfig, TaskMonitor, SystemStatus, SourceConfig, ArticleImport)
+│   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, TagEditor, UpdateReviewPanel, VersionHistory)
+│   │   ├── admin/                # 管理组件 (ModelConfig, ApiKeyConfig, TaskMonitor, SystemStatus, SourceConfig, ArticleImport)
 │   │   ├── chat/                 # 聊天组件 (ChatSidebar, ChatMessage, SidebarToggle)
 │   │   └── providers/            # QueryProvider
 │   ├── hooks/
@@ -147,6 +145,7 @@ web3-insight/
 │   │   └── utils.ts              # 工具函数 (cn)
 │   └── __mocks__/                # MSW 测试 Mock
 ├── scripts/                      # 运维脚本
+│   ├── lib.sh                    # 共享函数 (Docker Compose 检测)
 │   ├── start-all.sh              # 一键启动所有服务
 │   ├── stop-all.sh               # 停止所有服务
 │   └── status.sh                 # 检查服务状态
@@ -159,10 +158,10 @@ web3-insight/
 | 模块 | 功能 | 前端组件 | 后端端点 |
 |------|------|----------|----------|
 | 知识库 | 文章列表/详情/CRUD | ArticleList, ArticleView | GET/POST/PUT/DELETE /api/articles |
-| 知识库 | 分类管理/树结构 | CategoryTree | GET /api/categories, /api/categories/tree |
+| 知识库 | 分类管理/树结构 | - | GET /api/categories, /api/categories/tree |
 | 知识库 | 全局搜索 + 语义搜索 | SearchInput | GET /api/search, /api/search/semantic |
 | 聊天 | AI 实时对话 (可调宽侧边栏) | ChatSidebar, SidebarToggle, ResizeHandle | WS /ws/chat |
-| 调研 | Explorer 管理 + 功能对比 | ExplorerResearch | /api/explorers (含 compare, stats, features) |
+| 调研 | Explorer 管理 + 功能对比 | - (backend only) | /api/explorers (含 compare, stats, features) |
 | 管理 | 系统状态 | SystemStatus | GET /health |
 | 管理 | 任务监控 | TaskMonitor | GET /api/tasks, /api/tasks/stats |
 | 管理 | 模型配置 (YAML + DB) | ModelConfig | /api/models (registry, tasks, selections) |
@@ -170,7 +169,7 @@ web3-insight/
 | 管理 | 文章导入导出 | ArticleImport | /api/import (batch, validate, upload, template, export) |
 | 管理 | 新闻管理 | - | /api/news |
 | 基础 | Feature Flags | DisabledFeature | - |
-| 基础 | 错误边界 | ExplorerErrorBoundary | - |
+| 基础 | 错误边界 | ErrorBoundary | - |
 | 管理 | 知识库自动更新 (主题驱动) | KBUpdatePage | /api/kb (trigger, jobs, keywords, scheduler, themes, config) |
 | 管理 | 标签管理 (CRUD+注册表+生命周期) | TagsPage | /api/tags (list, create, update, delete, stats, status, approve) |
 | 标签 | 文章自动标签 (Sonnet + balanced_v1) | - | tagger.go (TagArticle) |
@@ -256,7 +255,6 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 
 ## Key Patterns & Lessons
 
-- **GVM workaround**: Always use `/usr/local/go/bin/go -C /path` instead of `cd && go`
 - **Package manager**: Frontend uses `npm` (not pnpm)
 - **API contracts**: Frontend TypeScript interfaces must exactly match backend JSON responses. Use `curl` to verify actual responses.
 - **React Query**: Use `useQuery`/`useMutation` for all data fetching. Never `useEffect` + `fetch`.
@@ -275,40 +273,19 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 
 ### KB Auto-Update Lessons (2026-02-07)
 
-- **Claude CLI Session ID**: Every call MUST use a fresh `uuid.UUID`. Reuse causes "Session ID already in use" error. Retry loops also need new IDs per attempt. Stale session files at `~/.claude/projects/*/session-*` can also cause this — clean up on startup.
-- **Process Group Killing**: When killing a timed-out Claude CLI process, use `syscall.SysProcAttr{Setpgid: true}` + `syscall.Kill(-pid, SIGKILL)` to kill the entire process group. Simple `cmd.Process.Kill()` leaves zombie child processes.
-- **Orphaned Job Cleanup**: Backend restarts leave jobs stuck in "running". On startup, mark any job running > 30 min as "failed". Without this, job locking prevents new updates.
+- **Orphaned Job Cleanup**: On startup, mark any job running > 30 min as "failed" to prevent stale locks.
 - **LLM Output Parsing**: JSON output from LLMs is ~75% reliable even with strong prompts. Use two-layer defense: prompt constraints + `extractJSON()` code extraction. For complex content (markdown, Chinese), use delimiter format (`===TITLE_START===`/`===TITLE_END===`) for 100% success.
 - **Article Generation Timeout**: Simple articles: 2-4 min. Research-heavy articles (WebFetch): 60-90 min. Default timeout: 60 min. Initial 5-10 min timeouts failed all articles.
 - **goroutines Must Use context.Background()**: HTTP handler goroutines must NOT reuse `c.Request.Context()` — it's canceled when the response is sent. Always create fresh `context.Background()` for long-running background tasks.
 - **Async HTTP Pattern for Long Tasks**: Return HTTP 202 immediately, run work in goroutine with `context.Background()`. Use `sync.Mutex.TryLock()` or DB checks for 409 Conflict on duplicate requests.
-- **Nil struct vs nil field**: Passing a struct with nil internal fields causes deep nil pointer panics. Pass `nil` for the whole struct and nil-check before use: `if classifier != nil { ... }`.
-- **GORM Updates**: Use `Updates(map[string]interface{}{...})` for partial updates, not full struct (which zeros out unset fields).
-- **pq.StringArray**: PostgreSQL `TEXT[]` fields need explicit `pq.StringArray(slice)` conversion. Array append: `gorm.Expr("array_append(field, ?)", value)`.
-- **Next.js useSearchParams**: Requires `<Suspense>` boundary wrapper in App Router, otherwise build fails.
 - **Repository Testing**: PostgreSQL-specific features (UUID, pq.StringArray, array_append) make SQLite-based tests impossible. Use integration tests against real PostgreSQL.
 - **LLM Prompt Specificity**: Concrete keywords ("Gas optimization tips") produce reliable structured output. Abstract keywords ("Byzantine fault tolerance") cause LLMs to output free-form text instead.
 
-## Tagging Quality Metrics (Success Matrix)
+## Tagging Quality Metrics
 
-**Current production config**: Claude Sonnet 4 + balanced_v1 prompt (upgraded from Haiku + default prompt on 2026-02-11).
-Fallback model: Claude Haiku 4.5 (previously qwen2.5:32b).
+**Current production config**: Claude Sonnet 4 + balanced_v1 prompt. Fallback: Claude Haiku 4.5.
 
-Benchmark result (Sonnet + balanced_v1): Macro-F1 ~79.6%, Registry Rate ~92%, Avg Tags ~4.3 (vs baseline Haiku: F1 72.6%, Reg 74.6%, Avg 3.6).
-
-Evaluated on 27 articles (2026-02-10). Previous eval uses Haiku with tag registry validation + keyword fallback.
-
-| 指标 | 目标 | 实际 | 状态 | 说明 |
-|------|------|------|------|------|
-| 每篇标签数 (3-7) | >95% in range | 96% (avg 4.0) | PASS | 26/27 in range, 1 article at 2 tags |
-| 注册表合规率 | >95% | 100% (107/107) | PASS | All tags from registry |
-| 标签复用率 (>=3篇) | >80% | 20% | FAIL* | 11/54 reused (dataset size limit) |
-| 孤儿标签率 (仅1篇) | <15% | 57% | FAIL* | 31/54 orphaned (dataset size limit) |
-| 最大覆盖率 | <=40% | 30% | PASS | "DeFi协议" covers 8/27 articles |
-| Gini 系数 | <=0.60 | 0.37 | PASS | Good distribution |
-| 空标签率 | 0% | 0% | PASS | All 27 articles tagged |
-
-*Reuse/orphan metrics are mathematically limited at 27 articles. With 54 unique tags × 3 articles = 162 min assignments needed for 80% reuse, but only 107 total assignments exist. These targets become meaningful at 50+ articles.
+Benchmark (Sonnet + balanced_v1): Macro-F1 ~79.6%, Registry Rate ~92%, Avg Tags ~4.3. Run `eval-tagger` or `bench-tagger` for latest metrics.
 
 **评估命令:**
 ```bash
@@ -344,15 +321,13 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 - **Auto-tagging toggle**: Uses `configs` table key `auto_tagging_enabled`. Frontend sends string "true"/"false", backend stores as JSON `"true"`/`"false"` (with quotes from json.Marshal). Check uses `string(cfg.Value) == \`"false"\``.
 - **LLM tag compliance**: Even with explicit "only choose from this list" prompts, Claude Haiku generates off-registry tags ~15% of the time. The `ResolveTag()` function handles case-insensitive matching and parenthetical stripping. Code-level validation filters these out to achieve 100% compliance.
 - **Keyword fallback for minimum tags**: After LLM tag validation, if fewer than 3 tags remain, auto-supplement from universal tags by keyword matching against article title/summary. This raised in-range from 89% to 96%.
-- **API keys are DB-managed**: `config.yaml` no longer contains API key fields. Keys are stored in DB `configs` table and resolved at runtime via `KeyProvider` with env var fallback. No `os.ExpandEnv()` needed.
 - **Reuse/orphan metrics require scale**: With only 27 articles, tag reuse metrics are inherently low. These targets (>80% reuse, <15% orphan) are meaningful only at 50+ articles.
 - **Bulk tagging**: Use `POST /api/tags/bulk-tag?force=true` endpoint or `cmd/bulk-tag --force` CLI. API endpoint runs in background, CLI is synchronous.
 - **Tag auto-creation disabled**: The `handleNewTagSuggestion()` was causing DB pollution (196 auto-created tags). Now disabled - LLM suggestions are logged but not auto-created.
 
 ### CLI Article Updater & Chat Model Selector Lessons (2026-02-12)
 
-- **Env filtering for subscription auth**: Strip `ANTHROPIC_API_KEY` from subprocess env with `filterEnv(os.Environ(), "ANTHROPIC_API_KEY")` using prefix matching (`key + "="`). This forces Claude CLI to use subscription auth ($0 cost). Pattern: `ClaudeExecutorOptions{StripAPIKey: true}`.
-- **Process cleanup after CombinedOutput**: `defer syscall.Kill(-pid, SIGKILL)` runs even after successful exit. Harmless (error ignored), but PID reuse is a theoretical risk. Guard with `cmd.ProcessState != nil` check if this becomes an issue.
+- **Claude CLI subprocess patterns**: Every call MUST use a fresh `uuid.UUID` session ID (reuse causes errors). Strip `ANTHROPIC_API_KEY` from env via `ClaudeExecutorOptions{StripAPIKey: true}` to force subscription auth ($0 cost). Use `syscall.SysProcAttr{Setpgid: true}` + `syscall.Kill(-pid, SIGKILL)` to kill entire process group on timeout.
 - **Model name resolution pattern**: Frontend sends short names ("haiku"/"sonnet"/"opus"), backend `resolveModelName()` maps to adapter names ("claude-haiku-4-5"/"claude-sonnet-4"/"claude-opus-4"). Frontend `formatModelName()` reverse-maps using `includes()` for display. Keep both maps in sync.
 - **Explicit model selection = no fallback**: When user explicitly selects a model via `GenerateStreamWithModel()`, failures return errors directly (no automatic fallback to another model). This is correct — user should know if their chosen model is unavailable.
 - **CLI → API fallback pattern**: `ArticleHandler.GenerateUpdate()` tries `cliUpdater` first, falls back to `updater` (API-based) on any error. Both are injected separately in `NewArticleHandler()`. Log the fallback reason for debugging.
@@ -361,8 +336,7 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 ### Config Consolidation Lessons (2026-02-12)
 
 - **Shared config path resolution**: All CLI tools (eval-tagger, bench-tagger, seed-articles, bulk-tag) should use `config.FindConfigFile()` and `config.LoadTagsFromConfigDir()` instead of duplicating path-search logic. This eliminated ~50 lines of duplicated code across 3 files.
-- **Sensitive vs non-sensitive config separation**: Only `backend/config/config.yaml` contains secrets (API keys, DB password). The other 4 YAML files (models, routing, prompts, tags) are non-sensitive and safe for Claude Code to read. `.claudeignore` and `settings.local.json` deny rules block only `config.yaml`.
-- **Config is secret-free**: `config.yaml` contains no API keys or secrets. All sensitive keys are in DB `configs` table, managed via admin UI. CLI tools use `KeyProvider` (DB-backed) just like the server.
+- **Sensitive vs non-sensitive config separation**: `config.yaml` has only the DB password (dev default `web3insight_dev`), no API keys. The other 4 YAML files (models, routing, prompts, tags) are non-sensitive. `.claudeignore` and `settings.local.json` deny rules block only `config.yaml`.
 - **Hardcoded DSN is a code smell**: `seed-articles` had a hardcoded DB connection string. Always use `config.Load()` + `database.Connect()` — it respects config file values and env var expansion.
 
 ## Plan Completion Protocol
