@@ -55,6 +55,7 @@ web3-insight/
 │   │   ├── models.yaml           # 模型注册表 (本地/云端模型定义)
 │   │   ├── routing.yaml          # 任务路由配置 (任务→模型映射)
 │   │   ├── prompts.yaml          # 主题提示词模板 (9个主题 + 生成配置)
+│   │   ├── research.yaml         # 即时研究域模板 (8个领域 + 生成设置)
 │   │   └── tags.yaml             # 标签注册表 (92个标签, 按主题分组)
 │   ├── internal/
 │   │   ├── api/                  # HTTP 路由和处理器
@@ -73,12 +74,15 @@ web3-insight/
 │   │   │   ├── tag.go            # 标签管理 API
 │   │   │   ├── api_key.go        # API Key 管理 (列表/保存/测试)
 │   │   │   ├── chat_ws.go        # WebSocket 聊天
+│   │   │   ├── research.go       # 即时研究 REST API (会话/计划/固定/整合)
+│   │   │   ├── research_chat_ws.go # 即时研究 WebSocket 聊天
 │   │   │   └── middleware.go     # CORS 中间件
 │   │   ├── config/               # 配置加载 (Viper)
 │   │   │   ├── config.go         # 主配置
 │   │   │   ├── models.go         # 模型注册表解析
 │   │   │   ├── routing.go        # 路由配置解析
 │   │   │   ├── prompts.go        # 主题提示词配置解析
+│   │   │   ├── research.go       # 即时研究配置解析 (领域模板+生成设置)
 │   │   │   └── tags.go           # 标签注册表解析
 │   │   ├── collector/            # 数据采集
 │   │   │   ├── crawler.go        # 网页爬虫 (Colly)
@@ -101,7 +105,8 @@ web3-insight/
 │   │   │   ├── generator.go      # 内容生成
 │   │   │   ├── summarizer.go     # 摘要生成
 │   │   │   ├── classifier.go     # 自动分类
-│   │   │   ├── research.go       # 即时研究
+│   │   │   ├── research.go       # 即时研究编排 (计划→研究→撰写, Claude CLI)
+│   │   │   ├── research_chat.go  # 即时研究聊天 (会话上下文+领域提示)
 │   │   │   ├── semantic_search.go # 语义搜索
 │   │   │   ├── keyword_pool.go   # 关键词池 (主题感知, 自动批次)
 │   │   │   ├── article_generator.go # 文章生成 (Claude CLI)
@@ -122,6 +127,9 @@ web3-insight/
 │   ├── app/                      # Next.js App Router 页面
 │   │   ├── page.tsx              # 首页
 │   │   ├── knowledge/            # 知识库 (文章列表+详情)
+│   │   ├── research/             # 即时研究
+│   │   │   ├── page.tsx          # 研究首页 (搜索+领域+历史)
+│   │   │   └── [id]/page.tsx     # 研究会话详情 (报告+聊天双栏)
 │   │   └── admin/                # 管理后台
 │   │       ├── page.tsx          # 仪表板 (状态+任务)
 │   │       ├── config/page.tsx   # 模型配置 + API 密钥
@@ -134,9 +142,12 @@ web3-insight/
 │   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, ArticleEditor, EditorToolbar, TagEditor, UpdateReviewPanel, VersionHistory)
 │   │   ├── admin/                # 管理组件 (ModelConfig, ApiKeyConfig, TaskMonitor, SystemStatus, SourceConfig, ArticleImport)
 │   │   ├── chat/                 # 聊天组件 (ChatSidebar, ChatMessage, SidebarToggle)
+│   │   ├── research/             # 即时研究组件 (DomainSelector, PlanReview, ReportViewer, ResearchChat, SessionList, IntegrateFindings, PinButton)
 │   │   └── providers/            # QueryProvider
 │   ├── hooks/
 │   │   ├── use-chat.ts           # 聊天 Hook (多轮对话, localStorage 持久化)
+│   │   ├── use-research.ts       # 研究会话 Hook (状态轮询, 固定/整合, 分页历史)
+│   │   ├── use-research-chat.ts  # 研究聊天 Hook (WebSocket, 模型选择)
 │   │   ├── use-resize.ts         # 拖拽调整大小 Hook (rAF 节流)
 │   │   └── use-feature-flag.ts   # Feature Flag Hook
 │   ├── lib/
@@ -192,6 +203,14 @@ web3-insight/
 | 聊天 | 模型选择器 (Haiku/Sonnet/Opus, 默认 Sonnet) | Select in ChatSidebar header + useChat | WS /ws/chat (model field → resolveModelName → adapter) |
 | 管理 | API Key DB存储 + 管理UI (动态keyFunc, env fallback) | ApiKeyConfig | GET/PUT /api/models/keys, POST /api/models/keys/test |
 | 知识库 | WYSIWYG 文章编辑器 (Tiptap, markdown round-trip) | ArticleEditor, EditorToolbar | POST /api/articles/:id/save-edit |
+| 研究 | 即时研究首页 (搜索+领域选择+历史) | research/page.tsx, DomainSelector, SessionList | GET /api/research/domains, /sessions |
+| 研究 | 研究会话详情 (报告+聊天双栏) | research/[id]/page.tsx, ReportViewer, ResearchChat | GET /api/research/sessions/:id, /status |
+| 研究 | 研究计划审核 (编辑+批准) | PlanReview | POST /api/research/sessions/:id/approve-plan |
+| 研究 | 研究报告生成 (Claude CLI, 订阅认证) | ReportViewer (阶段指示器) | POST /api/research/sessions (202 异步) |
+| 研究 | 研究聊天 (会话上下文+模型选择) | ResearchChat | WS /ws/research-chat |
+| 研究 | 固定发现 + 整合到报告 | PinButton, IntegrateFindings | POST /sessions/:id/pin, /integrate |
+| 研究 | 会话取消 (CLI 进程终止) | - | POST /api/research/sessions/:id/cancel |
+| 研究 | 会话删除 (含关联文章) | SessionList (确认对话框) | DELETE /api/research/sessions/:id |
 
 ## Model Fallback Pattern
 
@@ -228,6 +247,8 @@ docker-compose -f /Users/tongleyao/claudeProjects/explorerResearch/web3-insight/
 **Database:** PostgreSQL (`pgvector/pgvector:pg16`), User: `web3insight`, Password: `web3insight_dev`, DB: `web3insight`
 
 **Migrations:** Automatic on backend startup via GORM AutoMigrate. No separate command.
+
+**Research Feature:** Uses Claude CLI (`claude --print`) for report generation via subscription auth (StripAPIKey: true, $0 API cost). Each research session spawns a CLI subprocess with fresh UUID. Orphaned sessions cleaned up on startup (45-min cutoff). Max 3 concurrent sessions.
 
 **Logs:** `web3-insight/logs/{backend,frontend,worker,ollama}.log`
 
@@ -345,6 +366,15 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 - **ContentHTML stale data bug**: When articles have a pre-existing `contentHtml` field (from import/crawl), any content update (manual edit, AI update, rollback) MUST clear `ContentHTML = ""` so the markdown renderer takes over. This is easy to miss on new content-modifying endpoints — check all paths that update `article.Content`.
 - **Tiptap markdown round-trip**: Use `tiptap-markdown` extension for load (content as string) and save (`editor.storage.markdown.getMarkdown()`). Minor formatting differences (extra newlines, list style) are expected and acceptable.
 - **Mutual exclusion for edit modes**: When multiple editing modes exist (manual edit vs AI update), lift state to the common parent and use boolean flags (`isEditing`, `isGenerating`, `isReviewOpen`) to disable conflicting actions. Simpler than a state machine for two modes.
+
+### Instant Research Lessons (2026-02-15)
+
+- **Cancellable goroutines with sync.Map**: Long-running background goroutines (CLI subprocesses) need cancellation support. Store `context.CancelFunc` per session ID in `sync.Map`, call it on cancel, defer cleanup on completion. Using bare `context.Background()` without cancel is a bug — the process runs forever even after user cancellation.
+- **GORM column/JSON name collision**: A field with `gorm:"column:category" json:"category"` collides with a `Category *Category` relationship that also serializes to `"category"`. Always use distinct names — `gorm:"column:article_type" json:"articleType"`.
+- **Column rename migration**: GORM AutoMigrate adds columns but won't rename them. Use a pre-migration check: query `information_schema.columns` for old name, then `ALTER TABLE RENAME COLUMN` before AutoMigrate runs.
+- **Frontend-backend API contract verification**: Field name mismatches (`content` vs `messageContent`, `.id` vs `.sessionId`) cause silent failures. Always verify contracts from both sides during code review. The `binding:"required"` validator silently returns 400 for mismatched field names.
+- **Delimiter parsing for multi-section LLM output**: For research reports with title + content + summary + citations, use multiple delimiter pairs (`===REPORT_TITLE_START===`/`===REPORT_TITLE_END===`). Add fallbacks for each section — title falls back to question, content falls back to full response.
+- **Domain config ID consistency**: Frontend domain selector IDs must exactly match backend YAML config IDs. Use the full IDs (`tech-engineering`, not `tech`) to avoid silent routing failures.
 
 ## Plan Completion Protocol
 
