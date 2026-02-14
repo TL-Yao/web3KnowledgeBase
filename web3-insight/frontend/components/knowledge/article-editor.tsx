@@ -105,31 +105,43 @@ export function ArticleEditor({
   }, [isDirty, onCancel])
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Title input */}
-      <Input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="text-3xl font-bold mb-4"
-        placeholder="文章标题"
-      />
-
-      {/* Editor */}
-      <div className="tiptap-editor border rounded-md overflow-hidden">
-        <EditorToolbar editor={editor} />
-        <div className="prose prose-neutral max-w-none dark:prose-invert">
-          <EditorContent editor={editor} />
+    <div className="flex flex-col h-full">
+      {/* Fixed top: title + toolbar + actions */}
+      <div className="shrink-0 border-b bg-background px-6 pt-6 pb-3">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-3xl font-bold flex-1"
+              placeholder="文章标题"
+            />
+            <div className="flex gap-3 shrink-0">
+              <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+                取消
+              </Button>
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving ? "保存中..." : "保存"}
+              </Button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-4xl mx-auto">
+          <div className="tiptap-editor border rounded-t-md overflow-hidden">
+            <EditorToolbar editor={editor} />
+          </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="flex justify-end gap-3 mt-4">
-        <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-          取消
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "保存中..." : "保存"}
-        </Button>
+      {/* Scrollable middle: editor content */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="tiptap-editor border border-t-0 rounded-b-md">
+            <div className="prose prose-neutral max-w-none dark:prose-invert">
+              <EditorContent editor={editor} />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

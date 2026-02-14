@@ -131,7 +131,7 @@ web3-insight/
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui 基础组件
 │   │   ├── layout/               # 布局 (Sidebar, Header, MainLayout)
-│   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, TagEditor, UpdateReviewPanel, VersionHistory)
+│   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, ArticleEditor, EditorToolbar, TagEditor, UpdateReviewPanel, VersionHistory)
 │   │   ├── admin/                # 管理组件 (ModelConfig, ApiKeyConfig, TaskMonitor, SystemStatus, SourceConfig, ArticleImport)
 │   │   ├── chat/                 # 聊天组件 (ChatSidebar, ChatMessage, SidebarToggle)
 │   │   └── providers/            # QueryProvider
@@ -191,6 +191,7 @@ web3-insight/
 | 知识库 | CLI 文章更新 (订阅认证, API fallback) | ChatSidebar → UpdateReviewPanel | POST /api/articles/:id/generate-update (cli_article_updater.go → claude_executor.go) |
 | 聊天 | 模型选择器 (Haiku/Sonnet/Opus, 默认 Sonnet) | Select in ChatSidebar header + useChat | WS /ws/chat (model field → resolveModelName → adapter) |
 | 管理 | API Key DB存储 + 管理UI (动态keyFunc, env fallback) | ApiKeyConfig | GET/PUT /api/models/keys, POST /api/models/keys/test |
+| 知识库 | WYSIWYG 文章编辑器 (Tiptap, markdown round-trip) | ArticleEditor, EditorToolbar | POST /api/articles/:id/save-edit |
 
 ## Model Fallback Pattern
 
@@ -338,6 +339,12 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 - **Shared config path resolution**: All CLI tools (eval-tagger, bench-tagger, seed-articles, bulk-tag) should use `config.FindConfigFile()` and `config.LoadTagsFromConfigDir()` instead of duplicating path-search logic. This eliminated ~50 lines of duplicated code across 3 files.
 - **Sensitive vs non-sensitive config separation**: `config.yaml` has only the DB password (dev default `web3insight_dev`), no API keys. The other 4 YAML files (models, routing, prompts, tags) are non-sensitive. `.claudeignore` and `settings.local.json` deny rules block only `config.yaml`.
 - **Hardcoded DSN is a code smell**: `seed-articles` had a hardcoded DB connection string. Always use `config.Load()` + `database.Connect()` — it respects config file values and env var expansion.
+
+### WYSIWYG Editor Lessons (2026-02-15)
+
+- **ContentHTML stale data bug**: When articles have a pre-existing `contentHtml` field (from import/crawl), any content update (manual edit, AI update, rollback) MUST clear `ContentHTML = ""` so the markdown renderer takes over. This is easy to miss on new content-modifying endpoints — check all paths that update `article.Content`.
+- **Tiptap markdown round-trip**: Use `tiptap-markdown` extension for load (content as string) and save (`editor.storage.markdown.getMarkdown()`). Minor formatting differences (extra newlines, list style) are expected and acceptable.
+- **Mutual exclusion for edit modes**: When multiple editing modes exist (manual edit vs AI update), lift state to the common parent and use boolean flags (`isEditing`, `isGenerating`, `isReviewOpen`) to disable conflicting actions. Simpler than a state machine for two modes.
 
 ## Plan Completion Protocol
 

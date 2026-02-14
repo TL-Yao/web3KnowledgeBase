@@ -355,7 +355,7 @@ export default function ArticlePage() {
     <MainLayout>
       <div className="flex h-full relative">
         {/* Article content or UpdateReviewPanel */}
-        <div className="flex-1 min-w-0 overflow-auto relative">
+        <div className={`flex-1 min-w-0 relative ${isEditing ? 'overflow-hidden' : 'overflow-auto'}`}>
           {isEditing ? (
             <ArticleEditor
               article={displayArticle}
