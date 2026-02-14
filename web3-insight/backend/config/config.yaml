@@ -22,12 +22,10 @@ llm:
 
   claude:
     enabled: true
-    api_key: "${ANTHROPIC_API_KEY}"
     default_model: "claude-sonnet-4-20250514"
 
   openai:
     enabled: false
-    api_key: "${OPENAI_API_KEY}"
     default_model: "gpt-4o"
 
 worker:
