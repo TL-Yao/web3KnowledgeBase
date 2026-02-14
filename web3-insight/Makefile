@@ -5,7 +5,7 @@ dev: db-up
 	@make -j2 dev-backend dev-frontend
 
 dev-backend:
-	cd backend && go run cmd/server/main.go
+	/usr/local/go/bin/go run -C backend cmd/server/main.go
 
 dev-frontend:
 	cd frontend && npm run dev
@@ -21,12 +21,12 @@ db-down:
 
 # Worker
 worker:
-	cd backend && go run cmd/worker/main.go
+	/usr/local/go/bin/go run -C backend cmd/worker/main.go
 
 # Build
 build-backend:
-	cd backend && go build -o bin/server cmd/server/main.go
-	cd backend && go build -o bin/worker cmd/worker/main.go
+	/usr/local/go/bin/go build -C backend -o bin/server cmd/server/main.go
+	/usr/local/go/bin/go build -C backend -o bin/worker cmd/worker/main.go
 
 build-frontend:
 	cd frontend && npm run build
@@ -35,7 +35,7 @@ build: build-backend build-frontend
 
 # Test
 test-backend:
-	cd backend && go test ./...
+	/usr/local/go/bin/go test -C backend ./...
 
 test-frontend:
 	cd frontend && npm test
