@@ -158,8 +158,8 @@ export function ArticleImport() {
 
   const handleExport = () => {
     const url = importAPI.export(
-      exportCategory || undefined,
-      exportStatus || undefined
+      exportCategory && exportCategory !== 'all' ? exportCategory : undefined,
+      exportStatus && exportStatus !== 'all' ? exportStatus : undefined
     )
     window.open(url, '_blank')
   }
@@ -402,7 +402,7 @@ export function ArticleImport() {
                       <SelectValue placeholder="全部分类" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">全部分类</SelectItem>
+                      <SelectItem value="all">全部分类</SelectItem>
                       {categories?.map((cat: Category) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
@@ -418,7 +418,7 @@ export function ArticleImport() {
                       <SelectValue placeholder="全部状态" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">全部状态</SelectItem>
+                      <SelectItem value="all">全部状态</SelectItem>
                       <SelectItem value="published">已发布</SelectItem>
                       <SelectItem value="draft">草稿</SelectItem>
                     </SelectContent>
