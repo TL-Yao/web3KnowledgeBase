@@ -21,6 +21,8 @@ All file operations (create, delete, modify, read, execute) MUST be confined to 
 - NEVER include API keys in code, commits, logs, or any output
 - NEVER read, query, or expose API keys from the database `configs` table (keys like `api_key.anthropic`, `api_key.openai`, etc.)
 - Only reference environment variables by name (e.g., `os.Getenv("ANTHROPIC_API_KEY")`), never by value
+- API keys are managed via admin UI (`/admin/config` → API 密钥 tab). DB is source of truth; env vars are read-only fallbacks
+- `config.yaml` is secret-free — no API key fields remain. Only non-sensitive config (enabled flags, model names, ports)
 - This applies to ALL agents, teammates, and subprocesses
 
 # Project Guidelines
@@ -189,7 +191,7 @@ web3-insight/
 | 知识库 | 版本历史 + 回滚 | VersionHistory | GET /api/articles/:id/versions, POST /:id/versions/:versionId/rollback |
 | 知识库 | CLI 文章更新 (订阅认证, API fallback) | ChatSidebar → UpdateReviewPanel | POST /api/articles/:id/generate-update (cli_article_updater.go → claude_executor.go) |
 | 聊天 | 模型选择器 (Haiku/Sonnet/Opus, 默认 Sonnet) | Select in ChatSidebar header + useChat | WS /ws/chat (model field → resolveModelName → adapter) |
-| 管理 | API Key DB存储 + 管理API (动态keyFunc) | - | GET/PUT /api/models/keys, POST /api/models/keys/test |
+| 管理 | API Key DB存储 + 管理UI (动态keyFunc, env fallback) | ApiKeyConfig | GET/PUT /api/models/keys, POST /api/models/keys/test |
 
 ## Model Fallback Pattern
 
@@ -207,7 +209,7 @@ if result.IsFallback {
 
 Configuration: `backend/config/models.yaml` (registry) + `backend/config/routing.yaml` (routing) + DB `configs` table (user selections + API keys)
 
-**API Key Resolution:** All LLM adapters use `keyFunc func() string` pattern. Keys are resolved at request time from `KeyProvider` (DB-backed, 30s cache). Env vars are seeded to DB on first boot via `SeedAPIKeysFromEnv()`. DB keys: `api_key.anthropic`, `api_key.openai`, `api_key.tavily`, `api_key.serpapi`.
+**API Key Resolution:** All LLM adapters use `keyFunc func() string` pattern. Keys are resolved at request time from `KeyProvider` (DB-backed, 30s cache). Fallback order: DB → environment variable → empty string. Env vars are read-only fallbacks (never written to DB). DB keys: `api_key.anthropic`, `api_key.openai`, `api_key.tavily`, `api_key.serpapi`. Config structs (`ClaudeConfig`, `OpenAIConfig`, `TavilyConfig`, `SerpAPIConfig`) no longer contain `APIKey` fields — all key management is through DB + admin UI.
 
 ## Service Management
 
@@ -342,7 +344,7 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 - **Auto-tagging toggle**: Uses `configs` table key `auto_tagging_enabled`. Frontend sends string "true"/"false", backend stores as JSON `"true"`/`"false"` (with quotes from json.Marshal). Check uses `string(cfg.Value) == \`"false"\``.
 - **LLM tag compliance**: Even with explicit "only choose from this list" prompts, Claude Haiku generates off-registry tags ~15% of the time. The `ResolveTag()` function handles case-insensitive matching and parenthetical stripping. Code-level validation filters these out to achieve 100% compliance.
 - **Keyword fallback for minimum tags**: After LLM tag validation, if fewer than 3 tags remain, auto-supplement from universal tags by keyword matching against article title/summary. This raised in-range from 89% to 96%.
-- **Config env expansion**: `config.yaml` uses `${ANTHROPIC_API_KEY}` syntax. Config loader now calls `os.ExpandEnv()` automatically. CLI tools no longer need manual expansion.
+- **API keys are DB-managed**: `config.yaml` no longer contains API key fields. Keys are stored in DB `configs` table and resolved at runtime via `KeyProvider` with env var fallback. No `os.ExpandEnv()` needed.
 - **Reuse/orphan metrics require scale**: With only 27 articles, tag reuse metrics are inherently low. These targets (>80% reuse, <15% orphan) are meaningful only at 50+ articles.
 - **Bulk tagging**: Use `POST /api/tags/bulk-tag?force=true` endpoint or `cmd/bulk-tag --force` CLI. API endpoint runs in background, CLI is synchronous.
 - **Tag auto-creation disabled**: The `handleNewTagSuggestion()` was causing DB pollution (196 auto-created tags). Now disabled - LLM suggestions are logged but not auto-created.
@@ -360,7 +362,7 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 
 - **Shared config path resolution**: All CLI tools (eval-tagger, bench-tagger, seed-articles, bulk-tag) should use `config.FindConfigFile()` and `config.LoadTagsFromConfigDir()` instead of duplicating path-search logic. This eliminated ~50 lines of duplicated code across 3 files.
 - **Sensitive vs non-sensitive config separation**: Only `backend/config/config.yaml` contains secrets (API keys, DB password). The other 4 YAML files (models, routing, prompts, tags) are non-sensitive and safe for Claude Code to read. `.claudeignore` and `settings.local.json` deny rules block only `config.yaml`.
-- **Config env expansion is centralized**: `config.Load()` calls `os.ExpandEnv()` on API keys (lines 110-111 of config.go). CLI tools should NOT duplicate this — `bulk-tag` had redundant expansion that was removed.
+- **Config is secret-free**: `config.yaml` contains no API keys or secrets. All sensitive keys are in DB `configs` table, managed via admin UI. CLI tools use `KeyProvider` (DB-backed) just like the server.
 - **Hardcoded DSN is a code smell**: `seed-articles` had a hardcoded DB connection string. Always use `config.Load()` + `database.Connect()` — it respects config file values and env var expansion.
 
 ## Plan Completion Protocol
