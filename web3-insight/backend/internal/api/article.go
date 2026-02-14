@@ -387,36 +387,6 @@ func (h *ArticleHandler) ToggleArchive(c *gin.Context) {
 	c.JSON(http.StatusOK, article)
 }
 
-// RegenerateArticle godoc
-// @Summary Regenerate article content
-// @Description Trigger AI regeneration of article content
-// @Tags articles
-// @Accept json
-// @Produce json
-// @Param id path string true "Article ID"
-// @Success 202 {object} map[string]string
-// @Router /api/articles/{id}/regenerate [post]
-func (h *ArticleHandler) Regenerate(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-
-	_, err = h.repo.GetByID(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "article not found"})
-		return
-	}
-
-	// TODO: Queue regeneration task with Asynq
-	// For now, return accepted status
-	c.JSON(http.StatusAccepted, gin.H{
-		"message":    "regeneration queued",
-		"article_id": id,
-	})
-}
-
 type UpdateTagsRequest struct {
 	Tags []string `json:"tags"`
 }

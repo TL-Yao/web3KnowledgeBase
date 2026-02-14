@@ -23,6 +23,7 @@ type Server struct {
 	chatHandler        *ChatHandler
 	modelConfigHandler *ModelConfigHandler
 	apiKeyHandler      *ApiKeyHandler
+	tagHandler         *TagHandler
 }
 
 func NewServer(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyProvider) *Server {
@@ -43,6 +44,10 @@ func NewServer(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyProvider
 	articleUpdater := service.NewArticleUpdater(llmRouter)
 	cliUpdater := service.NewCLIArticleUpdater()
 
+	// Initialize tagger (shared across requests)
+	tagRepo := repository.NewTagRepository(db)
+	tagger := service.NewTagger(llmRouter, tagRepo, articleRepo, configRepo)
+
 	return &Server{
 		config:             cfg,
 		db:                 db,
@@ -55,23 +60,8 @@ func NewServer(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyProvider
 		chatHandler:        NewChatHandler(chatService),
 		modelConfigHandler: NewModelConfigHandler(configRepo, cfg.Models, cfg.Routing),
 		apiKeyHandler:      NewApiKeyHandler(configRepo, keyProvider),
+		tagHandler:         NewTagHandler(db, tagger),
 	}
-}
-
-func NewRouter(cfg *config.Config) *gin.Engine {
-	router := gin.Default()
-
-	// CORS middleware
-	router.Use(corsMiddleware())
-
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-		})
-	})
-
-	return router
 }
 
 func NewRouterWithDB(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyProvider) *gin.Engine {
@@ -109,7 +99,6 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyPr
 			articles.POST("/:id/apply-update", server.articleHandler.ApplyUpdate)
 			articles.GET("/:id/versions", server.articleHandler.ListVersions)
 			articles.POST("/:id/versions/:versionId/rollback", server.articleHandler.Rollback)
-			articles.POST("/:id/regenerate", server.articleHandler.Regenerate)
 		}
 
 		// Categories
@@ -223,19 +212,18 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyPr
 		}
 
 		// Tags
-		tagHandler := NewTagHandler(db, &cfg.LLM, server.keyProvider)
 		tags := api.Group("/tags")
 		{
-			tags.GET("", tagHandler.List)
-			tags.POST("", tagHandler.Create)
-			tags.GET("/search", tagHandler.Search)
-			tags.GET("/in-use", tagHandler.GetInUse)
-			tags.GET("/stats", tagHandler.GetStats)
-			tags.PUT("/:id", tagHandler.Update)
-			tags.DELETE("/:id", tagHandler.Delete)
-			tags.PUT("/:id/status", tagHandler.UpdateStatus)
-			tags.POST("/:id/approve", tagHandler.ApprovePending)
-			tags.POST("/bulk-tag", tagHandler.BulkTag)
+			tags.GET("", server.tagHandler.List)
+			tags.POST("", server.tagHandler.Create)
+			tags.GET("/search", server.tagHandler.Search)
+			tags.GET("/in-use", server.tagHandler.GetInUse)
+			tags.GET("/stats", server.tagHandler.GetStats)
+			tags.PUT("/:id", server.tagHandler.Update)
+			tags.DELETE("/:id", server.tagHandler.Delete)
+			tags.PUT("/:id/status", server.tagHandler.UpdateStatus)
+			tags.POST("/:id/approve", server.tagHandler.ApprovePending)
+			tags.POST("/bulk-tag", server.tagHandler.BulkTag)
 		}
 
 		// Knowledge Base Update
