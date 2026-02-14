@@ -49,6 +49,7 @@ export function ArticleEditor({
       }),
       Link.configure({
         openOnClick: false,
+        protocols: ["http", "https", "mailto"],
         HTMLAttributes: { class: "text-primary underline" },
       }),
       Table.configure({ resizable: false }),
@@ -115,7 +116,7 @@ export function ArticleEditor({
       {/* Editor */}
       <div className="tiptap-editor border rounded-md overflow-hidden">
         <EditorToolbar editor={editor} />
-        <div className="prose">
+        <div className="prose prose-neutral max-w-none dark:prose-invert">
           <EditorContent editor={editor} />
         </div>
       </div>
