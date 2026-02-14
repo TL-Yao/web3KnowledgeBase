@@ -17,10 +17,11 @@ type Config struct {
 	Search   SearchConfig   `mapstructure:"search"`
 
 	// Model registry and routing configs (loaded separately from YAML files)
-	Models  *ModelsConfig
-	Routing *RoutingConfig
-	Prompts *PromptsConfig
-	Tags    *TagsConfig
+	Models   *ModelsConfig
+	Routing  *RoutingConfig
+	Prompts  *PromptsConfig
+	Tags     *TagsConfig
+	Research *ResearchConfig
 
 	// Warnings collected during configuration loading
 	Warnings []string
@@ -184,6 +185,16 @@ func LoadAll() (*Config, error) {
 			return nil, fmt.Errorf("failed to load tags.yaml: %w", err)
 		}
 		cfg.Tags = tags
+	}
+
+	// Find and load research.yaml (optional — research feature disabled if not found)
+	researchPath, err := FindConfigFile("research.yaml")
+	if err == nil {
+		research, err := LoadResearch(researchPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load research.yaml: %w", err)
+		}
+		cfg.Research = research
 	}
 
 	// Validate task models against model registry and store warnings

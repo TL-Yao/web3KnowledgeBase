@@ -1,0 +1,115 @@
+# Research domain templates
+# Each domain provides context and search strategy guidance for the research agent
+
+domains:
+  - id: "auto"
+    name: "自动识别"
+    nameEn: "Auto-Detect"
+    description: "根据问题自动判断最合适的领域"
+    icon: "sparkles"
+    sort_order: 0
+    # No system_context — the research agent auto-detects
+
+  - id: "tech-engineering"
+    name: "科技/工程"
+    nameEn: "Tech & Engineering"
+    description: "软件开发、AI/ML、硬件、区块链等技术主题"
+    icon: "cpu"
+    sort_order: 1
+    system_context: |
+      You are researching a technology/engineering topic. Focus on:
+      - Technical accuracy and implementation details
+      - Architecture, design trade-offs, performance characteristics
+      - Comparison with alternatives and prior art
+      - Code examples or technical specifications where relevant
+      - Current adoption and ecosystem maturity
+
+  - id: "finance-markets"
+    name: "金融/市场"
+    nameEn: "Finance & Markets"
+    description: "金融市场、投资、经济政策、加密货币等"
+    icon: "trending-up"
+    sort_order: 2
+    system_context: |
+      You are researching a finance/markets topic. Focus on:
+      - Data-driven analysis with specific numbers and metrics
+      - Historical context and trend analysis
+      - Risk factors and counterarguments
+      - Regulatory environment and compliance considerations
+      - Impact on different market participants
+
+  - id: "industry-business"
+    name: "产业/商业"
+    nameEn: "Industry & Business"
+    description: "行业分析、商业模式、公司研究、市场竞争"
+    icon: "building-2"
+    sort_order: 3
+    system_context: |
+      You are researching an industry/business topic. Focus on:
+      - Market size, growth trajectory, key players
+      - Business model analysis and competitive dynamics
+      - Supply chain and operational considerations
+      - Strategic implications and future outlook
+
+  - id: "news-current"
+    name: "新闻/时事"
+    nameEn: "News & Current Events"
+    description: "最新新闻、事件分析、社会议题"
+    icon: "newspaper"
+    sort_order: 4
+    system_context: |
+      You are researching a current event or news topic. Focus on:
+      - Factual, chronological account of events
+      - Multiple perspectives and stakeholder viewpoints
+      - Verified sources and cross-referenced information
+      - Historical context and broader implications
+      - CRITICAL: Only state confirmed facts. Clearly label speculation or analysis.
+
+  - id: "product-analysis"
+    name: "产品分析"
+    nameEn: "Product Analysis"
+    description: "产品评测、功能对比、使用体验、技术架构"
+    icon: "package"
+    sort_order: 5
+    system_context: |
+      You are analyzing a product or service. Focus on:
+      - Feature set and capabilities assessment
+      - User experience and practical usability
+      - Technical architecture and design decisions
+      - Competitive comparison with alternatives
+      - Pricing, availability, and target audience
+
+  - id: "science-academic"
+    name: "科学/学术"
+    nameEn: "Science & Academic"
+    description: "科学研究、学术论文、理论分析"
+    icon: "flask-conical"
+    sort_order: 6
+    system_context: |
+      You are researching a scientific/academic topic. Focus on:
+      - Peer-reviewed sources and established research
+      - Methodology and evidence quality assessment
+      - Current scientific consensus and debates
+      - Practical applications and implications
+      - Limitations and areas of uncertainty
+
+  - id: "general"
+    name: "通用知识"
+    nameEn: "General Knowledge"
+    description: "不属于以上分类的通用主题"
+    icon: "book-open"
+    sort_order: 7
+    system_context: |
+      You are researching a general knowledge topic. Focus on:
+      - Clear, comprehensive explanation from fundamentals
+      - Multiple credible sources for key claims
+      - Practical relevance and real-world applications
+      - Common misconceptions to address
+
+# Research generation settings
+generation:
+  default_model: "opus"
+  timeout_minutes: 30
+  plan_timeout_minutes: 3
+  min_report_length: 1000
+  max_report_length: 50000
