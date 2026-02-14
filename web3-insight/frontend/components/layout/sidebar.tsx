@@ -3,8 +3,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { FileText, Newspaper, Search, Settings } from 'lucide-react'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { CategoryTree } from '@/components/knowledge/category-tree'
 
 interface SidebarProps {
   className?: string
@@ -45,16 +43,6 @@ export function Sidebar({ className }: SidebarProps) {
           后台管理
         </Link>
       </nav>
-
-      {/* Category Tree */}
-      <div className="flex-1 overflow-hidden">
-        <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase">
-          分类
-        </div>
-        <ScrollArea className="h-full px-2">
-          <CategoryTree />
-        </ScrollArea>
-      </div>
 
       {/* Recent */}
       <div className="border-t border-border p-4">

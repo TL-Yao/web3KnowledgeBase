@@ -523,13 +523,6 @@ export interface TaskSelection {
   fallback: string
 }
 
-export interface ModelSelectionResult {
-  modelId: string
-  isFallback: boolean
-  primaryFailed: boolean
-  reason?: string
-}
-
 // Model Configuration API
 export const modelConfigAPI = {
   // Get available models from registry
@@ -806,15 +799,6 @@ export interface ApiKeyProvider {
 
 export interface ApiKeyListResponse {
   providers: ApiKeyProvider[]
-}
-
-export interface ApiKeySaveRequest {
-  keys: Record<string, string>
-}
-
-export interface ApiKeyTestRequest {
-  provider: string
-  key?: string
 }
 
 export interface ApiKeyTestResponse {

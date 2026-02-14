@@ -17,13 +17,3 @@ export function useFeatureFlag(feature: FeatureFlag) {
     isDisabled: !isEnabled,
   }
 }
-
-/**
- * Hook 用于获取多个功能状态
- */
-export function useFeatureFlags<T extends FeatureFlag[]>(features: T) {
-  return features.reduce((acc, feature) => {
-    (acc as Record<FeatureFlag, boolean>)[feature] = DEV_SHOW_ALL_FEATURES || featureFlags[feature]
-    return acc
-  }, {} as Record<T[number], boolean>)
-}

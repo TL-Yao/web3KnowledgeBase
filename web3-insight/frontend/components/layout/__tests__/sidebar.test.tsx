@@ -10,18 +10,6 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-// Mock the CategoryTree component since it has complex dependencies
-vi.mock('@/components/knowledge/category-tree', () => ({
-  CategoryTree: () => <div data-testid="category-tree">Category Tree Mock</div>,
-}))
-
-// Mock the ScrollArea component
-vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className} data-testid="scroll-area">{children}</div>
-  ),
-}))
-
 describe('Sidebar', () => {
   describe('rendering', () => {
     it('renders sidebar element with correct structure', () => {
@@ -95,26 +83,6 @@ describe('Sidebar', () => {
 
       const settingsIcon = document.querySelector('svg.lucide-settings')
       expect(settingsIcon).toBeInTheDocument()
-    })
-  })
-
-  describe('category section', () => {
-    it('renders category section header', () => {
-      render(<Sidebar />)
-
-      expect(screen.getByText('分类')).toBeInTheDocument()
-    })
-
-    it('renders CategoryTree component', () => {
-      render(<Sidebar />)
-
-      expect(screen.getByTestId('category-tree')).toBeInTheDocument()
-    })
-
-    it('renders ScrollArea for category tree', () => {
-      render(<Sidebar />)
-
-      expect(screen.getByTestId('scroll-area')).toBeInTheDocument()
     })
   })
 
