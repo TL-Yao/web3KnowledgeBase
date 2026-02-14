@@ -4,7 +4,6 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useFeatureFlag } from '@/hooks/use-feature-flag'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -26,7 +25,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { TagEditor } from '@/components/knowledge/tag-editor'
 import { VersionHistory } from '@/components/knowledge/version-history'
-import { Edit, RefreshCw, MoreHorizontal, ExternalLink, Clock, Archive, ArchiveRestore, Trash2 } from 'lucide-react'
+import { Edit, MoreHorizontal, ExternalLink, Clock, Archive, ArchiveRestore, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
@@ -48,12 +47,12 @@ function stripLeadingTitle(content: string, title: string): string {
 
 interface ArticleViewProps {
   article: Article
+  onEdit?: () => void
+  canEdit?: boolean
 }
 
-export function ArticleView({ article }: ArticleViewProps) {
-  const [isEditing, setIsEditing] = useState(false)
+export function ArticleView({ article, onEdit, canEdit = true }: ArticleViewProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const { isDisabled: regenerateDisabled } = useFeatureFlag('articleRegenerate')
   const router = useRouter()
   const queryClient = useQueryClient()
 
@@ -120,16 +119,9 @@ export function ArticleView({ article }: ArticleViewProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsEditing(true)}>
+              <DropdownMenuItem onClick={onEdit} disabled={!canEdit}>
                 <Edit className="w-4 h-4 mr-2" />
                 编辑
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={regenerateDisabled}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                重新生成
-                {regenerateDisabled && (
-                  <span className="ml-auto text-xs text-muted-foreground">开发中</span>
-                )}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => archiveMutation.mutate()}

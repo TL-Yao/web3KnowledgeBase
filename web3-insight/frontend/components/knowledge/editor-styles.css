@@ -1,0 +1,35 @@
+@reference "../../app/globals.css";
+
+.tiptap-editor .ProseMirror {
+  @apply max-w-none;
+  @apply min-h-[400px] outline-none px-6 py-4;
+}
+
+.tiptap-editor .ProseMirror pre {
+  @apply bg-muted rounded-md p-4 overflow-x-auto;
+}
+
+.tiptap-editor .ProseMirror pre code {
+  @apply bg-transparent p-0;
+}
+
+.tiptap-editor .ProseMirror table {
+  @apply border-collapse w-full;
+}
+
+.tiptap-editor .ProseMirror td,
+.tiptap-editor .ProseMirror th {
+  @apply border border-border px-3 py-2 text-left;
+}
+
+.tiptap-editor .ProseMirror th {
+  @apply bg-muted font-semibold;
+}
+
+.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+  @apply text-muted-foreground;
+  content: "开始编写文章内容...";
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

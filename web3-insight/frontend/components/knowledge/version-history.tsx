@@ -28,6 +28,7 @@ function getEditedByLabel(editedBy: string): string {
   switch (editedBy) {
     case 'chat_refinement': return 'AI对话更新'
     case 'rollback': return '版本回滚'
+    case 'manual_edit': return '手动编辑'
     default: return editedBy
   }
 }

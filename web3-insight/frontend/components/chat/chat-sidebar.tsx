@@ -23,6 +23,7 @@ interface ChatSidebarProps {
   onToggle: () => void
   onGenerateUpdate?: (messages: Message[], model: ChatModel) => void
   isGeneratingUpdate?: boolean
+  isEditing?: boolean
   width: number
   isDragging?: boolean
   clearTrigger?: number
@@ -35,6 +36,7 @@ export function ChatSidebar({
   onToggle,
   onGenerateUpdate,
   isGeneratingUpdate,
+  isEditing,
   width,
   isDragging,
   clearTrigger,
@@ -173,7 +175,7 @@ export function ChatSidebar({
                 size="sm"
                 className="text-xs rounded-r-none"
                 onClick={() => onGenerateUpdate(messages, 'opus')}
-                disabled={isLoading || isGeneratingUpdate}
+                disabled={isLoading || isGeneratingUpdate || isEditing}
               >
                 {isGeneratingUpdate ? (
                   <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -187,7 +189,7 @@ export function ChatSidebar({
                   variant="default"
                   size="sm"
                   className="px-1.5 rounded-l-none border-l border-primary-foreground/20"
-                  disabled={isLoading || isGeneratingUpdate}
+                  disabled={isLoading || isGeneratingUpdate || isEditing}
                 >
                   <ChevronDown className="w-3 h-3" />
                 </Button>

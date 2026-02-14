@@ -193,6 +193,12 @@ export const articleAPI = {
     fetchAPI<{ article: Article; message: string }>(`/api/articles/${id}/versions/${versionId}/rollback`, {
       method: 'POST',
     }),
+
+  saveEdit: (id: string, data: { title?: string; content: string }) =>
+    fetchAPI<Article>(`/api/articles/${id}/save-edit`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }
 
 // Categories API

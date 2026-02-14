@@ -37,8 +37,6 @@ export const featureFlags = {
   rssSync: false,
   /** 网页爬虫功能 */
   webCrawler: false,
-  /** 文章重新生成（需要 Asynq 集成） */
-  articleRegenerate: false,
   /** 模型路由配置 UI */
   modelRoutingConfig: false,
   /** 提示词模板管理 */

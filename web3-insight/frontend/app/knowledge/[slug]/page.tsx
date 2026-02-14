@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MainLayout } from '@/components/layout/main-layout'
 import { ArticleView } from '@/components/knowledge/article-view'
+import { ArticleEditor } from '@/components/knowledge/article-editor'
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { SidebarToggle } from '@/components/chat/sidebar-toggle'
 import { ResizeHandle } from '@/components/ui/resize-handle'
@@ -36,6 +37,8 @@ export default function ArticlePage() {
   const slug = params.slug as string
   const queryClient = useQueryClient()
 
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [clearTrigger, setClearTrigger] = useState(0)
   const lastMessagesRef = useRef<Message[]>([])
@@ -327,12 +330,40 @@ export default function ArticlePage() {
     setUpdateState({ isGenerating: false, isReviewOpen: false, updatedContent: null, changeSummary: null, model: null })
   }
 
+  const handleSaveEdit = async (title: string, content: string) => {
+    setIsSavingEdit(true)
+    try {
+      await articleAPI.saveEdit(displayArticle!.id, { title, content })
+      toast.success('文章已保存')
+      setIsEditing(false)
+      queryClient.invalidateQueries({ queryKey: ['article', slug] })
+      queryClient.invalidateQueries({ queryKey: ['article-versions', displayArticle!.id] })
+    } catch {
+      toast.error('保存失败')
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+  }
+
+  const canEdit = !updateState.isGenerating && !updateState.isReviewOpen
+
   return (
     <MainLayout>
       <div className="flex h-full relative">
         {/* Article content or UpdateReviewPanel */}
         <div className="flex-1 min-w-0 overflow-auto relative">
-          {updateState.isReviewOpen && updateState.updatedContent ? (
+          {isEditing ? (
+            <ArticleEditor
+              article={displayArticle}
+              onSave={handleSaveEdit}
+              onCancel={handleCancelEdit}
+              isSaving={isSavingEdit}
+            />
+          ) : updateState.isReviewOpen && updateState.updatedContent ? (
             <UpdateReviewPanel
               variant="inline"
               articleTitle={displayArticle.title}
@@ -347,7 +378,11 @@ export default function ArticlePage() {
               isRegenerating={updateState.isGenerating}
             />
           ) : (
-            <ArticleView article={displayArticle} />
+            <ArticleView
+              article={displayArticle}
+              onEdit={() => setIsEditing(true)}
+              canEdit={canEdit}
+            />
           )}
           {updateState.isGenerating && <UpdateProgressOverlay onCancel={handleCancelGeneration} />}
         </div>
@@ -370,6 +405,7 @@ export default function ArticlePage() {
           onToggle={toggleSidebar}
           onGenerateUpdate={handleGenerateUpdate}
           isGeneratingUpdate={updateState.isGenerating}
+          isEditing={isEditing}
           width={sidebarWidth}
           isDragging={isDragging}
           clearTrigger={clearTrigger}
