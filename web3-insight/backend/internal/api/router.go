@@ -23,7 +23,9 @@ type Server struct {
 	chatHandler        *ChatHandler
 	modelConfigHandler *ModelConfigHandler
 	apiKeyHandler      *ApiKeyHandler
-	tagHandler         *TagHandler
+	tagHandler          *TagHandler
+	researchHandler     *ResearchHandler
+	researchChatHandler *ResearchChatHandler
 }
 
 func NewServer(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyProvider) *Server {
@@ -48,19 +50,29 @@ func NewServer(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyProvider
 	tagRepo := repository.NewTagRepository(db)
 	tagger := service.NewTagger(llmRouter, tagRepo, articleRepo, configRepo)
 
+	// Initialize research services
+	sessionRepo := repository.NewResearchSessionRepository(db)
+	researchService := service.NewResearchService(sessionRepo, articleRepo, cfg.Research)
+	researchChatService := service.NewResearchChatService(db, &cfg.LLM, claudeKeyFunc, openaiKeyFunc, cfg.Research)
+
+	// Cleanup orphaned research sessions from previous runs
+	researchService.CleanupOrphanedSessions()
+
 	return &Server{
-		config:             cfg,
-		db:                 db,
-		keyProvider:        keyProvider,
-		articleHandler:     NewArticleHandler(articleRepo, db, articleUpdater, cliUpdater),
-		categoryHandler:    NewCategoryHandler(categoryRepo),
-		configHandler:      NewConfigHandler(configRepo),
-		taskHandler:        NewTaskHandler(taskRepo),
-		searchHandler:      NewSearchHandlerWithSemantic(articleRepo, categoryRepo, semanticSearchService),
-		chatHandler:        NewChatHandler(chatService),
-		modelConfigHandler: NewModelConfigHandler(configRepo, cfg.Models, cfg.Routing),
-		apiKeyHandler:      NewApiKeyHandler(configRepo, keyProvider),
-		tagHandler:         NewTagHandler(db, tagger),
+		config:              cfg,
+		db:                  db,
+		keyProvider:         keyProvider,
+		articleHandler:      NewArticleHandler(articleRepo, db, articleUpdater, cliUpdater),
+		categoryHandler:     NewCategoryHandler(categoryRepo),
+		configHandler:       NewConfigHandler(configRepo),
+		taskHandler:         NewTaskHandler(taskRepo),
+		searchHandler:       NewSearchHandlerWithSemantic(articleRepo, categoryRepo, semanticSearchService),
+		chatHandler:         NewChatHandler(chatService),
+		modelConfigHandler:  NewModelConfigHandler(configRepo, cfg.Models, cfg.Routing),
+		apiKeyHandler:       NewApiKeyHandler(configRepo, keyProvider),
+		tagHandler:          NewTagHandler(db, tagger),
+		researchHandler:     NewResearchHandler(researchService, sessionRepo, articleRepo, cfg.Research),
+		researchChatHandler: NewResearchChatHandler(researchChatService),
 	}
 }
 
@@ -139,12 +151,21 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyPr
 			tasks.POST("/:id/cancel", server.taskHandler.Cancel)
 		}
 
-		// Instant research (placeholder for now)
-		api.POST("/research", func(c *gin.Context) {
-			c.JSON(http.StatusAccepted, gin.H{
-				"message": "research endpoint - to be implemented with LLM integration",
-			})
-		})
+		// Research
+		research := api.Group("/research")
+		{
+			research.GET("/domains", server.researchHandler.GetDomains)
+			research.POST("/sessions", server.researchHandler.StartSession)
+			research.GET("/sessions", server.researchHandler.ListSessions)
+			research.GET("/sessions/:id", server.researchHandler.GetSession)
+			research.GET("/sessions/:id/status", server.researchHandler.GetSessionStatus)
+			research.POST("/sessions/:id/approve-plan", server.researchHandler.ApprovePlan)
+			research.POST("/sessions/:id/cancel", server.researchHandler.CancelSession)
+			research.POST("/sessions/:id/pin", server.researchHandler.PinFinding)
+			research.DELETE("/sessions/:id/pin/:index", server.researchHandler.RemovePin)
+			research.POST("/sessions/:id/integrate", server.researchHandler.IntegrateFindings)
+			research.DELETE("/sessions/:id", server.researchHandler.DeleteSession)
+		}
 
 		// Data Sources
 		dsHandler := NewDataSourceHandler(db)
@@ -258,6 +279,7 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyPr
 
 	// WebSocket for chat
 	router.GET("/ws/chat", server.chatHandler.HandleWebSocket)
+	router.GET("/ws/research-chat", server.researchChatHandler.HandleWebSocket)
 
 	return router
 }
