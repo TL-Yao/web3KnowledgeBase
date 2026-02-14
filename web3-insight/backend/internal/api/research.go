@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -270,7 +271,9 @@ func (h *ResearchHandler) DeleteSession(c *gin.Context) {
 
 	// Delete linked article if exists
 	if session.ArticleID != nil {
-		h.articleRepo.Delete(*session.ArticleID)
+		if err := h.articleRepo.Delete(*session.ArticleID); err != nil {
+			log.Printf("Warning: failed to delete linked article %s for session %s: %v", *session.ArticleID, id, err)
+		}
 	}
 
 	if err := h.sessionRepo.Delete(id); err != nil {

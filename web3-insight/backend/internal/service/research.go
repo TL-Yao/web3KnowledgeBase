@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -59,6 +60,7 @@ type ResearchService struct {
 	sessionRepo    *repository.ResearchSessionRepository
 	articleRepo    *repository.ArticleRepository
 	researchConfig *config.ResearchConfig
+	cancelFuncs    sync.Map // map[uuid.UUID]context.CancelFunc
 }
 
 func NewResearchService(
@@ -108,8 +110,13 @@ func (s *ResearchService) StartSession(ctx context.Context, req StartResearchReq
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 
-	// Run generation pipeline in background goroutine with fresh context
-	go s.runPlanGeneration(context.Background(), session.ID, req)
+	// Run generation pipeline in background goroutine with cancellable context
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancelFuncs.Store(session.ID, cancel)
+	go func() {
+		defer s.cancelFuncs.Delete(session.ID)
+		s.runPlanGeneration(ctx, session.ID, req)
+	}()
 
 	return session, nil
 }
@@ -134,8 +141,13 @@ func (s *ResearchService) ApprovePlan(ctx context.Context, sessionID uuid.UUID, 
 		return fmt.Errorf("failed to update session: %w", err)
 	}
 
-	// Continue to research phase in background
-	go s.runResearchGeneration(context.Background(), session.ID)
+	// Continue to research phase in background with cancellable context
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancelFuncs.Store(sessionID, cancel)
+	go func() {
+		defer s.cancelFuncs.Delete(sessionID)
+		s.runResearchGeneration(ctx, sessionID)
+	}()
 
 	return nil
 }
@@ -153,6 +165,12 @@ func (s *ResearchService) CancelSession(ctx context.Context, sessionID uuid.UUID
 	}
 	if !activeStatuses[session.Status] {
 		return fmt.Errorf("session cannot be cancelled (status: %s)", session.Status)
+	}
+
+	// Cancel the running goroutine if active
+	if cancelFn, ok := s.cancelFuncs.LoadAndDelete(sessionID); ok {
+		cancelFn.(context.CancelFunc)()
+		log.Printf("Cancelled running goroutine for session %s", sessionID)
 	}
 
 	return s.sessionRepo.UpdateStatus(sessionID, "failed", "", "Cancelled by user")
@@ -237,7 +255,12 @@ func (s *ResearchService) IntegrateFindings(ctx context.Context, sessionID uuid.
 		return fmt.Errorf("failed to update status: %w", err)
 	}
 
-	go s.runIntegration(context.Background(), sessionID)
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancelFuncs.Store(sessionID, cancel)
+	go func() {
+		defer s.cancelFuncs.Delete(sessionID)
+		s.runIntegration(ctx, sessionID)
+	}()
 
 	return nil
 }
@@ -657,7 +680,7 @@ The user has pinned these additional findings from chat. Integrate them naturall
 {{end}}
 {{end}}
 ## Critical Instructions
-1. Use WebFetch and web search to gather FACTUAL, up-to-date information
+1. Use web search and reading tools to gather FACTUAL, up-to-date information
 2. EVERY claim must be backed by a source. Use inline citations [1], [2], etc.
 3. Be comprehensive: minimum 1500 words, cover all sections in the plan
 4. Language: Write in Chinese (中文). Use "English (中文)" for technical terms
