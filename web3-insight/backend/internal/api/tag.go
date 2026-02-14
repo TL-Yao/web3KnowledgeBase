@@ -10,8 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/user/web3-insight/internal/config"
-	"github.com/user/web3-insight/internal/llm"
 	"github.com/user/web3-insight/internal/model"
 	"github.com/user/web3-insight/internal/repository"
 	"github.com/user/web3-insight/internal/service"
@@ -22,17 +20,15 @@ type TagHandler struct {
 	db          *gorm.DB
 	tagRepo     *repository.TagRepository
 	articleRepo *repository.ArticleRepository
-	llmConfig   *config.LLMConfig
-	keyProvider *service.KeyProvider
+	tagger      *service.Tagger
 }
 
-func NewTagHandler(db *gorm.DB, llmCfg *config.LLMConfig, kp *service.KeyProvider) *TagHandler {
+func NewTagHandler(db *gorm.DB, tagger *service.Tagger) *TagHandler {
 	return &TagHandler{
 		db:          db,
 		tagRepo:     repository.NewTagRepository(db),
 		articleRepo: repository.NewArticleRepository(db),
-		llmConfig:   llmCfg,
-		keyProvider: kp,
+		tagger:      tagger,
 	}
 }
 
@@ -349,13 +345,6 @@ func (h *TagHandler) BulkTag(c *gin.Context) {
 		return
 	}
 
-	// Create tagger
-	claudeKeyFunc := func() string { return h.keyProvider.GetKey("anthropic") }
-	openaiKeyFunc := func() string { return h.keyProvider.GetKey("openai") }
-	llmRouter := llm.NewRouterFromConfig(h.llmConfig, claudeKeyFunc, openaiKeyFunc)
-	configRepo := repository.NewConfigRepository(h.db)
-	tagger := service.NewTagger(llmRouter, h.tagRepo, h.articleRepo, configRepo)
-
 	// Tag in background, return immediately
 	total := len(articles)
 	c.JSON(http.StatusAccepted, gin.H{
@@ -367,7 +356,7 @@ func (h *TagHandler) BulkTag(c *gin.Context) {
 		ctx := context.Background()
 		success, failed := 0, 0
 		for i, article := range articles {
-			if err := tagger.TagArticle(ctx, &article); err != nil {
+			if err := h.tagger.TagArticle(ctx, &article); err != nil {
 				log.Printf("[bulk-tag %d/%d] FAILED '%s': %v", i+1, total, article.Title, err)
 				failed++
 			} else {
