@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -58,6 +59,10 @@ func (h *ResearchHandler) StartSession(c *gin.Context) {
 	if err != nil {
 		if err.Error() == "concurrent session limit reached (3)" {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
+			return
+		}
+		if strings.HasPrefix(err.Error(), "invalid domain:") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
