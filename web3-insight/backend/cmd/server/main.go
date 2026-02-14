@@ -55,14 +55,6 @@ func main() {
 	configRepo := repository.NewConfigRepository(db)
 	keyProvider := service.NewKeyProvider(configRepo)
 
-	// Seed API keys from env vars on first run (does not overwrite existing DB values)
-	service.SeedAPIKeysFromEnv(configRepo, map[string]string{
-		"anthropic": "ANTHROPIC_API_KEY",
-		"openai":    "OPENAI_API_KEY",
-		"tavily":    "TAVILY_API_KEY",
-		"serpapi":   "SERPAPI_API_KEY",
-	})
-
 	router := api.NewRouterWithDB(cfg, db, keyProvider)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)

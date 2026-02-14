@@ -2,8 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -11,7 +9,16 @@ import (
 	"github.com/user/web3-insight/internal/repository"
 )
 
+// providerEnvVars maps provider names to their corresponding environment variable names.
+var providerEnvVars = map[string]string{
+	"anthropic": "ANTHROPIC_API_KEY",
+	"openai":    "OPENAI_API_KEY",
+	"tavily":    "TAVILY_API_KEY",
+	"serpapi":   "SERPAPI_API_KEY",
+}
+
 // KeyProvider resolves API keys at runtime from the database with caching.
+// Falls back to environment variables when no DB value is set.
 type KeyProvider struct {
 	configRepo *repository.ConfigRepository
 	cache      map[string]cachedKey
@@ -47,20 +54,27 @@ func (kp *KeyProvider) GetKey(provider string) string {
 	// Cache miss or expired — fetch from DB
 	dbKey := "api_key." + provider
 	cfg, err := kp.configRepo.Get(dbKey)
-	if err != nil {
-		return "" // not configured
+	if err == nil {
+		var value string
+		if err := json.Unmarshal(cfg.Value, &value); err == nil && value != "" {
+			kp.mu.Lock()
+			kp.cache[provider] = cachedKey{value: value, fetchedAt: time.Now()}
+			kp.mu.Unlock()
+			return value
+		}
 	}
 
-	var value string
-	if err := json.Unmarshal(cfg.Value, &value); err != nil {
-		return ""
+	// Fallback to environment variable (not written to DB)
+	if envVar, ok := providerEnvVars[provider]; ok {
+		if value := os.Getenv(envVar); value != "" {
+			kp.mu.Lock()
+			kp.cache[provider] = cachedKey{value: value, fetchedAt: time.Now()}
+			kp.mu.Unlock()
+			return value
+		}
 	}
 
-	kp.mu.Lock()
-	kp.cache[provider] = cachedKey{value: value, fetchedAt: time.Now()}
-	kp.mu.Unlock()
-
-	return value
+	return ""
 }
 
 // InvalidateCache forces the next GetKey call to hit the DB.
@@ -70,20 +84,3 @@ func (kp *KeyProvider) InvalidateCache() {
 	kp.mu.Unlock()
 }
 
-// SeedAPIKeysFromEnv writes env var values to DB for providers that have no key stored yet.
-// Does NOT overwrite existing DB values.
-func SeedAPIKeysFromEnv(configRepo *repository.ConfigRepository, envMap map[string]string) {
-	for provider, envVar := range envMap {
-		dbKey := "api_key." + provider
-		if _, err := configRepo.Get(dbKey); err == nil {
-			continue // already has a value in DB
-		}
-		if value := os.Getenv(envVar); value != "" {
-			if err := configRepo.Set(dbKey, value, fmt.Sprintf("API key for %s (seeded from env)", provider)); err != nil {
-				log.Printf("Warning: failed to seed API key for %s: %v", provider, err)
-			} else {
-				log.Printf("Seeded API key for %s from $%s", provider, envVar)
-			}
-		}
-	}
-}
