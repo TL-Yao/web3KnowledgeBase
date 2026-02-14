@@ -620,6 +620,7 @@ func (h *ArticleHandler) ApplyUpdate(c *gin.Context) {
 
 	// Update article content
 	article.Content = req.UpdatedContent
+	article.ContentHTML = "" // Clear stale HTML so markdown renders fresh
 	if err := h.repo.Update(article); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update article"})
 		return
@@ -629,6 +630,59 @@ func (h *ArticleHandler) ApplyUpdate(c *gin.Context) {
 		"article": article,
 		"message": "Article updated successfully",
 	})
+}
+
+type SaveEditRequest struct {
+	Title   string `json:"title"`
+	Content string `json:"content" binding:"required"`
+}
+
+func (h *ArticleHandler) SaveEdit(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid article ID"})
+		return
+	}
+
+	article, err := h.repo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "article not found"})
+		return
+	}
+
+	var req SaveEditRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Determine change summary
+	titleChanged := req.Title != "" && req.Title != article.Title
+	changeSummary := "手动编辑"
+	if titleChanged {
+		changeSummary = "手动编辑标题和内容"
+	}
+
+	// Create version snapshot of current content before modifying
+	_, err = h.repo.CreateVersion(article.ID, article.Content, "manual_edit", changeSummary)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create version snapshot"})
+		return
+	}
+
+	// Update article fields
+	article.Content = req.Content
+	article.ContentHTML = "" // Clear stale HTML so markdown renders fresh
+	if titleChanged {
+		article.Title = req.Title
+	}
+
+	if err := h.repo.Update(article); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update article"})
+		return
+	}
+
+	c.JSON(http.StatusOK, article)
 }
 
 func (h *ArticleHandler) ListVersions(c *gin.Context) {

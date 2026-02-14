@@ -97,6 +97,7 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyPr
 			articles.GET("/:id/update-status", server.articleHandler.GetUpdateStatus)
 			articles.POST("/:id/cancel-update", server.articleHandler.CancelUpdate)
 			articles.POST("/:id/apply-update", server.articleHandler.ApplyUpdate)
+			articles.POST("/:id/save-edit", server.articleHandler.SaveEdit)
 			articles.GET("/:id/versions", server.articleHandler.ListVersions)
 			articles.POST("/:id/versions/:versionId/rollback", server.articleHandler.Rollback)
 		}
