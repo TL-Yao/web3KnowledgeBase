@@ -42,6 +42,7 @@ export function ArticleEditor({
   const initialTitleRef = useRef(article.title)
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         codeBlock: false,
