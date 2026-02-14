@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ModelConfig } from '@/components/admin/model-config'
 import { SourceConfig } from '@/components/admin/source-config'
+import { ApiKeyConfig } from '@/components/admin/api-key-config'
 import { isFeatureEnabled } from '@/config/features'
 import { Badge } from '@/components/ui/badge'
 import { DisabledFeature } from '@/components/ui/disabled-feature'
@@ -13,6 +14,7 @@ export default function ConfigPage() {
       <Tabs defaultValue="models">
         <TabsList>
           <TabsTrigger value="models">模型设置</TabsTrigger>
+          <TabsTrigger value="api-keys">API 密钥</TabsTrigger>
           <TabsTrigger value="sources">数据源</TabsTrigger>
           <TabsTrigger value="crawler" disabled={!isFeatureEnabled('crawlerConfig')}>
             爬虫
@@ -30,6 +32,10 @@ export default function ConfigPage() {
 
         <TabsContent value="models" className="mt-6">
           <ModelConfig />
+        </TabsContent>
+
+        <TabsContent value="api-keys" className="mt-6">
+          <ApiKeyConfig />
         </TabsContent>
 
         <TabsContent value="sources" className="mt-6">

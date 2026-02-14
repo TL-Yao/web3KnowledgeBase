@@ -795,3 +795,48 @@ export const configAPI = {
       body: JSON.stringify({ value, description }),
     }),
 }
+
+// API Key Types
+export interface ApiKeyProvider {
+  id: string
+  name: string
+  configured: boolean
+  masked: string
+}
+
+export interface ApiKeyListResponse {
+  providers: ApiKeyProvider[]
+}
+
+export interface ApiKeySaveRequest {
+  keys: Record<string, string>
+}
+
+export interface ApiKeyTestRequest {
+  provider: string
+  key?: string
+}
+
+export interface ApiKeyTestResponse {
+  provider: string
+  success: boolean
+  message: string
+}
+
+// API Key API
+export const apiKeyAPI = {
+  list: () =>
+    fetchAPI<ApiKeyListResponse>('/api/models/keys'),
+
+  save: (keys: Record<string, string>) =>
+    fetchAPI<ApiKeyListResponse>('/api/models/keys', {
+      method: 'PUT',
+      body: JSON.stringify({ keys }),
+    }),
+
+  test: (provider: string, key?: string) =>
+    fetchAPI<ApiKeyTestResponse>('/api/models/keys/test', {
+      method: 'POST',
+      body: JSON.stringify({ provider, ...(key ? { key } : {}) }),
+    }),
+}
