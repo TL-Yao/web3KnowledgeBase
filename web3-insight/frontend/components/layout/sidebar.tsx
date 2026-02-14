@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { FileText, Newspaper, Search, Settings } from 'lucide-react'
+import { FileText, Newspaper, Telescope, Settings } from 'lucide-react'
 
 interface SidebarProps {
   className?: string
@@ -35,7 +35,7 @@ export function Sidebar({ className }: SidebarProps) {
           新闻
         </Link>
         <Link href="/research" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent/10 text-sm">
-          <Search className="w-4 h-4" />
+          <Telescope className="w-4 h-4" />
           即时研究
         </Link>
         <Link href="/admin" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent/10 text-sm">

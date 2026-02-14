@@ -58,6 +58,7 @@ export interface Article {
   modelUsed?: string
   viewCount?: number
   status?: string
+  articleType?: string // "kb" or "research"
   archived?: boolean
   createdAt: string
   updatedAt: string
@@ -828,5 +829,127 @@ export const apiKeyAPI = {
     fetchAPI<ApiKeyTestResponse>('/api/models/keys/test', {
       method: 'POST',
       body: JSON.stringify({ provider, ...(key ? { key } : {}) }),
+    }),
+}
+
+// Research Types
+export type ResearchSessionStatus =
+  | 'pending'
+  | 'planning'
+  | 'plan_review'
+  | 'researching'
+  | 'writing'
+  | 'completed'
+  | 'failed'
+
+export interface ResearchDomain {
+  id: string
+  name: string
+  description: string
+}
+
+export interface ResearchCitation {
+  title: string
+  url: string
+  snippet?: string
+}
+
+export interface ResearchPinnedFinding {
+  messageContent: string
+  addedAt: string
+}
+
+export interface ResearchSession {
+  id: string
+  question: string
+  domain: string
+  status: ResearchSessionStatus
+  stage?: string
+  stageDetail?: string
+  researchPlan?: string
+  reviewPlan: boolean
+  articleId?: string
+  articleSlug?: string
+  citations?: ResearchCitation[]
+  pinnedFindings?: ResearchPinnedFinding[]
+  error?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ResearchSessionStatusResponse {
+  status: ResearchSessionStatus
+  stage?: string
+  stageDetail?: string
+  researchPlan?: string
+  articleSlug?: string
+  error?: string
+}
+
+export interface ResearchSessionListResponse {
+  sessions: ResearchSession[]
+  total: number
+  page: number
+  limit: number
+}
+
+export interface StartResearchRequest {
+  question: string
+  domain?: string
+  reviewPlan?: boolean
+}
+
+// Research API
+export const researchAPI = {
+  getDomains: () =>
+    fetchAPI<{ domains: ResearchDomain[] }>('/api/research/domains'),
+
+  startSession: (data: StartResearchRequest) =>
+    fetchAPI<{ sessionId: string; status: string }>('/api/research/sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  listSessions: (page: number = 1, limit: number = 20) =>
+    fetchAPI<ResearchSessionListResponse>(
+      `/api/research/sessions?page=${page}&limit=${limit}`
+    ),
+
+  getSession: (id: string) =>
+    fetchAPI<ResearchSession>(`/api/research/sessions/${id}`),
+
+  getSessionStatus: (id: string) =>
+    fetchAPI<ResearchSessionStatusResponse>(`/api/research/sessions/${id}/status`),
+
+  approvePlan: (id: string, editedPlan?: string) =>
+    fetchAPI<{ status: string }>(`/api/research/sessions/${id}/approve-plan`, {
+      method: 'POST',
+      body: JSON.stringify({ approved: true, editedPlan }),
+    }),
+
+  cancelSession: (id: string) =>
+    fetchAPI<{ message: string }>(`/api/research/sessions/${id}/cancel`, {
+      method: 'POST',
+    }),
+
+  pinFinding: (id: string, messageContent: string) =>
+    fetchAPI<ResearchSession>(`/api/research/sessions/${id}/pin`, {
+      method: 'POST',
+      body: JSON.stringify({ messageContent }),
+    }),
+
+  removePin: (id: string, index: number) =>
+    fetchAPI<{ message: string }>(`/api/research/sessions/${id}/pin/${index}`, {
+      method: 'DELETE',
+    }),
+
+  integrateFindings: (id: string) =>
+    fetchAPI<{ message: string }>(`/api/research/sessions/${id}/integrate`, {
+      method: 'POST',
+    }),
+
+  deleteSession: (id: string) =>
+    fetchAPI<{ message: string }>(`/api/research/sessions/${id}`, {
+      method: 'DELETE',
     }),
 }
