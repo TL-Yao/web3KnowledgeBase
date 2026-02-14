@@ -56,13 +56,11 @@ type LLMConfig struct {
 
 type ClaudeConfig struct {
 	Enabled      bool   `mapstructure:"enabled"`
-	APIKey       string `mapstructure:"api_key"`
 	DefaultModel string `mapstructure:"default_model"`
 }
 
 type OpenAIConfig struct {
 	Enabled      bool   `mapstructure:"enabled"`
-	APIKey       string `mapstructure:"api_key"`
 	DefaultModel string `mapstructure:"default_model"`
 }
 
@@ -77,13 +75,11 @@ type SearchConfig struct {
 }
 
 type TavilyConfig struct {
-	Enabled bool   `mapstructure:"enabled"`
-	APIKey  string `mapstructure:"api_key"`
+	Enabled bool `mapstructure:"enabled"`
 }
 
 type SerpAPIConfig struct {
-	Enabled bool   `mapstructure:"enabled"`
-	APIKey  string `mapstructure:"api_key"`
+	Enabled bool `mapstructure:"enabled"`
 }
 
 func Load() (*Config, error) {
