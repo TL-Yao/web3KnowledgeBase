@@ -740,6 +740,7 @@ func (h *ArticleHandler) Rollback(c *gin.Context) {
 
 	// Restore article content from the target version
 	article.Content = version.Content
+	article.ContentHTML = "" // Clear stale HTML so markdown renders fresh
 	if err := h.repo.Update(article); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to rollback article"})
 		return
