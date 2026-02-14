@@ -110,7 +110,7 @@ export function ArticleEditor({
       <Input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="text-3xl font-bold border-none shadow-none px-0 mb-4 focus-visible:ring-0"
+        className="text-3xl font-bold mb-4"
         placeholder="文章标题"
       />
 
