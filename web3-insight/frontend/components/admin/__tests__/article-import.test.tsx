@@ -86,42 +86,42 @@ describe('ArticleImport', () => {
     it('renders file upload area', () => {
       renderWithQueryClient(<ArticleImport />)
 
-      expect(screen.getByText(/click to upload or drag and drop a json file/i)).toBeInTheDocument()
-      expect(screen.getByText(/max file size: 10mb/i)).toBeInTheDocument()
+      expect(screen.getByText(/点击上传或拖拽 JSON 文件/)).toBeInTheDocument()
+      expect(screen.getByText(/最大文件大小: 10MB/)).toBeInTheDocument()
     })
 
     it('renders import and export tabs', () => {
       renderWithQueryClient(<ArticleImport />)
 
-      expect(screen.getByRole('tab', { name: /import/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /export/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /导入/ })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /导出/ })).toBeInTheDocument()
     })
 
     it('renders import options checkboxes', () => {
       renderWithQueryClient(<ArticleImport />)
 
-      expect(screen.getByLabelText(/skip duplicates/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/update existing/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/跳过重复/)).toBeInTheDocument()
+      expect(screen.getByLabelText(/更新已有文章/)).toBeInTheDocument()
     })
 
     it('renders JSON textarea for pasting content', () => {
       renderWithQueryClient(<ArticleImport />)
 
-      expect(screen.getByLabelText(/or paste json content/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/或粘贴 JSON 内容/)).toBeInTheDocument()
       expect(screen.getByRole('textbox')).toBeInTheDocument()
     })
 
     it('renders validate and import buttons', () => {
       renderWithQueryClient(<ArticleImport />)
 
-      expect(screen.getByRole('button', { name: /validate/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /^import$/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /验证/ })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^导入$/ })).toBeInTheDocument()
     })
 
     it('renders download template button', () => {
       renderWithQueryClient(<ArticleImport />)
 
-      expect(screen.getByRole('button', { name: /download template/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /下载模板/ })).toBeInTheDocument()
     })
   })
 
@@ -143,7 +143,7 @@ describe('ArticleImport', () => {
 
       // Wait for import to complete (file upload triggers automatic import)
       await waitFor(() => {
-        expect(screen.getByText(/import completed/i)).toBeInTheDocument()
+        expect(screen.getByText(/导入完成/)).toBeInTheDocument()
       })
     })
 
@@ -180,11 +180,11 @@ describe('ArticleImport', () => {
       const textarea = screen.getByRole('textbox')
       await user.type(textarea, 'invalid json content')
 
-      const validateButton = screen.getByRole('button', { name: /validate/i })
+      const validateButton = screen.getByRole('button', { name: /验证/ })
       await user.click(validateButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/invalid json format/i)).toBeInTheDocument()
+        expect(screen.getByText(/JSON 格式无效/)).toBeInTheDocument()
       })
     })
 
@@ -196,11 +196,11 @@ describe('ArticleImport', () => {
       const textarea = screen.getByRole('textbox')
       setTextareaValue(textarea, validJson)
 
-      const validateButton = screen.getByRole('button', { name: /validate/i })
+      const validateButton = screen.getByRole('button', { name: /验证/ })
       await user.click(validateButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/validation passed/i)).toBeInTheDocument()
+        expect(screen.getByText(/验证通过/)).toBeInTheDocument()
       })
     })
 
@@ -230,11 +230,11 @@ describe('ArticleImport', () => {
       const textarea = screen.getByRole('textbox')
       setTextareaValue(textarea, validJson)
 
-      const validateButton = screen.getByRole('button', { name: /validate/i })
+      const validateButton = screen.getByRole('button', { name: /验证/ })
       await user.click(validateButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/validation failed/i)).toBeInTheDocument()
+        expect(screen.getByText(/验证失败/)).toBeInTheDocument()
       })
 
       expect(screen.getByText(/title is required/i)).toBeInTheDocument()
@@ -264,11 +264,11 @@ describe('ArticleImport', () => {
         })
       )
 
-      const validateButton = screen.getByRole('button', { name: /validate/i })
+      const validateButton = screen.getByRole('button', { name: /验证/ })
       await user.click(validateButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/2 articles/i)).toBeInTheDocument()
+        expect(screen.getByText(/2 篇文章/)).toBeInTheDocument()
       })
     })
   })
@@ -277,7 +277,7 @@ describe('ArticleImport', () => {
     it('disables import button when textarea is empty', () => {
       renderWithQueryClient(<ArticleImport />)
 
-      const importButton = screen.getByRole('button', { name: /^import$/i })
+      const importButton = screen.getByRole('button', { name: /^导入$/ })
       expect(importButton).toBeDisabled()
     })
 
@@ -288,7 +288,7 @@ describe('ArticleImport', () => {
       const textarea = screen.getByRole('textbox')
       setTextareaValue(textarea, validJson)
 
-      const importButton = screen.getByRole('button', { name: /^import$/i })
+      const importButton = screen.getByRole('button', { name: /^导入$/ })
       expect(importButton).not.toBeDisabled()
     })
 
@@ -303,18 +303,18 @@ describe('ArticleImport', () => {
       const textarea = screen.getByRole('textbox')
       setTextareaValue(textarea, validJson)
 
-      const importButton = screen.getByRole('button', { name: /^import$/i })
+      const importButton = screen.getByRole('button', { name: /^导入$/ })
       await user.click(importButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/import completed/i)).toBeInTheDocument()
+        expect(screen.getByText(/导入完成/)).toBeInTheDocument()
       })
 
       // Should show import statistics
-      expect(screen.getByText(/imported/i)).toBeInTheDocument()
-      expect(screen.getByText(/updated/i)).toBeInTheDocument()
-      expect(screen.getByText(/skipped/i)).toBeInTheDocument()
-      expect(screen.getByText(/errors/i)).toBeInTheDocument()
+      expect(screen.getByText(/已导入/)).toBeInTheDocument()
+      expect(screen.getByText(/已更新/)).toBeInTheDocument()
+      expect(screen.getByText(/已跳过/)).toBeInTheDocument()
+      expect(screen.getByText(/错误/)).toBeInTheDocument()
     })
 
     it('shows import errors in results', async () => {
@@ -344,11 +344,11 @@ describe('ArticleImport', () => {
       const textarea = screen.getByRole('textbox')
       setTextareaValue(textarea, validJson)
 
-      const importButton = screen.getByRole('button', { name: /^import$/i })
+      const importButton = screen.getByRole('button', { name: /^导入$/ })
       await user.click(importButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/import completed/i)).toBeInTheDocument()
+        expect(screen.getByText(/导入完成/)).toBeInTheDocument()
       })
 
       expect(screen.getByText(/database error/i)).toBeInTheDocument()
@@ -363,23 +363,23 @@ describe('ArticleImport', () => {
       setTextareaValue(textarea, validJson)
 
       // First validate
-      const validateButton = screen.getByRole('button', { name: /validate/i })
+      const validateButton = screen.getByRole('button', { name: /验证/ })
       await user.click(validateButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/validation passed/i)).toBeInTheDocument()
+        expect(screen.getByText(/验证通过/)).toBeInTheDocument()
       })
 
       // Then import
-      const importButton = screen.getByRole('button', { name: /^import$/i })
+      const importButton = screen.getByRole('button', { name: /^导入$/ })
       await user.click(importButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/import completed/i)).toBeInTheDocument()
+        expect(screen.getByText(/导入完成/)).toBeInTheDocument()
       })
 
       // Validation result should be cleared
-      expect(screen.queryByText(/validation passed/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/验证通过/)).not.toBeInTheDocument()
     })
   })
 
@@ -388,7 +388,7 @@ describe('ArticleImport', () => {
       const user = userEvent.setup()
       renderWithQueryClient(<ArticleImport />)
 
-      const skipDuplicatesCheckbox = screen.getByLabelText(/skip duplicates/i)
+      const skipDuplicatesCheckbox = screen.getByLabelText(/跳过重复/)
       expect(skipDuplicatesCheckbox).toBeChecked() // Default is true
 
       await user.click(skipDuplicatesCheckbox)
@@ -402,7 +402,7 @@ describe('ArticleImport', () => {
       const user = userEvent.setup()
       renderWithQueryClient(<ArticleImport />)
 
-      const updateExistingCheckbox = screen.getByLabelText(/update existing/i)
+      const updateExistingCheckbox = screen.getByLabelText(/更新已有文章/)
       expect(updateExistingCheckbox).not.toBeChecked() // Default is false
 
       await user.click(updateExistingCheckbox)
@@ -418,27 +418,27 @@ describe('ArticleImport', () => {
       const user = userEvent.setup()
       renderWithQueryClient(<ArticleImport />)
 
-      const exportTab = screen.getByRole('tab', { name: /export/i })
+      const exportTab = screen.getByRole('tab', { name: /导出/ })
       await user.click(exportTab)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /export articles/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /导出文章/ })).toBeInTheDocument()
       })
 
       // Check for export description text
-      expect(screen.getByText(/export articles in json format/i)).toBeInTheDocument()
+      expect(screen.getByText(/以 JSON 格式导出文章/)).toBeInTheDocument()
     })
 
     it.skip('renders filter labels in export tab', async () => {
       const user = userEvent.setup()
       renderWithQueryClient(<ArticleImport />)
 
-      const exportTab = screen.getByRole('tab', { name: /export/i })
+      const exportTab = screen.getByRole('tab', { name: /导出/ })
       await user.click(exportTab)
 
       await waitFor(() => {
-        expect(screen.getByText(/filter by category/i)).toBeInTheDocument()
-        expect(screen.getByText(/filter by status/i)).toBeInTheDocument()
+        expect(screen.getByText(/按分类筛选/)).toBeInTheDocument()
+        expect(screen.getByText(/按状态筛选/)).toBeInTheDocument()
       })
     })
   })
@@ -465,7 +465,7 @@ describe('ArticleImport', () => {
       const textarea = screen.getByRole('textbox')
       setTextareaValue(textarea, validJson)
 
-      const validateButton = screen.getByRole('button', { name: /validate/i })
+      const validateButton = screen.getByRole('button', { name: /验证/ })
       await user.click(validateButton)
 
       // Button should be disabled during loading
@@ -473,7 +473,7 @@ describe('ArticleImport', () => {
 
       // Wait for completion
       await waitFor(() => {
-        expect(screen.getByText(/validation passed/i)).toBeInTheDocument()
+        expect(screen.getByText(/验证通过/)).toBeInTheDocument()
       })
     })
 
@@ -500,7 +500,7 @@ describe('ArticleImport', () => {
       const textarea = screen.getByRole('textbox')
       setTextareaValue(textarea, validJson)
 
-      const importButton = screen.getByRole('button', { name: /^import$/i })
+      const importButton = screen.getByRole('button', { name: /^导入$/ })
       await user.click(importButton)
 
       // Button should be disabled during loading
@@ -508,7 +508,7 @@ describe('ArticleImport', () => {
 
       // Wait for completion
       await waitFor(() => {
-        expect(screen.getByText(/import completed/i)).toBeInTheDocument()
+        expect(screen.getByText(/导入完成/)).toBeInTheDocument()
       })
     })
 
@@ -533,8 +533,8 @@ describe('ArticleImport', () => {
       const textarea = screen.getByRole('textbox')
       setTextareaValue(textarea, validJson)
 
-      const validateButton = screen.getByRole('button', { name: /validate/i })
-      const importButton = screen.getByRole('button', { name: /^import$/i })
+      const validateButton = screen.getByRole('button', { name: /验证/ })
+      const importButton = screen.getByRole('button', { name: /^导入$/ })
 
       await user.click(validateButton)
 
@@ -544,7 +544,7 @@ describe('ArticleImport', () => {
 
       // Wait for completion
       await waitFor(() => {
-        expect(screen.getByText(/validation passed/i)).toBeInTheDocument()
+        expect(screen.getByText(/验证通过/)).toBeInTheDocument()
       })
     })
   })

@@ -100,7 +100,7 @@ export function ArticleImport() {
     } catch {
       setValidationResult({
         valid: false,
-        errors: [{ index: 0, title: '', message: 'Invalid JSON format' }],
+        errors: [{ index: 0, title: '', message: 'JSON 格式无效' }],
         errorCount: 1,
         totalCount: 0,
       })
@@ -140,7 +140,7 @@ export function ArticleImport() {
     } else {
       setValidationResult({
         valid: false,
-        errors: [{ index: 0, title: file.name, message: 'Only JSON files are supported' }],
+        errors: [{ index: 0, title: file.name, message: '仅支持 JSON 文件' }],
         errorCount: 1,
         totalCount: 0,
       })
@@ -172,17 +172,17 @@ export function ArticleImport() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileJson className="h-5 w-5" />
-            Article Import/Export
+            文章导入/导出
           </CardTitle>
           <CardDescription>
-            Import articles from JSON or export existing articles
+            从 JSON 导入文章或导出现有文章
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="import" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="import">Import</TabsTrigger>
-              <TabsTrigger value="export">Export</TabsTrigger>
+              <TabsTrigger value="import">导入</TabsTrigger>
+              <TabsTrigger value="export">导出</TabsTrigger>
             </TabsList>
 
             <TabsContent value="import" className="space-y-4">
@@ -196,7 +196,7 @@ export function ArticleImport() {
                       setOptions({ ...options, skipDuplicates: checked as boolean })
                     }
                   />
-                  <Label htmlFor="skipDuplicates">Skip duplicates</Label>
+                  <Label htmlFor="skipDuplicates">跳过重复</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -206,7 +206,7 @@ export function ArticleImport() {
                       setOptions({ ...options, updateExisting: checked as boolean })
                     }
                   />
-                  <Label htmlFor="updateExisting">Update existing</Label>
+                  <Label htmlFor="updateExisting">更新已有文章</Label>
                 </div>
               </div>
 
@@ -226,10 +226,10 @@ export function ArticleImport() {
                 >
                   <Upload className="h-8 w-8 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
-                    Click to upload or drag and drop a JSON file
+                    点击上传或拖拽 JSON 文件
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Max file size: 10MB
+                    最大文件大小: 10MB
                   </span>
                 </label>
               </div>
@@ -237,14 +237,14 @@ export function ArticleImport() {
               {/* JSON Input */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="json-content">Or paste JSON content</Label>
+                  <Label htmlFor="json-content">或粘贴 JSON 内容</Label>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleDownloadTemplate}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    Download Template
+                    下载模板
                   </Button>
                 </div>
                 <Textarea
@@ -268,7 +268,7 @@ export function ArticleImport() {
                   ) : (
                     <AlertCircle className="h-4 w-4 mr-2" />
                   )}
-                  Validate
+                  验证
                 </Button>
                 <Button
                   onClick={handleImport}
@@ -279,7 +279,7 @@ export function ArticleImport() {
                   ) : (
                     <Upload className="h-4 w-4 mr-2" />
                   )}
-                  Import
+                  导入
                 </Button>
               </div>
 
@@ -292,19 +292,19 @@ export function ArticleImport() {
                         <>
                           <CheckCircle className="h-5 w-5 text-green-500" />
                           <span className="font-medium text-green-700">
-                            Validation passed
+                            验证通过
                           </span>
                         </>
                       ) : (
                         <>
                           <AlertCircle className="h-5 w-5 text-red-500" />
                           <span className="font-medium text-red-700">
-                            Validation failed
+                            验证失败
                           </span>
                         </>
                       )}
                       <Badge variant="outline">
-                        {validationResult.totalCount} articles
+                        {validationResult.totalCount} 篇文章
                       </Badge>
                     </div>
                     {validationResult.errors.length > 0 && (
@@ -332,44 +332,44 @@ export function ArticleImport() {
                   <CardContent className="pt-4">
                     <div className="flex items-center gap-2 mb-4">
                       <CheckCircle className="h-5 w-5 text-blue-500" />
-                      <span className="font-medium">Import completed</span>
+                      <span className="font-medium">导入完成</span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                       <div>
                         <div className="text-2xl font-bold text-green-600">
                           {importResult.importedCount}
                         </div>
-                        <div className="text-sm text-muted-foreground">Imported</div>
+                        <div className="text-sm text-muted-foreground">已导入</div>
                       </div>
                       <div>
                         <div className="text-2xl font-bold text-blue-600">
                           {importResult.updatedCount}
                         </div>
-                        <div className="text-sm text-muted-foreground">Updated</div>
+                        <div className="text-sm text-muted-foreground">已更新</div>
                       </div>
                       <div>
                         <div className="text-2xl font-bold text-yellow-600">
                           {importResult.skippedCount}
                         </div>
-                        <div className="text-sm text-muted-foreground">Skipped</div>
+                        <div className="text-sm text-muted-foreground">已跳过</div>
                       </div>
                       <div>
                         <div className="text-2xl font-bold text-red-600">
                           {importResult.errorCount}
                         </div>
-                        <div className="text-sm text-muted-foreground">Errors</div>
+                        <div className="text-sm text-muted-foreground">错误</div>
                       </div>
                     </div>
 
                     {importResult.errors && importResult.errors.length > 0 && (
                       <div className="mt-4">
-                        <h4 className="font-medium mb-2">Errors:</h4>
+                        <h4 className="font-medium mb-2">错误详情:</h4>
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Index</TableHead>
-                              <TableHead>Title</TableHead>
-                              <TableHead>Error</TableHead>
+                              <TableHead>序号</TableHead>
+                              <TableHead>标题</TableHead>
+                              <TableHead>错误信息</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -396,13 +396,13 @@ export function ArticleImport() {
             <TabsContent value="export" className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Filter by Category</Label>
+                  <Label>按分类筛选</Label>
                   <Select value={exportCategory} onValueChange={setExportCategory}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All categories" />
+                      <SelectValue placeholder="全部分类" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All categories</SelectItem>
+                      <SelectItem value="">全部分类</SelectItem>
                       {categories?.map((cat: Category) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
@@ -412,15 +412,15 @@ export function ArticleImport() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Filter by Status</Label>
+                  <Label>按状态筛选</Label>
                   <Select value={exportStatus} onValueChange={setExportStatus}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
+                      <SelectValue placeholder="全部状态" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All statuses</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="">全部状态</SelectItem>
+                      <SelectItem value="published">已发布</SelectItem>
+                      <SelectItem value="draft">草稿</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -428,12 +428,11 @@ export function ArticleImport() {
 
               <Button onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
-                Export Articles
+                导出文章
               </Button>
 
               <p className="text-sm text-muted-foreground">
-                Export articles in JSON format compatible with import. Use this to
-                backup articles or transfer between environments.
+                以 JSON 格式导出文章，可用于备份或在不同环境之间迁移数据。
               </p>
             </TabsContent>
           </Tabs>
