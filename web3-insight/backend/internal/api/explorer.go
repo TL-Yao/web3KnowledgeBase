@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -421,42 +422,16 @@ func (h *ExplorerHandler) SeedFeatures(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "features seeded successfully"})
 }
 
-// Helper functions
+// splitAndTrim splits a string by separator and trims whitespace from each part.
 func splitAndTrim(s string, sep string) []string {
 	parts := make([]string, 0)
-	for _, part := range splitString(s, sep) {
-		trimmed := trimString(part)
+	for _, part := range strings.Split(s, sep) {
+		trimmed := strings.TrimSpace(part)
 		if trimmed != "" {
 			parts = append(parts, trimmed)
 		}
 	}
 	return parts
-}
-
-func splitString(s, sep string) []string {
-	result := make([]string, 0)
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if i+len(sep) <= len(s) && s[i:i+len(sep)] == sep {
-			result = append(result, s[start:i])
-			start = i + len(sep)
-			i += len(sep) - 1
-		}
-	}
-	result = append(result, s[start:])
-	return result
-}
-
-func trimString(s string) string {
-	start := 0
-	end := len(s)
-	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n') {
-		start++
-	}
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n') {
-		end--
-	}
-	return s[start:end]
 }
 
 func mustMarshalJSON(v interface{}) []byte {
