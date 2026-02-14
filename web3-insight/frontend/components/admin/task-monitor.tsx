@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { fetchAPI } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Eye, XCircle, Clock, CheckCircle, Loader2 } from 'lucide-react'
@@ -19,12 +20,7 @@ interface Task {
 export function TaskMonitor() {
   const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ['tasks'],
-    queryFn: async () => {
-      // TODO: Replace with actual API call when task queue backend is implemented
-      // Return empty array - backend endpoint not yet implemented
-      return []
-    },
-    refetchInterval: 5000
+    queryFn: () => fetchAPI<Task[]>('/api/tasks'),
   })
 
   const statusIcons = {

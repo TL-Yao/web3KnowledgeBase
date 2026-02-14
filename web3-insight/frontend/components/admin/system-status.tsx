@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { fetchAPI } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-react'
@@ -16,28 +17,13 @@ export function SystemStatus() {
     queryKey: ['system-status'],
     queryFn: async () => {
       try {
-        // Check backend health status
-        const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-        const healthRes = await fetch(`${API_BASE}/health`)
-        const backendOnline = healthRes.ok
+        await fetchAPI<{ status: string }>('/health')
 
-        const statuses: Status[] = [
-          {
-            name: '后台服务',
-            status: backendOnline ? 'online' : 'offline',
-            detail: backendOnline ? '运行中' : '无法连接'
-          },
+        return [
+          { name: '后台服务', status: 'online' as const, detail: '运行中' },
+          { name: 'PostgreSQL', status: 'online' as const, detail: '已连接' },
         ]
-
-        // If backend is online, add more status checks
-        if (backendOnline) {
-          statuses.push(
-            { name: 'PostgreSQL', status: 'online', detail: '已连接' }
-          )
-        }
-
-        return statuses
-      } catch (error) {
+      } catch {
         return [
           { name: '后台服务', status: 'offline' as const, detail: '无法连接' }
         ]
