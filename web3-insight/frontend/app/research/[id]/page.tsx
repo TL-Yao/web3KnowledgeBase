@@ -34,6 +34,7 @@ export default function ResearchSessionPage() {
     isCancelling,
     pinFinding,
     unpinFinding,
+    setPinPosition,
     integrateFindings,
     isIntegrating,
   } = useResearch(sessionId)
@@ -47,6 +48,9 @@ export default function ResearchSessionPage() {
     model,
     setModel,
   } = useResearchChat(sessionId)
+
+  // Pin placement mode
+  const [placingPinIndex, setPlacingPinIndex] = useState<number | null>(null)
 
   // Sidebar state with localStorage persistence
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
@@ -102,6 +106,24 @@ export default function ResearchSessionPage() {
       pinFinding(content)
     }
   }, [session?.pinnedFindings, pinFinding, unpinFinding])
+
+  // Handle placing a pin at a section heading (receives originalIndex from IntegrateFindings)
+  const handlePlacePin = useCallback((originalIndex: number) => {
+    // Toggle: clicking same pin exits placement mode
+    setPlacingPinIndex(prev => prev === originalIndex ? null : originalIndex)
+  }, [])
+
+  // Handle selecting a section for the currently placing pin
+  const handleSelectSection = useCallback((headingText: string) => {
+    if (placingPinIndex == null) return
+    setPinPosition(placingPinIndex, headingText)
+    setPlacingPinIndex(null)
+  }, [placingPinIndex, setPinPosition])
+
+  // Handle removing a pin's position
+  const handleRemovePinPosition = useCallback((index: number) => {
+    setPinPosition(index, null)
+  }, [setPinPosition])
 
   // Article is preloaded in the session response — no separate fetch needed
   const article = session?.article
@@ -160,9 +182,13 @@ export default function ResearchSessionPage() {
     : isFailed ? 'failed' as const
     : undefined
 
-  const pinnedPreviews = session?.pinnedFindings?.map(f =>
-    f.messageContent.length > 120 ? f.messageContent.slice(0, 120) + '...' : f.messageContent
-  ) ?? []
+  // Filter to non-integrated findings, preserving original indices for backend calls
+  const activeFindings = useMemo(() =>
+    (session?.pinnedFindings ?? [])
+      .map((f, i) => ({ ...f, originalIndex: i }))
+      .filter(f => !f.integrated),
+    [session?.pinnedFindings]
+  )
 
   return (
     <MainLayout>
@@ -215,6 +241,7 @@ export default function ResearchSessionPage() {
                 stage={reportStage}
                 stageDetail={currentStageDetail}
                 content={article?.content}
+                pinnedFindings={session?.pinnedFindings}
               />
             )}
 
@@ -223,6 +250,11 @@ export default function ResearchSessionPage() {
                 stage="completed"
                 content={article.content}
                 citations={session?.citations}
+                pinnedFindings={session?.pinnedFindings}
+                isPlacementMode={placingPinIndex != null}
+                onSelectSection={handleSelectSection}
+                onRemovePinPosition={handleRemovePinPosition}
+                onRemovePin={(idx) => unpinFinding(idx)}
               />
             )}
 
@@ -244,14 +276,15 @@ export default function ResearchSessionPage() {
           </div>
 
           {/* Pinned findings bar */}
-          {(session?.pinnedFindings?.length ?? 0) > 0 && (
+          {activeFindings.length > 0 && (
             <IntegrateFindings
-              pinnedCount={session?.pinnedFindings?.length ?? 0}
-              pinnedPreviews={pinnedPreviews}
+              findings={activeFindings}
               onIntegrate={() => integrateFindings()}
               onRemove={(idx) => unpinFinding(idx)}
+              onPlacePin={isCompleted ? handlePlacePin : undefined}
               isIntegrating={isIntegrating}
               disableIntegrate={!isCompleted}
+              placingPinIndex={placingPinIndex}
             />
           )}
         </div>

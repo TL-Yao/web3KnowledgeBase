@@ -104,6 +104,13 @@ export function useResearch(sessionId?: string) {
     onSuccess: () => refetchSession(),
   })
 
+  // Set pin position
+  const setPinPositionMutation = useMutation({
+    mutationFn: ({ index, targetSection }: { index: number; targetSection: string | null }) =>
+      researchAPI.setPinPosition(sessionId!, index, targetSection),
+    onSuccess: () => refetchSession(),
+  })
+
   // Integrate findings
   const integrateMutation = useMutation({
     mutationFn: () => researchAPI.integrateFindings(sessionId!),
@@ -140,6 +147,9 @@ export function useResearch(sessionId?: string) {
 
     pinFinding: pinMutation.mutate,
     unpinFinding: unpinMutation.mutate,
+
+    setPinPosition: (index: number, targetSection: string | null) =>
+      setPinPositionMutation.mutate({ index, targetSection }),
 
     integrateFindings: integrateMutation.mutate,
     isIntegrating: integrateMutation.isPending,

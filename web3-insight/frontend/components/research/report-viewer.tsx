@@ -4,6 +4,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import { ExternalLink, Loader2, Search, FileText, PenLine } from 'lucide-react'
+import { HeadingWithPinTarget } from './heading-with-pin-target'
+import type { ResearchPinnedFinding } from '@/lib/api'
 
 export interface Citation {
   title: string
@@ -19,6 +21,11 @@ interface ReportViewerProps {
   stage?: ResearchStage
   stageDetail?: string
   error?: string
+  pinnedFindings?: ResearchPinnedFinding[]
+  isPlacementMode?: boolean
+  onSelectSection?: (headingText: string) => void
+  onRemovePinPosition?: (index: number) => void
+  onRemovePin?: (index: number) => void
 }
 
 const STAGE_STEPS: { key: ResearchStage; label: string; icon: React.ElementType }[] = [
@@ -125,7 +132,18 @@ function CitationList({ citations }: { citations: Citation[] }) {
   )
 }
 
-export function ReportViewer({ content, citations, stage, stageDetail, error }: ReportViewerProps) {
+export function ReportViewer({
+  content,
+  citations,
+  stage,
+  stageDetail,
+  error,
+  pinnedFindings = [],
+  isPlacementMode = false,
+  onSelectSection,
+  onRemovePinPosition,
+  onRemovePin,
+}: ReportViewerProps) {
   const isGenerating = stage === 'planning' || stage === 'researching' || stage === 'writing'
 
   if (error) {
@@ -134,6 +152,22 @@ export function ReportViewer({ content, citations, stage, stageDetail, error }: 
         <div className="text-red-500 text-lg font-medium mb-2">生成失败</div>
         <p className="text-sm">{error}</p>
       </div>
+    )
+  }
+
+  const makeHeadingComponent = (level: 2 | 3) => {
+    // eslint-disable-next-line react/display-name
+    return ({ children }: { children?: React.ReactNode }) => (
+      <HeadingWithPinTarget
+        level={level}
+        isPlacementMode={isPlacementMode}
+        onSelectSection={onSelectSection}
+        pinnedFindings={pinnedFindings}
+        onRemovePosition={onRemovePinPosition}
+        onRemovePin={onRemovePin}
+      >
+        {children}
+      </HeadingWithPinTarget>
     )
   }
 
@@ -160,6 +194,8 @@ export function ReportViewer({ content, citations, stage, stageDetail, error }: 
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
+              h2: makeHeadingComponent(2),
+              h3: makeHeadingComponent(3),
               a: ({ href, children }) => (
                 <a href={href} target="_blank" rel="noopener noreferrer">
                   {children}

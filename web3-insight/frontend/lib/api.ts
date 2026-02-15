@@ -856,7 +856,9 @@ export interface ResearchCitation {
 
 export interface ResearchPinnedFinding {
   messageContent: string
-  addedAt: string
+  pinnedAt: string
+  integrated: boolean
+  targetSection?: string | null
 }
 
 export interface ResearchSession {
@@ -947,6 +949,12 @@ export const researchAPI = {
   integrateFindings: (id: string) =>
     fetchAPI<{ message: string }>(`/api/research/sessions/${id}/integrate`, {
       method: 'POST',
+    }),
+
+  setPinPosition: (id: string, index: number, targetSection: string | null) =>
+    fetchAPI<ResearchSession>(`/api/research/sessions/${id}/pin/${index}/position`, {
+      method: 'PUT',
+      body: JSON.stringify({ targetSection }),
     }),
 
   deleteSession: (id: string) =>
