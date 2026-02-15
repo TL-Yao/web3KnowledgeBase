@@ -139,12 +139,10 @@ func (h *ResearchHandler) GetSessionStatus(c *gin.Context) {
 		resp["error"] = session.ErrorMessage
 	}
 
-	// Compute articleSlug via join when completed
-	if session.Status == "completed" && session.ArticleID != nil {
-		article, err := h.articleRepo.GetByID(*session.ArticleID)
-		if err == nil {
-			resp["articleSlug"] = article.Slug
-		}
+	// Include article data when completed (preloaded via GetByID)
+	if session.Status == "completed" && session.Article != nil {
+		resp["articleSlug"] = session.Article.Slug
+		resp["article"] = session.Article
 	}
 
 	c.JSON(http.StatusOK, resp)

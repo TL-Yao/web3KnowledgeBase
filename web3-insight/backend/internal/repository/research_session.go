@@ -23,7 +23,7 @@ func (r *ResearchSessionRepository) Create(session *model.ResearchSession) error
 
 func (r *ResearchSessionRepository) GetByID(id uuid.UUID) (*model.ResearchSession, error) {
 	var session model.ResearchSession
-	if err := r.db.First(&session, "id = ?", id).Error; err != nil {
+	if err := r.db.Preload("Article").First(&session, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &session, nil
