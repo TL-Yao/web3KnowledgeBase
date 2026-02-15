@@ -142,7 +142,7 @@ web3-insight/
 │   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, ArticleEditor, EditorToolbar, TagEditor, UpdateReviewPanel, VersionHistory)
 │   │   ├── admin/                # 管理组件 (ModelConfig, ApiKeyConfig, TaskMonitor, SystemStatus, SourceConfig, ArticleImport)
 │   │   ├── chat/                 # 聊天组件 (ChatSidebar, ChatMessage, SidebarToggle)
-│   │   ├── research/             # 即时研究组件 (DomainSelector, PlanReview, ReportViewer, ResearchChat, SessionList, PinButton, PinnableBlock, GutterDot, IntegrateButton, PlacementHint, UnplacedPinsChip, PinPreviewCard)
+│   │   ├── research/             # 即时研究组件 (DomainSelector, PlanReview, ReportViewer, ResearchChat, SessionList, PinButton, PinnableBlock, GutterDot, PinnedCard, IntegrateButton, PlacementHint, UnplacedPinsChip, PinPreviewCard)
 │   │   └── providers/            # QueryProvider
 │   ├── hooks/
 │   │   ├── use-chat.ts           # 聊天 Hook (多轮对话, localStorage 持久化)
@@ -208,7 +208,7 @@ web3-insight/
 | 研究 | 研究计划审核 (编辑+批准) | PlanReview | POST /api/research/sessions/:id/approve-plan |
 | 研究 | 研究报告生成 (Claude CLI, 订阅认证) | ReportViewer (阶段指示器) | POST /api/research/sessions (202 异步) |
 | 研究 | 研究聊天 (会话上下文+模型选择) | ResearchChat | WS /ws/research-chat |
-| 研究 | 固定发现 + 内联标注 + 整合 (sticky-note v3 UX) | PinButton, PinnableBlock, GutterDot, IntegrateButton, PlacementHint, UnplacedPinsChip | POST /sessions/:id/pin, PUT /pin-position/:index, /integrate |
+| 研究 | 固定发现 + 内联标注 + 整合 (sticky-note v3 UX) | PinButton, PinnableBlock, GutterDot, PinnedCard, IntegrateButton, PlacementHint, UnplacedPinsChip | POST /sessions/:id/pin, PUT /pin-position/:index, /integrate |
 | 研究 | 会话取消 (CLI 进程终止) | - | POST /api/research/sessions/:id/cancel |
 | 研究 | 会话删除 (含关联文章) | SessionList (确认对话框) | DELETE /api/research/sessions/:id |
 
@@ -380,6 +380,7 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 - **Gin radix tree route conflicts**: Gin's httprouter cannot disambiguate `PUT /sessions/:id/pin/:index/position` from `DELETE /sessions/:id/pin/:index` — both have `:index` at the same path segment under `/pin/`. Fix: flatten to `PUT /sessions/:id/pin-position/:index`. Always test route registration with all HTTP methods on the same prefix.
 - **React hooks order with conditional returns**: `useMemo`/`useCallback` must appear BEFORE any conditional `return` statements in a component. React enforces consistent hook call order across renders — placing hooks after an early return causes "rendered fewer hooks than expected" errors.
 - **Ref-based block counter for ReactMarkdown**: ReactMarkdown renders custom components independently (no shared state). Use a `useRef` counter reset to 0 at the start of each render. Since ReactMarkdown calls components synchronously during render, `ref.current++` produces stable sequential indices for the same content.
+- **Tailwind prose vs explicit selectors in portaled components**: Tailwind `prose` modifiers don't propagate into React portaled elements (`createPortal`). For floating/portaled cards rendering markdown, use explicit child selectors (`[&_p]:my-0.5`, `[&_h3]:font-semibold`) instead of `prose` classes.
 
 ## Plan Completion Protocol
 
