@@ -8,20 +8,33 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { DomainSelector } from '@/components/research/domain-selector'
 import { SessionList } from '@/components/research/session-list'
 import { useResearch, useResearchSessions } from '@/hooks/use-research'
-import { Telescope, Loader2, Send } from 'lucide-react'
+import { Telescope, Loader2, Send, AlertCircle } from 'lucide-react'
 
 export default function ResearchPage() {
   const [question, setQuestion] = useState('')
   const [domain, setDomain] = useState('auto')
   const [reviewPlan, setReviewPlan] = useState(false)
   const [page, setPage] = useState(1)
+  const [error, setError] = useState<string | null>(null)
 
   const { startResearch, isStarting } = useResearch()
   const { sessions, total, isLoading, deleteSession, isDeleting } = useResearchSessions(page)
 
   const handleSubmit = async () => {
     if (!question.trim() || isStarting) return
-    await startResearch({ question: question.trim(), domain, reviewPlan })
+    setError(null)
+    try {
+      await startResearch({ question: question.trim(), domain, reviewPlan })
+      setQuestion('')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '提交研究请求失败，请重试'
+      try {
+        const parsed = JSON.parse(message)
+        setError(parsed.error || parsed.message || message)
+      } catch {
+        setError(message)
+      }
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -94,6 +107,13 @@ export default function ResearchPage() {
                 ⌘↵ 开始研究
               </p>
             </div>
+
+            {error && (
+              <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-md px-3 py-2">
+                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
           </div>
         </div>
 

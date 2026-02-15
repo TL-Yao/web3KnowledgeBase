@@ -226,7 +226,7 @@ export default function ResearchSessionPage() {
 
             {isFailed && (
               <ReportViewer
-                error={currentError || '研究过程中发生未知错误'}
+                error={currentError || currentStageDetail || '研究过程中发生未知错误'}
               />
             )}
 
