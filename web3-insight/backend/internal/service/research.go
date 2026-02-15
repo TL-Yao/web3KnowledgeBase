@@ -102,7 +102,7 @@ func (s *ResearchService) StartSession(ctx context.Context, req StartResearchReq
 		Domain:      req.Domain,
 		Status:      "planning",
 		Stage:       "planning",
-		StageDetail: "Analyzing question and creating research outline...",
+		StageDetail: "正在分析问题...",
 		StartedAt:   &now,
 	}
 
@@ -251,7 +251,7 @@ func (s *ResearchService) IntegrateFindings(ctx context.Context, sessionID uuid.
 	}
 
 	// Set status back to writing
-	if err := s.sessionRepo.UpdateStatus(sessionID, "writing", "writing", "Integrating pinned findings into report..."); err != nil {
+	if err := s.sessionRepo.UpdateStatus(sessionID, "writing", "writing", "正在整合研究发现..."); err != nil {
 		return fmt.Errorf("failed to update status: %w", err)
 	}
 
@@ -365,8 +365,8 @@ func (s *ResearchService) runResearchGeneration(ctx context.Context, sessionID u
 		return
 	}
 
-	// Update status to researching
-	s.sessionRepo.UpdateStatus(sessionID, "researching", "researching", "Searching and reading sources...")
+	// Update status to researching (stays during the entire CLI execution)
+	s.sessionRepo.UpdateStatus(sessionID, "researching", "researching", "正在搜索资料...")
 
 	researchTimeout := 30 * time.Minute
 	if s.researchConfig != nil && s.researchConfig.Generation.TimeoutMinutes > 0 {
@@ -399,17 +399,14 @@ func (s *ResearchService) runResearchGeneration(ctx context.Context, sessionID u
 
 	log.Printf("Research generation started (session: %s, cli: %s)", sessionID, executor.GetSessionID())
 
-	// Update stage to writing before the long call
-	s.sessionRepo.UpdateStatus(sessionID, "writing", "writing", "Generating comprehensive report...")
-
 	response, err := executor.Execute(researchCtx, prompt)
 	if err != nil {
 		s.failSession(sessionID, fmt.Sprintf("Research generation failed: %v", err))
 		return
 	}
 
-	// Update stage to finalizing
-	s.sessionRepo.UpdateStatus(sessionID, "writing", "finalizing", "Saving report and extracting citations...")
+	// Update stage to writing/finalizing as we parse and save the result
+	s.sessionRepo.UpdateStatus(sessionID, "writing", "writing", "正在撰写报告...")
 
 	// Parse response and save
 	s.saveResearchResult(sessionID, session, response)
