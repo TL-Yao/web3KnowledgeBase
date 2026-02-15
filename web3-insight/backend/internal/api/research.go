@@ -238,6 +238,37 @@ func (h *ResearchHandler) RemovePin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"pinnedFindings": session.PinnedFindings})
 }
 
+// SetPinPosition sets or clears the target section for a pinned finding.
+func (h *ResearchHandler) SetPinPosition(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session ID"})
+		return
+	}
+
+	index, err := strconv.Atoi(c.Param("index"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid index"})
+		return
+	}
+
+	var req struct {
+		TargetSection *string `json:"targetSection"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if err := h.researchService.SetPinPosition(c.Request.Context(), id, index, req.TargetSection); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	session, _ := h.sessionRepo.GetByID(id)
+	c.JSON(http.StatusOK, gin.H{"pinnedFindings": session.PinnedFindings})
+}
+
 // IntegrateFindings triggers re-generation to merge pinned content.
 func (h *ResearchHandler) IntegrateFindings(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))

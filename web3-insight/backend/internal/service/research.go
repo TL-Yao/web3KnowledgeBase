@@ -46,6 +46,7 @@ type PinnedFinding struct {
 	MessageContent string    `json:"messageContent"`
 	PinnedAt       time.Time `json:"pinnedAt"`
 	Integrated     bool      `json:"integrated"`
+	TargetSection  *string   `json:"targetSection,omitempty"` // heading text, nil = unpositioned
 }
 
 // CitationEntry represents a single citation extracted from the report.
@@ -221,6 +222,34 @@ func (s *ResearchService) RemovePinFinding(ctx context.Context, sessionID uuid.U
 	}
 
 	findings = append(findings[:index], findings[index+1:]...)
+
+	data, err := json.Marshal(findings)
+	if err != nil {
+		return fmt.Errorf("failed to marshal pinned findings: %w", err)
+	}
+
+	return s.sessionRepo.UpdatePinnedFindings(sessionID, data)
+}
+
+// SetPinPosition sets or clears the target section for a pinned finding.
+func (s *ResearchService) SetPinPosition(ctx context.Context, sessionID uuid.UUID, index int, targetSection *string) error {
+	session, err := s.sessionRepo.GetByID(sessionID)
+	if err != nil {
+		return fmt.Errorf("session not found: %w", err)
+	}
+
+	var findings []PinnedFinding
+	if len(session.PinnedFindings) > 0 {
+		if err := json.Unmarshal(session.PinnedFindings, &findings); err != nil {
+			return fmt.Errorf("failed to parse pinned findings: %w", err)
+		}
+	}
+
+	if index < 0 || index >= len(findings) {
+		return fmt.Errorf("invalid finding index: %d", index)
+	}
+
+	findings[index].TargetSection = targetSection
 
 	data, err := json.Marshal(findings)
 	if err != nil {
