@@ -59,7 +59,7 @@ export function PinnableBlock({
       onClick={isPlacementMode ? handleClick : undefined}
     >
       {pins.length > 0 && (
-        <div
+        <span
           className="absolute -left-4 top-1 flex flex-col gap-0.5"
           onClick={(e) => e.stopPropagation()}
         >
@@ -72,7 +72,7 @@ export function PinnableBlock({
               onRemove={onRemovePin}
             />
           ))}
-        </div>
+        </span>
       )}
       {children}
     </Tag>
