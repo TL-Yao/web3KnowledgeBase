@@ -242,13 +242,14 @@ export default function ResearchSessionPage() {
           </div>
 
           {/* Pinned findings bar */}
-          {isCompleted && (session?.pinnedFindings?.length ?? 0) > 0 && (
+          {(session?.pinnedFindings?.length ?? 0) > 0 && (
             <IntegrateFindings
               pinnedCount={session?.pinnedFindings?.length ?? 0}
               pinnedPreviews={pinnedPreviews}
               onIntegrate={() => integrateFindings()}
               onRemove={(idx) => unpinFinding(idx)}
               isIntegrating={isIntegrating}
+              disableIntegrate={!isCompleted}
             />
           )}
         </div>
@@ -276,7 +277,7 @@ export default function ResearchSessionPage() {
           onModelChange={setModel}
           onSendMessage={sendMessage}
           onClearMessages={clearMessages}
-          onPinFinding={isCompleted ? (content) => pinFinding(content) : undefined}
+          onPinFinding={(isCompleted || isActive) ? (content) => pinFinding(content) : undefined}
           pinnedContents={pinnedContents}
         />
 

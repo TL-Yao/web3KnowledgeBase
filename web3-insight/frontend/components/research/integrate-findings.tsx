@@ -22,6 +22,7 @@ interface IntegrateFindingsProps {
   onRemove?: (index: number) => void
   onClearAll?: () => void
   isIntegrating?: boolean
+  disableIntegrate?: boolean
 }
 
 export function IntegrateFindings({
@@ -31,6 +32,7 @@ export function IntegrateFindings({
   onRemove,
   onClearAll,
   isIntegrating,
+  disableIntegrate,
 }: IntegrateFindingsProps) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -67,7 +69,8 @@ export function IntegrateFindings({
             <Button
               size="sm"
               onClick={() => setShowConfirm(true)}
-              disabled={isIntegrating}
+              disabled={isIntegrating || disableIntegrate}
+              title={disableIntegrate ? '研究完成后可整合到报告' : undefined}
             >
               {isIntegrating ? (
                 <Loader2 className="size-3.5 mr-1.5 animate-spin" />
