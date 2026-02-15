@@ -96,11 +96,13 @@ export default function ResearchSessionPage() {
   }, [session?.pinnedFindings])
 
   // Fetch linked article when session is completed
-  const articleSlug = status?.articleSlug ?? session?.articleSlug
+  // articleSlug comes from status polling; articleId from full session (always present for completed sessions).
+  // On page refresh, status polling doesn't run for completed sessions, so fall back to articleId.
+  const articleRef = status?.articleSlug ?? session?.articleSlug ?? session?.articleId
   const { data: article } = useQuery({
-    queryKey: ['article', articleSlug],
-    queryFn: () => articleAPI.get(articleSlug!),
-    enabled: !!articleSlug,
+    queryKey: ['article', articleRef],
+    queryFn: () => articleAPI.get(articleRef!),
+    enabled: !!articleRef,
     staleTime: 30000,
   })
 
