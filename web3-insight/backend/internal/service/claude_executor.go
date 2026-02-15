@@ -75,10 +75,13 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, prompt string) (*ClaudeRes
 	// Set up process group for reliable killing
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	// Filter environment if StripAPIKey is set (forces subscription auth)
+	// Always strip CLAUDECODE to prevent nested session errors.
+	// Optionally strip ANTHROPIC_API_KEY to force subscription auth.
+	stripKeys := []string{"CLAUDECODE"}
 	if e.opts.StripAPIKey {
-		cmd.Env = filterEnv(os.Environ(), "ANTHROPIC_API_KEY")
+		stripKeys = append(stripKeys, "ANTHROPIC_API_KEY")
 	}
+	cmd.Env = filterEnv(os.Environ(), stripKeys...)
 
 	// Safety-net cleanup after CombinedOutput returns
 	defer func() {
@@ -131,12 +134,18 @@ func (e *ClaudeExecutor) GetSessionID() string {
 	return e.sessionID
 }
 
-// filterEnv returns a copy of env with entries matching the given key prefix removed
-func filterEnv(env []string, key string) []string {
-	prefix := key + "="
+// filterEnv returns a copy of env with entries matching any of the given keys removed
+func filterEnv(env []string, keys ...string) []string {
 	filtered := make([]string, 0, len(env))
 	for _, e := range env {
-		if !strings.HasPrefix(e, prefix) {
+		skip := false
+		for _, key := range keys {
+			if strings.HasPrefix(e, key+"=") {
+				skip = true
+				break
+			}
+		}
+		if !skip {
 			filtered = append(filtered, e)
 		}
 	}
