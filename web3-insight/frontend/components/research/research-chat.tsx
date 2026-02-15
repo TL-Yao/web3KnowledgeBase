@@ -23,7 +23,7 @@ interface ResearchChatProps {
   onModelChange?: (model: ChatModel) => void
   onSendMessage?: (content: string) => void
   onClearMessages?: () => void
-  onPinFinding?: (content: string) => void
+  onPinFinding?: (content: string, shiftKey?: boolean) => void
   pinnedContents?: Set<string>
 }
 
@@ -129,7 +129,7 @@ export function ResearchChat({
               <div className="absolute top-1 right-1">
                 <PinButton
                   isPinned={isPinned(msg.content)}
-                  onClick={() => onPinFinding(msg.content)}
+                  onClick={(shiftKey) => onPinFinding(msg.content, shiftKey)}
                 />
               </div>
             )}

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 
 interface PinButtonProps {
   isPinned?: boolean
-  onClick: () => void
+  onClick: (shiftKey: boolean) => void
   className?: string
 }
 
@@ -20,8 +20,8 @@ export function PinButton({ isPinned, onClick, className }: PinButtonProps) {
         isPinned && 'opacity-100 text-primary',
         className
       )}
-      onClick={onClick}
-      title={isPinned ? '已固定到报告' : '固定到报告'}
+      onClick={(e) => onClick(e.shiftKey)}
+      title={isPinned ? '已固定到报告 (Shift+点击: 不放置)' : '固定到报告 (Shift+点击: 不放置)'}
     >
       <Pin
         className={cn(

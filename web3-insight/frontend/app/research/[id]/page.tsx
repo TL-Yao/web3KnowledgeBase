@@ -6,14 +6,16 @@ import { MainLayout } from '@/components/layout/main-layout'
 import { ReportViewer } from '@/components/research/report-viewer'
 import { PlanReview } from '@/components/research/plan-review'
 import { ResearchChat } from '@/components/research/research-chat'
-import { IntegrateFindings } from '@/components/research/integrate-findings'
+import { IntegrateButton } from '@/components/research/integrate-button'
+import { UnplacedPinsChip } from '@/components/research/unplaced-pins-chip'
+import { PlacementHint } from '@/components/research/placement-hint'
 import { SidebarToggle } from '@/components/chat/sidebar-toggle'
 import { ResizeHandle } from '@/components/ui/resize-handle'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useResearch } from '@/hooks/use-research'
 import { useResearchChat } from '@/hooks/use-research-chat'
-import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
+import { AlertCircle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 const SIDEBAR_MIN = 320
@@ -97,21 +99,27 @@ export default function ResearchSessionPage() {
     return set
   }, [session?.pinnedFindings])
 
-  // Toggle pin: unpin if already pinned, pin if not
-  const handlePinToggle = useCallback((content: string) => {
-    const idx = session?.pinnedFindings?.findIndex(f => f.messageContent === content) ?? -1
-    if (idx >= 0) {
-      unpinFinding(idx)
+  // Pin + auto-place (Shift+Click skips placement mode)
+  const handlePinToggle = useCallback((content: string, shiftKey?: boolean) => {
+    const existing = session?.pinnedFindings?.findIndex(f => f.messageContent === content) ?? -1
+    if (existing >= 0) {
+      unpinFinding(existing)
+      if (placingPinIndex === existing) setPlacingPinIndex(null)
     } else {
-      pinFinding(content)
+      if (shiftKey) {
+        // Shift+Click: pin without entering placement mode
+        pinFinding(content)
+      } else {
+        // Normal click: pin + auto-enter placement mode
+        pinFinding(content, {
+          onSuccess: () => {
+            const newIndex = session?.pinnedFindings?.length ?? 0
+            setPlacingPinIndex(newIndex)
+          }
+        })
+      }
     }
-  }, [session?.pinnedFindings, pinFinding, unpinFinding])
-
-  // Handle placing a pin at a section heading (receives originalIndex from IntegrateFindings)
-  const handlePlacePin = useCallback((originalIndex: number) => {
-    // Toggle: clicking same pin exits placement mode
-    setPlacingPinIndex(prev => prev === originalIndex ? null : originalIndex)
-  }, [])
+  }, [session?.pinnedFindings, pinFinding, unpinFinding, placingPinIndex])
 
   // Handle selecting a block for the currently placing pin
   const handleSelectBlock = useCallback((blockIndex: number, preview: string) => {
@@ -120,17 +128,36 @@ export default function ResearchSessionPage() {
     setPlacingPinIndex(null)
   }, [placingPinIndex, setPinPosition])
 
-  // Handle removing a pin's position
-  const handleRemovePinPosition = useCallback((index: number) => {
-    setPinPosition(index, null)
-  }, [setPinPosition])
+  // Move a pin (re-enter placement mode for an existing pin)
+  const handleMovePin = useCallback((findingIndex: number) => {
+    setPlacingPinIndex(findingIndex)
+  }, [])
 
-  // Filter to non-integrated findings, preserving original indices for backend calls
-  // NOTE: All hooks (useState, useEffect, useCallback, useMemo) must be above conditional returns
-  const activeFindings = useMemo(() =>
+  // ESC cancels placement mode
+  useEffect(() => {
+    if (placingPinIndex == null) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        setPlacingPinIndex(null)
+      }
+    }
+    window.addEventListener('keydown', handler, true)
+    return () => window.removeEventListener('keydown', handler, true)
+  }, [placingPinIndex])
+
+  // Active (non-integrated) findings count for integrate button
+  const activePinCount = useMemo(() =>
+    (session?.pinnedFindings ?? []).filter(f => !f.integrated).length,
+    [session?.pinnedFindings]
+  )
+
+  // Unplaced active findings for the floating chip
+  const unplacedFindings = useMemo(() =>
     (session?.pinnedFindings ?? [])
-      .map((f, i) => ({ ...f, originalIndex: i }))
-      .filter(f => !f.integrated),
+      .map((f, i) => ({ finding: f, findingIndex: i }))
+      .filter(({ finding }) => !finding.integrated && finding.targetBlockIndex == null),
     [session?.pinnedFindings]
   )
 
@@ -138,7 +165,6 @@ export default function ResearchSessionPage() {
   const article = session?.article
 
   const currentStatus = status?.status ?? session?.status
-  const currentStage = status?.stage ?? session?.stage
   const currentStageDetail = status?.stageDetail ?? session?.stageDetail
   const currentPlan = status?.researchPlan ?? session?.researchPlan
   const currentError = status?.error ?? session?.error
@@ -208,25 +234,35 @@ export default function ResearchSessionPage() {
                 {session?.question}
               </h1>
             </div>
-            {currentStatus && (
-              <Badge
-                variant={isCompleted ? 'default' : isFailed ? 'destructive' : 'outline'}
-                className="shrink-0 ml-2"
-              >
-                {isActive && <span className="inline-block size-1.5 rounded-full bg-current mr-1.5 animate-pulse" />}
-                {currentStatus === 'planning' ? '规划中'
-                  : currentStatus === 'plan_review' ? '待审核'
-                  : currentStatus === 'researching' ? '研究中'
-                  : currentStatus === 'writing' ? '撰写中'
-                  : isCompleted ? '已完成'
-                  : isFailed ? '失败'
-                  : '等待中'}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2 shrink-0 ml-2">
+              {/* Integrate button in header */}
+              {activePinCount > 0 && (
+                <IntegrateButton
+                  pinCount={activePinCount}
+                  onIntegrate={() => integrateFindings()}
+                  isIntegrating={isIntegrating}
+                  disabled={!isCompleted}
+                />
+              )}
+              {currentStatus && (
+                <Badge
+                  variant={isCompleted ? 'default' : isFailed ? 'destructive' : 'outline'}
+                >
+                  {isActive && <span className="inline-block size-1.5 rounded-full bg-current mr-1.5 animate-pulse" />}
+                  {currentStatus === 'planning' ? '规划中'
+                    : currentStatus === 'plan_review' ? '待审核'
+                    : currentStatus === 'researching' ? '研究中'
+                    : currentStatus === 'writing' ? '撰写中'
+                    : isCompleted ? '已完成'
+                    : isFailed ? '失败'
+                    : '等待中'}
+                </Badge>
+              )}
+            </div>
           </div>
 
           {/* Main content area */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto relative">
             {isPlanReview && currentPlan && (
               <PlanReview
                 plan={currentPlan}
@@ -247,16 +283,27 @@ export default function ResearchSessionPage() {
             )}
 
             {isCompleted && article && (
-              <ReportViewer
-                stage="completed"
-                content={article.content}
-                citations={session?.citations}
-                pinnedFindings={session?.pinnedFindings}
-                isPlacementMode={placingPinIndex != null}
-                onSelectBlock={handleSelectBlock}
-                onRemovePinPosition={handleRemovePinPosition}
-                onRemovePin={(idx) => unpinFinding(idx)}
-              />
+              <>
+                {placingPinIndex != null && (
+                  <PlacementHint onSkip={() => setPlacingPinIndex(null)} />
+                )}
+                <ReportViewer
+                  stage="completed"
+                  content={article.content}
+                  citations={session?.citations}
+                  pinnedFindings={session?.pinnedFindings}
+                  isPlacementMode={placingPinIndex != null}
+                  onSelectBlock={handleSelectBlock}
+                  onMovePin={handleMovePin}
+                  onRemovePin={(idx) => unpinFinding(idx)}
+                />
+                {/* Unplaced pins floating chip */}
+                <UnplacedPinsChip
+                  findings={unplacedFindings}
+                  onPlace={handleMovePin}
+                  onRemove={(idx) => unpinFinding(idx)}
+                />
+              </>
             )}
 
             {isFailed && (
@@ -275,19 +322,6 @@ export default function ResearchSessionPage() {
               </div>
             )}
           </div>
-
-          {/* Pinned findings bar */}
-          {activeFindings.length > 0 && (
-            <IntegrateFindings
-              findings={activeFindings}
-              onIntegrate={() => integrateFindings()}
-              onRemove={(idx) => unpinFinding(idx)}
-              onPlacePin={isCompleted ? handlePlacePin : undefined}
-              isIntegrating={isIntegrating}
-              disableIntegrate={!isCompleted}
-              placingPinIndex={placingPinIndex}
-            />
-          )}
         </div>
 
         {/* Resize handle */}

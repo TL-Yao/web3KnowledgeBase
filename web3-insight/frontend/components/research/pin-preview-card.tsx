@@ -1,18 +1,18 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { MapPinOff, X } from 'lucide-react'
+import { Move, X } from 'lucide-react'
 
 interface PinPreviewCardProps {
   content: string
-  onRemovePosition: () => void
-  onRemovePin: () => void
+  onMove?: () => void
+  onRemove?: () => void
 }
 
 export function PinPreviewCard({
   content,
-  onRemovePosition,
-  onRemovePin,
+  onMove,
+  onRemove,
 }: PinPreviewCardProps) {
   const truncated = content.length > 200 ? content.slice(0, 200) + '...' : content
 
@@ -25,24 +25,28 @@ export function PinPreviewCard({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={onRemovePosition}
-        >
-          <MapPinOff className="size-3 mr-1" />
-          移除定位
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs text-destructive hover:text-destructive"
-          onClick={onRemovePin}
-        >
-          <X className="size-3 mr-1" />
-          取消固定
-        </Button>
+        {onMove && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={onMove}
+          >
+            <Move className="size-3 mr-1" />
+            移动
+          </Button>
+        )}
+        {onRemove && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-destructive hover:text-destructive"
+            onClick={onRemove}
+          >
+            <X className="size-3 mr-1" />
+            取消固定
+          </Button>
+        )}
       </div>
     </div>
   )

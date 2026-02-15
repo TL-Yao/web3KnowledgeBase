@@ -3,20 +3,22 @@
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { PinPreviewCard } from './pin-preview-card'
-import { MapPin } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import type { ResearchPinnedFinding } from '@/lib/api'
 
-interface PinMarkerProps {
-  content: string
-  onRemovePosition: () => void
-  onRemovePin: () => void
+interface GutterDotProps {
+  finding: ResearchPinnedFinding
+  findingIndex: number
+  onMove?: (findingIndex: number) => void
+  onRemove?: (findingIndex: number) => void
 }
 
-export function PinMarker({
-  content,
-  onRemovePosition,
-  onRemovePin,
-}: PinMarkerProps) {
+export function GutterDot({
+  finding,
+  findingIndex,
+  onMove,
+  onRemove,
+}: GutterDotProps) {
   const [isTouchDevice, setIsTouchDevice] = useState(false)
 
   useEffect(() => {
@@ -25,19 +27,17 @@ export function PinMarker({
 
   const trigger = (
     <button
-      className="inline-flex items-center justify-center size-5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/60 transition-colors ml-1.5 align-middle cursor-pointer"
+      className="size-1.5 rounded-full bg-primary hover:scale-150 transition-transform cursor-pointer"
       aria-label="查看固定的发现"
       onClick={(e) => e.stopPropagation()}
-    >
-      <MapPin className="size-3" />
-    </button>
+    />
   )
 
   const previewCard = (
     <PinPreviewCard
-      content={content}
-      onRemovePosition={onRemovePosition}
-      onRemovePin={onRemovePin}
+      content={finding.messageContent}
+      onMove={onMove ? () => onMove(findingIndex) : undefined}
+      onRemove={onRemove ? () => onRemove(findingIndex) : undefined}
     />
   )
 

@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import { ExternalLink, Loader2, Search, FileText, PenLine } from 'lucide-react'
-import { HeadingWithPinTarget } from './heading-with-pin-target'
+import { PinnableBlock } from './pinnable-block'
 import type { ResearchPinnedFinding } from '@/lib/api'
 
 export interface Citation {
@@ -25,8 +25,8 @@ interface ReportViewerProps {
   pinnedFindings?: ResearchPinnedFinding[]
   isPlacementMode?: boolean
   onSelectBlock?: (blockIndex: number, preview: string) => void
-  onRemovePinPosition?: (index: number) => void
-  onRemovePin?: (index: number) => void
+  onMovePin?: (findingIndex: number) => void
+  onRemovePin?: (findingIndex: number) => void
 }
 
 const STAGE_STEPS: { key: ResearchStage; label: string; icon: React.ElementType }[] = [
@@ -142,7 +142,7 @@ export function ReportViewer({
   pinnedFindings = [],
   isPlacementMode = false,
   onSelectBlock,
-  onRemovePinPosition,
+  onMovePin,
   onRemovePin,
 }: ReportViewerProps) {
   const isGenerating = stage === 'planning' || stage === 'researching' || stage === 'writing'
@@ -159,28 +159,39 @@ export function ReportViewer({
     )
   }
 
-  const makeHeadingComponent = (level: 2 | 3) => {
+  // Build pins lookup for each block
+  const getPinsForBlock = (blockIndex: number) =>
+    pinnedFindings
+      .map((f, i) => ({ finding: f, findingIndex: i }))
+      .filter(
+        ({ finding }) =>
+          finding.targetBlockIndex != null &&
+          finding.targetBlockIndex === blockIndex &&
+          !finding.integrated
+      )
+
+  const makeBlockComponent = (tag: 'p' | 'h2' | 'h3' | 'h4' | 'li' | 'blockquote' | 'pre') => {
     // eslint-disable-next-line react/display-name
     return ({ children }: { children?: React.ReactNode }) => {
       const index = blockCounterRef.current++
       return (
-        <HeadingWithPinTarget
-          level={level}
+        <PinnableBlock
+          tag={tag}
           blockIndex={index}
           isPlacementMode={isPlacementMode}
+          pins={getPinsForBlock(index)}
           onSelectBlock={onSelectBlock}
-          pinnedFindings={pinnedFindings}
-          onRemovePosition={onRemovePinPosition}
+          onMovePin={onMovePin}
           onRemovePin={onRemovePin}
         >
           {children}
-        </HeadingWithPinTarget>
+        </PinnableBlock>
       )
     }
   }
 
   return (
-    <div className="px-6 py-4">
+    <div className="px-6 py-4 pl-10">
       {isGenerating && <StageIndicator stage={stage!} stageDetail={stageDetail} />}
 
       {isGenerating && !content && <LoadingSkeleton />}
@@ -202,8 +213,13 @@ export function ReportViewer({
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              h2: makeHeadingComponent(2),
-              h3: makeHeadingComponent(3),
+              p: makeBlockComponent('p'),
+              h2: makeBlockComponent('h2'),
+              h3: makeBlockComponent('h3'),
+              h4: makeBlockComponent('h4'),
+              li: makeBlockComponent('li'),
+              blockquote: makeBlockComponent('blockquote'),
+              pre: makeBlockComponent('pre'),
               a: ({ href, children }) => (
                 <a href={href} target="_blank" rel="noopener noreferrer">
                   {children}
