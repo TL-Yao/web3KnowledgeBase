@@ -760,19 +760,22 @@ func (s *ResearchService) buildIntegrationPrompt(question, existingContent, doma
 
 ## New Findings to Integrate
 Integrate these findings naturally into the report. Add new sections if needed, update existing sections with new information, and add new citations.
-{{range .Findings}}
+{{range $i, $f := .Findings}}
 ---
-{{.MessageContent}}
+Finding {{add $i 1}}:
+{{$f.MessageContent}}
+{{if $f.TargetSection}}→ Place after section "{{deref $f.TargetSection}}"{{else}}→ No specific position (place where most relevant){{end}}
 ---
 {{end}}
 
 ## Instructions
 1. Preserve the existing report structure and content
-2. Seamlessly integrate the new findings in appropriate sections
-3. Add new citations for any new sources
-4. Maintain consistent tone and language
-5. Keep or improve inline citation numbering [1], [2], etc.
-6. Language: Chinese (中文)
+2. For findings with a target section, integrate them after/within that section
+3. For findings without a target section, place them where most relevant
+4. Add new citations for any new sources
+5. Maintain consistent tone and language
+6. Keep or improve inline citation numbering [1], [2], etc.
+7. Language: Chinese (中文)
 
 ## Output Format (use these EXACT delimiters)
 
@@ -789,7 +792,11 @@ Updated 80-150 word summary in Chinese
 [{"url":"https://...","title":"Source title","snippet":"Brief description","accessedAt":"2026-02-15"}]
 ===CITATIONS_END===`
 
-	tmpl, err := template.New("integration").Parse(tmplStr)
+	funcMap := template.FuncMap{
+		"add":   func(a, b int) int { return a + b },
+		"deref": func(s *string) string { if s != nil { return *s }; return "" },
+	}
+	tmpl, err := template.New("integration").Funcs(funcMap).Parse(tmplStr)
 	if err != nil {
 		return "", err
 	}
