@@ -142,7 +142,7 @@ web3-insight/
 │   │   ├── knowledge/            # 知识库组件 (ArticleList, ArticleView, ArticleEditor, EditorToolbar, TagEditor, UpdateReviewPanel, VersionHistory)
 │   │   ├── admin/                # 管理组件 (ModelConfig, ApiKeyConfig, TaskMonitor, SystemStatus, SourceConfig, ArticleImport)
 │   │   ├── chat/                 # 聊天组件 (ChatSidebar, ChatMessage, SidebarToggle)
-│   │   ├── research/             # 即时研究组件 (DomainSelector, PlanReview, ReportViewer, ResearchChat, SessionList, IntegrateFindings, PinButton)
+│   │   ├── research/             # 即时研究组件 (DomainSelector, PlanReview, ReportViewer, ResearchChat, SessionList, PinButton, PinnableBlock, GutterDot, IntegrateButton, PlacementHint, UnplacedPinsChip, PinPreviewCard)
 │   │   └── providers/            # QueryProvider
 │   ├── hooks/
 │   │   ├── use-chat.ts           # 聊天 Hook (多轮对话, localStorage 持久化)
@@ -208,7 +208,7 @@ web3-insight/
 | 研究 | 研究计划审核 (编辑+批准) | PlanReview | POST /api/research/sessions/:id/approve-plan |
 | 研究 | 研究报告生成 (Claude CLI, 订阅认证) | ReportViewer (阶段指示器) | POST /api/research/sessions (202 异步) |
 | 研究 | 研究聊天 (会话上下文+模型选择) | ResearchChat | WS /ws/research-chat |
-| 研究 | 固定发现 + 整合到报告 | PinButton, IntegrateFindings | POST /sessions/:id/pin, /integrate |
+| 研究 | 固定发现 + 内联标注 + 整合 (sticky-note v3 UX) | PinButton, PinnableBlock, GutterDot, IntegrateButton, PlacementHint, UnplacedPinsChip | POST /sessions/:id/pin, PUT /pin-position/:index, /integrate |
 | 研究 | 会话取消 (CLI 进程终止) | - | POST /api/research/sessions/:id/cancel |
 | 研究 | 会话删除 (含关联文章) | SessionList (确认对话框) | DELETE /api/research/sessions/:id |
 
@@ -284,6 +284,8 @@ Chrome browser automation is available via `claude-in-chrome` extension. Use pro
 - **Stats null safety**: Use `?? 0` pattern for safe defaults
 - **Next.js cache**: Use `rm -rf .next` to force clean rebuild when encountering persistent errors
 - **CSS compatibility**: Avoid `field-sizing: content` (limited browser support)
+- **Stale backend binary**: Always rebuild backend after code changes. Running old binary can cause silent data persistence failures (API returns 200 but doesn't save).
+- **Event bubbling in nested blocks**: For React click handlers on nested DOM elements (e.g., `p` inside `blockquote`), always use `e.stopPropagation()` to prevent duplicate handler calls.
 
 ### Theme System Lessons (2026-02-10)
 
@@ -375,6 +377,9 @@ curl -X PUT http://localhost:8080/api/config/auto_tagging_enabled -H "Content-Ty
 - **Frontend-backend API contract verification**: Field name mismatches (`content` vs `messageContent`, `.id` vs `.sessionId`) cause silent failures. Always verify contracts from both sides during code review. The `binding:"required"` validator silently returns 400 for mismatched field names.
 - **Delimiter parsing for multi-section LLM output**: For research reports with title + content + summary + citations, use multiple delimiter pairs (`===REPORT_TITLE_START===`/`===REPORT_TITLE_END===`). Add fallbacks for each section — title falls back to question, content falls back to full response.
 - **Domain config ID consistency**: Frontend domain selector IDs must exactly match backend YAML config IDs. Use the full IDs (`tech-engineering`, not `tech`) to avoid silent routing failures.
+- **Gin radix tree route conflicts**: Gin's httprouter cannot disambiguate `PUT /sessions/:id/pin/:index/position` from `DELETE /sessions/:id/pin/:index` — both have `:index` at the same path segment under `/pin/`. Fix: flatten to `PUT /sessions/:id/pin-position/:index`. Always test route registration with all HTTP methods on the same prefix.
+- **React hooks order with conditional returns**: `useMemo`/`useCallback` must appear BEFORE any conditional `return` statements in a component. React enforces consistent hook call order across renders — placing hooks after an early return causes "rendered fewer hooks than expected" errors.
+- **Ref-based block counter for ReactMarkdown**: ReactMarkdown renders custom components independently (no shared state). Use a `useRef` counter reset to 0 at the start of each render. Since ReactMarkdown calls components synchronously during render, `ref.current++` produces stable sequential indices for the same content.
 
 ## Plan Completion Protocol
 
