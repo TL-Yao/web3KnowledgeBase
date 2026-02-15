@@ -37,8 +37,9 @@ export function PinnableBlock({
   onMovePin,
   onRemovePin,
 }: PinnableBlockProps) {
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
     if (isPlacementMode && onSelectBlock) {
+      e.stopPropagation()
       const text = extractText(children)
       onSelectBlock(blockIndex, text.slice(0, 60))
     }
