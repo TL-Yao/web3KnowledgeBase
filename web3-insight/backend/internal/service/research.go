@@ -43,10 +43,11 @@ type StartResearchRequest struct {
 
 // PinnedFinding represents a single pinned chat finding.
 type PinnedFinding struct {
-	MessageContent string    `json:"messageContent"`
-	PinnedAt       time.Time `json:"pinnedAt"`
-	Integrated     bool      `json:"integrated"`
-	TargetSection  *string   `json:"targetSection,omitempty"` // heading text, nil = unpositioned
+	MessageContent   string    `json:"messageContent"`
+	PinnedAt         time.Time `json:"pinnedAt"`
+	Integrated       bool      `json:"integrated"`
+	TargetBlockIndex *int      `json:"targetBlockIndex,omitempty"` // 0-based block index, nil = unplaced
+	TargetPreview    string    `json:"targetPreview,omitempty"`    // ~60 chars of target block text
 }
 
 // CitationEntry represents a single citation extracted from the report.
@@ -231,8 +232,8 @@ func (s *ResearchService) RemovePinFinding(ctx context.Context, sessionID uuid.U
 	return s.sessionRepo.UpdatePinnedFindings(sessionID, data)
 }
 
-// SetPinPosition sets or clears the target section for a pinned finding.
-func (s *ResearchService) SetPinPosition(ctx context.Context, sessionID uuid.UUID, index int, targetSection *string) error {
+// SetPinPosition sets or clears the target block for a pinned finding.
+func (s *ResearchService) SetPinPosition(ctx context.Context, sessionID uuid.UUID, index int, targetBlockIndex *int, targetPreview string) error {
 	session, err := s.sessionRepo.GetByID(sessionID)
 	if err != nil {
 		return fmt.Errorf("session not found: %w", err)
@@ -249,7 +250,8 @@ func (s *ResearchService) SetPinPosition(ctx context.Context, sessionID uuid.UUI
 		return fmt.Errorf("invalid finding index: %d", index)
 	}
 
-	findings[index].TargetSection = targetSection
+	findings[index].TargetBlockIndex = targetBlockIndex
+	findings[index].TargetPreview = targetPreview
 
 	data, err := json.Marshal(findings)
 	if err != nil {
@@ -764,14 +766,14 @@ Integrate these findings naturally into the report. Add new sections if needed, 
 ---
 Finding {{add $i 1}}:
 {{$f.MessageContent}}
-{{if $f.TargetSection}}→ Place after section "{{deref $f.TargetSection}}"{{else}}→ No specific position (place where most relevant){{end}}
+{{if $f.TargetBlockIndex}}→ Place near: "{{$f.TargetPreview}}"{{else}}→ No specific position (place where most relevant){{end}}
 ---
 {{end}}
 
 ## Instructions
 1. Preserve the existing report structure and content
-2. For findings with a target section, integrate them after/within that section
-3. For findings without a target section, place them where most relevant
+2. For findings with a target location, integrate them near the indicated text
+3. For findings without a target location, place them where most relevant
 4. Add new citations for any new sources
 5. Maintain consistent tone and language
 6. Keep or improve inline citation numbering [1], [2], etc.
@@ -793,8 +795,7 @@ Updated 80-150 word summary in Chinese
 ===CITATIONS_END===`
 
 	funcMap := template.FuncMap{
-		"add":   func(a, b int) int { return a + b },
-		"deref": func(s *string) string { if s != nil { return *s }; return "" },
+		"add": func(a, b int) int { return a + b },
 	}
 	tmpl, err := template.New("integration").Funcs(funcMap).Parse(tmplStr)
 	if err != nil {

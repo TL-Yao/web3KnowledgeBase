@@ -238,7 +238,7 @@ func (h *ResearchHandler) RemovePin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"pinnedFindings": session.PinnedFindings})
 }
 
-// SetPinPosition sets or clears the target section for a pinned finding.
+// SetPinPosition sets or clears the target block for a pinned finding.
 func (h *ResearchHandler) SetPinPosition(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -253,14 +253,15 @@ func (h *ResearchHandler) SetPinPosition(c *gin.Context) {
 	}
 
 	var req struct {
-		TargetSection *string `json:"targetSection"`
+		TargetBlockIndex *int   `json:"targetBlockIndex"`
+		TargetPreview    string `json:"targetPreview"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
 
-	if err := h.researchService.SetPinPosition(c.Request.Context(), id, index, req.TargetSection); err != nil {
+	if err := h.researchService.SetPinPosition(c.Request.Context(), id, index, req.TargetBlockIndex, req.TargetPreview); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
