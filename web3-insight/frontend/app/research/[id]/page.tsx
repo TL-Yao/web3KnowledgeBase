@@ -93,6 +93,16 @@ export default function ResearchSessionPage() {
     return set
   }, [session?.pinnedFindings])
 
+  // Toggle pin: unpin if already pinned, pin if not
+  const handlePinToggle = useCallback((content: string) => {
+    const idx = session?.pinnedFindings?.findIndex(f => f.messageContent === content) ?? -1
+    if (idx >= 0) {
+      unpinFinding(idx)
+    } else {
+      pinFinding(content)
+    }
+  }, [session?.pinnedFindings, pinFinding, unpinFinding])
+
   // Article is preloaded in the session response — no separate fetch needed
   const article = session?.article
 
@@ -269,7 +279,7 @@ export default function ResearchSessionPage() {
           onModelChange={setModel}
           onSendMessage={sendMessage}
           onClearMessages={clearMessages}
-          onPinFinding={(isCompleted || isActive) ? (content) => pinFinding(content) : undefined}
+          onPinFinding={(isCompleted || isActive) ? handlePinToggle : undefined}
           pinnedContents={pinnedContents}
         />
 
