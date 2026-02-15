@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
 import { MainLayout } from '@/components/layout/main-layout'
 import { ReportViewer } from '@/components/research/report-viewer'
 import { PlanReview } from '@/components/research/plan-review'
@@ -14,7 +13,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useResearch } from '@/hooks/use-research'
 import { useResearchChat } from '@/hooks/use-research-chat'
-import { articleAPI } from '@/lib/api'
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
@@ -95,16 +93,8 @@ export default function ResearchSessionPage() {
     return set
   }, [session?.pinnedFindings])
 
-  // Fetch linked article when session is completed
-  // articleSlug comes from status polling; articleId from full session (always present for completed sessions).
-  // On page refresh, status polling doesn't run for completed sessions, so fall back to articleId.
-  const articleRef = status?.articleSlug ?? session?.articleSlug ?? session?.articleId
-  const { data: article } = useQuery({
-    queryKey: ['article', articleRef],
-    queryFn: () => articleAPI.get(articleRef!),
-    enabled: !!articleRef,
-    staleTime: 30000,
-  })
+  // Article is preloaded in the session response — no separate fetch needed
+  const article = session?.article
 
   const currentStatus = status?.status ?? session?.status
   const currentStage = status?.stage ?? session?.stage

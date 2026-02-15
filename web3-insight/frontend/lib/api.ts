@@ -870,6 +870,7 @@ export interface ResearchSession {
   reviewPlan: boolean
   articleId?: string
   articleSlug?: string
+  article?: Article
   citations?: ResearchCitation[]
   pinnedFindings?: ResearchPinnedFinding[]
   error?: string
