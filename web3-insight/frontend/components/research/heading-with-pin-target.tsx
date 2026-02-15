@@ -16,15 +16,12 @@ function extractText(children: React.ReactNode): string {
   return ''
 }
 
-function normalizeHeading(text: string): string {
-  return text.trim().toLowerCase().replace(/\s+/g, ' ')
-}
-
 interface HeadingWithPinTargetProps {
   level: 2 | 3
+  blockIndex: number
   children: React.ReactNode
   isPlacementMode: boolean
-  onSelectSection?: (headingText: string) => void
+  onSelectBlock?: (blockIndex: number, preview: string) => void
   pinnedFindings: ResearchPinnedFinding[]
   onRemovePosition?: (index: number) => void
   onRemovePin?: (index: number) => void
@@ -32,29 +29,29 @@ interface HeadingWithPinTargetProps {
 
 export function HeadingWithPinTarget({
   level,
+  blockIndex,
   children,
   isPlacementMode,
-  onSelectSection,
+  onSelectBlock,
   pinnedFindings,
   onRemovePosition,
   onRemovePin,
 }: HeadingWithPinTargetProps) {
   const Tag = `h${level}` as const
   const headingText = extractText(children)
-  const normalizedHeading = normalizeHeading(headingText)
 
-  // Find pins targeting this heading
+  // Find pins targeting this block
   const matchedPins = pinnedFindings
     .map((f, idx) => ({ finding: f, index: idx }))
     .filter(
       ({ finding }) =>
-        finding.targetSection != null &&
-        normalizeHeading(finding.targetSection) === normalizedHeading
+        finding.targetBlockIndex != null &&
+        finding.targetBlockIndex === blockIndex
     )
 
   const handleClick = () => {
-    if (isPlacementMode && onSelectSection) {
-      onSelectSection(headingText)
+    if (isPlacementMode && onSelectBlock) {
+      onSelectBlock(blockIndex, headingText.slice(0, 60))
     }
   }
 

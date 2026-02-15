@@ -92,11 +92,17 @@ export function useResearch(sessionId?: string) {
     },
   })
 
-  // Pin finding
+  // Pin finding (supports onSuccess callback for auto-placement)
   const pinMutation = useMutation({
     mutationFn: (content: string) => researchAPI.pinFinding(sessionId!, content),
     onSuccess: () => refetchSession(),
   })
+  const pinFindingWithCallback = useCallback(
+    (content: string, options?: { onSuccess?: () => void }) => {
+      pinMutation.mutate(content, { onSuccess: options?.onSuccess })
+    },
+    [pinMutation]
+  )
 
   // Remove pin
   const unpinMutation = useMutation({
@@ -106,8 +112,8 @@ export function useResearch(sessionId?: string) {
 
   // Set pin position
   const setPinPositionMutation = useMutation({
-    mutationFn: ({ index, targetSection }: { index: number; targetSection: string | null }) =>
-      researchAPI.setPinPosition(sessionId!, index, targetSection),
+    mutationFn: ({ index, targetBlockIndex, targetPreview }: { index: number; targetBlockIndex: number | null; targetPreview?: string }) =>
+      researchAPI.setPinPosition(sessionId!, index, targetBlockIndex, targetPreview),
     onSuccess: () => refetchSession(),
   })
 
@@ -145,11 +151,11 @@ export function useResearch(sessionId?: string) {
     cancelResearch: cancelMutation.mutate,
     isCancelling: cancelMutation.isPending,
 
-    pinFinding: pinMutation.mutate,
+    pinFinding: pinFindingWithCallback,
     unpinFinding: unpinMutation.mutate,
 
-    setPinPosition: (index: number, targetSection: string | null) =>
-      setPinPositionMutation.mutate({ index, targetSection }),
+    setPinPosition: (index: number, targetBlockIndex: number | null, targetPreview?: string) =>
+      setPinPositionMutation.mutate({ index, targetBlockIndex, targetPreview }),
 
     integrateFindings: integrateMutation.mutate,
     isIntegrating: integrateMutation.isPending,

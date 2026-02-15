@@ -858,7 +858,8 @@ export interface ResearchPinnedFinding {
   messageContent: string
   pinnedAt: string
   integrated: boolean
-  targetSection?: string | null
+  targetBlockIndex?: number | null
+  targetPreview?: string
 }
 
 export interface ResearchSession {
@@ -951,10 +952,10 @@ export const researchAPI = {
       method: 'POST',
     }),
 
-  setPinPosition: (id: string, index: number, targetSection: string | null) =>
+  setPinPosition: (id: string, index: number, targetBlockIndex: number | null, targetPreview?: string) =>
     fetchAPI<ResearchSession>(`/api/research/sessions/${id}/pin-position/${index}`, {
       method: 'PUT',
-      body: JSON.stringify({ targetSection }),
+      body: JSON.stringify({ targetBlockIndex, targetPreview }),
     }),
 
   deleteSession: (id: string) =>

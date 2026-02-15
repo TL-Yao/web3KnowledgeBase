@@ -113,10 +113,10 @@ export default function ResearchSessionPage() {
     setPlacingPinIndex(prev => prev === originalIndex ? null : originalIndex)
   }, [])
 
-  // Handle selecting a section for the currently placing pin
-  const handleSelectSection = useCallback((headingText: string) => {
+  // Handle selecting a block for the currently placing pin
+  const handleSelectBlock = useCallback((blockIndex: number, preview: string) => {
     if (placingPinIndex == null) return
-    setPinPosition(placingPinIndex, headingText)
+    setPinPosition(placingPinIndex, blockIndex, preview)
     setPlacingPinIndex(null)
   }, [placingPinIndex, setPinPosition])
 
@@ -253,7 +253,7 @@ export default function ResearchSessionPage() {
                 citations={session?.citations}
                 pinnedFindings={session?.pinnedFindings}
                 isPlacementMode={placingPinIndex != null}
-                onSelectSection={handleSelectSection}
+                onSelectBlock={handleSelectBlock}
                 onRemovePinPosition={handleRemovePinPosition}
                 onRemovePin={(idx) => unpinFinding(idx)}
               />

@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
@@ -23,7 +24,7 @@ interface ReportViewerProps {
   error?: string
   pinnedFindings?: ResearchPinnedFinding[]
   isPlacementMode?: boolean
-  onSelectSection?: (headingText: string) => void
+  onSelectBlock?: (blockIndex: number, preview: string) => void
   onRemovePinPosition?: (index: number) => void
   onRemovePin?: (index: number) => void
 }
@@ -140,11 +141,14 @@ export function ReportViewer({
   error,
   pinnedFindings = [],
   isPlacementMode = false,
-  onSelectSection,
+  onSelectBlock,
   onRemovePinPosition,
   onRemovePin,
 }: ReportViewerProps) {
   const isGenerating = stage === 'planning' || stage === 'researching' || stage === 'writing'
+  const blockCounterRef = useRef(0)
+  // Reset block counter before each render
+  blockCounterRef.current = 0
 
   if (error) {
     return (
@@ -157,18 +161,22 @@ export function ReportViewer({
 
   const makeHeadingComponent = (level: 2 | 3) => {
     // eslint-disable-next-line react/display-name
-    return ({ children }: { children?: React.ReactNode }) => (
-      <HeadingWithPinTarget
-        level={level}
-        isPlacementMode={isPlacementMode}
-        onSelectSection={onSelectSection}
-        pinnedFindings={pinnedFindings}
-        onRemovePosition={onRemovePinPosition}
-        onRemovePin={onRemovePin}
-      >
-        {children}
-      </HeadingWithPinTarget>
-    )
+    return ({ children }: { children?: React.ReactNode }) => {
+      const index = blockCounterRef.current++
+      return (
+        <HeadingWithPinTarget
+          level={level}
+          blockIndex={index}
+          isPlacementMode={isPlacementMode}
+          onSelectBlock={onSelectBlock}
+          pinnedFindings={pinnedFindings}
+          onRemovePosition={onRemovePinPosition}
+          onRemovePin={onRemovePin}
+        >
+          {children}
+        </HeadingWithPinTarget>
+      )
+    }
   }
 
   return (

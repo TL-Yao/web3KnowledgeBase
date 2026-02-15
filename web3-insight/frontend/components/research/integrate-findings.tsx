@@ -120,10 +120,10 @@ export function IntegrateFindings({
                   <span className="flex-1 line-clamp-2 text-muted-foreground">
                     {preview}
                   </span>
-                  {finding.targetSection && (
+                  {finding.targetPreview && (
                     <Badge variant="secondary" className="shrink-0 text-xs gap-1">
                       <ArrowRight className="size-2.5" />
-                      {finding.targetSection}
+                      {finding.targetPreview}
                     </Badge>
                   )}
                   <div className="flex items-center gap-0.5 shrink-0">
