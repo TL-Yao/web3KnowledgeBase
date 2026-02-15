@@ -952,7 +952,7 @@ export const researchAPI = {
     }),
 
   setPinPosition: (id: string, index: number, targetSection: string | null) =>
-    fetchAPI<ResearchSession>(`/api/research/sessions/${id}/pin/${index}/position`, {
+    fetchAPI<ResearchSession>(`/api/research/sessions/${id}/pin-position/${index}`, {
       method: 'PUT',
       body: JSON.stringify({ targetSection }),
     }),
