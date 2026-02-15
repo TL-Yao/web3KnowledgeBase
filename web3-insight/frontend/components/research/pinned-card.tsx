@@ -96,8 +96,8 @@ export function PinnedCard({
       </div>
 
       {/* Content */}
-      <div className="px-3 py-2 max-h-[400px] overflow-y-auto">
-        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-sm prose-p:my-1 prose-li:text-sm prose-li:my-0.5">
+      <div className="px-3 py-2 max-h-[400px] overflow-y-auto text-sm">
+        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-xs prose-p:my-1 prose-li:text-xs prose-li:my-0.5 prose-headings:text-sm prose-code:text-xs">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {finding.messageContent}
           </ReactMarkdown>

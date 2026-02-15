@@ -22,6 +22,7 @@ export function GutterDot({
   onPinOpen,
 }: GutterDotProps) {
   const [isTouchDevice, setIsTouchDevice] = useState(false)
+  const [hoverOpen, setHoverOpen] = useState(false)
 
   useEffect(() => {
     setIsTouchDevice(window.matchMedia('(pointer: coarse)').matches)
@@ -30,6 +31,7 @@ export function GutterDot({
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation()
     if (onPinOpen) {
+      setHoverOpen(false)
       const rect = e.currentTarget.getBoundingClientRect()
       onPinOpen(findingIndex, { x: rect.right + 8, y: rect.top })
     }
@@ -63,7 +65,7 @@ export function GutterDot({
   }
 
   return (
-    <HoverCard openDelay={200} closeDelay={100}>
+    <HoverCard openDelay={200} closeDelay={100} open={hoverOpen} onOpenChange={setHoverOpen}>
       <HoverCardTrigger asChild>{trigger}</HoverCardTrigger>
       <HoverCardContent className="w-80" align="start">
         {previewCard}
