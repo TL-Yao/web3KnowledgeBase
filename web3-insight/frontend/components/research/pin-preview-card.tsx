@@ -14,13 +14,13 @@ export function PinPreviewCard({
   onMove,
   onRemove,
 }: PinPreviewCardProps) {
-  const truncated = content.length > 200 ? content.slice(0, 200) + '...' : content
+  const truncated = content.length > 400 ? content.slice(0, 400) + '...' : content
 
   return (
     <div className="space-y-3">
-      <div className="text-sm text-muted-foreground leading-relaxed max-h-[120px] overflow-hidden relative">
+      <div className="text-sm text-muted-foreground leading-relaxed max-h-[200px] overflow-hidden relative">
         {truncated}
-        {content.length > 200 && (
+        {content.length > 400 && (
           <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-popover to-transparent" />
         )}
       </div>

@@ -11,6 +11,7 @@ interface GutterDotProps {
   findingIndex: number
   onMove?: (findingIndex: number) => void
   onRemove?: (findingIndex: number) => void
+  onPinOpen?: (findingIndex: number, position: { x: number; y: number }) => void
 }
 
 export function GutterDot({
@@ -18,6 +19,7 @@ export function GutterDot({
   findingIndex,
   onMove,
   onRemove,
+  onPinOpen,
 }: GutterDotProps) {
   const [isTouchDevice, setIsTouchDevice] = useState(false)
 
@@ -25,11 +27,19 @@ export function GutterDot({
     setIsTouchDevice(window.matchMedia('(pointer: coarse)').matches)
   }, [])
 
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
+    if (onPinOpen) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      onPinOpen(findingIndex, { x: rect.right + 8, y: rect.top })
+    }
+  }
+
   const trigger = (
     <button
       className="size-1.5 rounded-full bg-primary hover:scale-150 transition-transform cursor-pointer"
       aria-label="查看固定的发现"
-      onClick={(e) => e.stopPropagation()}
+      onClick={handleClick}
     />
   )
 

@@ -8,6 +8,7 @@ import { PlanReview } from '@/components/research/plan-review'
 import { ResearchChat } from '@/components/research/research-chat'
 import { IntegrateButton } from '@/components/research/integrate-button'
 import { UnplacedPinsChip } from '@/components/research/unplaced-pins-chip'
+import { PinnedCard } from '@/components/research/pinned-card'
 import { PlacementHint } from '@/components/research/placement-hint'
 import { SidebarToggle } from '@/components/chat/sidebar-toggle'
 import { ResizeHandle } from '@/components/ui/resize-handle'
@@ -53,6 +54,25 @@ export default function ResearchSessionPage() {
 
   // Pin placement mode
   const [placingPinIndex, setPlacingPinIndex] = useState<number | null>(null)
+
+  // Open pinned cards (click-to-pin floating cards)
+  const [openPinnedCards, setOpenPinnedCards] = useState<
+    Array<{ findingIndex: number; position: { x: number; y: number } }>
+  >([])
+
+  const handlePinOpen = useCallback((findingIndex: number, position: { x: number; y: number }) => {
+    setOpenPinnedCards(prev => {
+      // Toggle: if already open, close it
+      if (prev.some(c => c.findingIndex === findingIndex)) {
+        return prev.filter(c => c.findingIndex !== findingIndex)
+      }
+      return [...prev, { findingIndex, position }]
+    })
+  }, [])
+
+  const handlePinCardClose = useCallback((findingIndex: number) => {
+    setOpenPinnedCards(prev => prev.filter(c => c.findingIndex !== findingIndex))
+  }, [])
 
   // Sidebar state with localStorage persistence
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
@@ -296,6 +316,7 @@ export default function ResearchSessionPage() {
                   onSelectBlock={handleSelectBlock}
                   onMovePin={handleMovePin}
                   onRemovePin={(idx) => unpinFinding(idx)}
+                  onPinOpen={handlePinOpen}
                 />
                 {/* Unplaced pins floating chip */}
                 <UnplacedPinsChip
@@ -303,6 +324,22 @@ export default function ResearchSessionPage() {
                   onPlace={handleMovePin}
                   onRemove={(idx) => unpinFinding(idx)}
                 />
+                {/* Floating pinned cards */}
+                {openPinnedCards.map(({ findingIndex, position }) => {
+                  const finding = session?.pinnedFindings?.[findingIndex]
+                  if (!finding || finding.integrated) return null
+                  return (
+                    <PinnedCard
+                      key={findingIndex}
+                      finding={finding}
+                      findingIndex={findingIndex}
+                      initialPosition={position}
+                      onClose={() => handlePinCardClose(findingIndex)}
+                      onMove={handleMovePin}
+                      onRemove={(idx) => unpinFinding(idx)}
+                    />
+                  )
+                })}
               </>
             )}
 

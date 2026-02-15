@@ -27,6 +27,7 @@ interface ReportViewerProps {
   onSelectBlock?: (blockIndex: number, preview: string) => void
   onMovePin?: (findingIndex: number) => void
   onRemovePin?: (findingIndex: number) => void
+  onPinOpen?: (findingIndex: number, position: { x: number; y: number }) => void
 }
 
 const STAGE_STEPS: { key: ResearchStage; label: string; icon: React.ElementType }[] = [
@@ -144,6 +145,7 @@ export function ReportViewer({
   onSelectBlock,
   onMovePin,
   onRemovePin,
+  onPinOpen,
 }: ReportViewerProps) {
   const isGenerating = stage === 'planning' || stage === 'researching' || stage === 'writing'
   const blockCounterRef = useRef(0)
@@ -183,6 +185,7 @@ export function ReportViewer({
           onSelectBlock={onSelectBlock}
           onMovePin={onMovePin}
           onRemovePin={onRemovePin}
+          onPinOpen={onPinOpen}
         >
           {children}
         </PinnableBlock>

@@ -25,6 +25,7 @@ interface PinnableBlockProps {
   onSelectBlock?: (blockIndex: number, previewText: string) => void
   onMovePin?: (findingIndex: number) => void
   onRemovePin?: (findingIndex: number) => void
+  onPinOpen?: (findingIndex: number, position: { x: number; y: number }) => void
 }
 
 export function PinnableBlock({
@@ -36,6 +37,7 @@ export function PinnableBlock({
   onSelectBlock,
   onMovePin,
   onRemovePin,
+  onPinOpen,
 }: PinnableBlockProps) {
   const handleClick = (e: React.MouseEvent) => {
     if (isPlacementMode && onSelectBlock) {
@@ -60,7 +62,7 @@ export function PinnableBlock({
     >
       {pins.length > 0 && (
         <span
-          className="absolute -left-4 top-1 flex flex-col gap-0.5"
+          className="absolute -left-4 top-1 flex flex-col gap-1.5"
           onClick={(e) => e.stopPropagation()}
         >
           {pins.map((pin) => (
@@ -70,6 +72,7 @@ export function PinnableBlock({
               findingIndex={pin.findingIndex}
               onMove={onMovePin}
               onRemove={onRemovePin}
+              onPinOpen={onPinOpen}
             />
           ))}
         </span>
