@@ -125,6 +125,15 @@ export default function ResearchSessionPage() {
     setPinPosition(index, null)
   }, [setPinPosition])
 
+  // Filter to non-integrated findings, preserving original indices for backend calls
+  // NOTE: All hooks (useState, useEffect, useCallback, useMemo) must be above conditional returns
+  const activeFindings = useMemo(() =>
+    (session?.pinnedFindings ?? [])
+      .map((f, i) => ({ ...f, originalIndex: i }))
+      .filter(f => !f.integrated),
+    [session?.pinnedFindings]
+  )
+
   // Article is preloaded in the session response — no separate fetch needed
   const article = session?.article
 
@@ -181,14 +190,6 @@ export default function ResearchSessionPage() {
     : isCompleted ? 'completed' as const
     : isFailed ? 'failed' as const
     : undefined
-
-  // Filter to non-integrated findings, preserving original indices for backend calls
-  const activeFindings = useMemo(() =>
-    (session?.pinnedFindings ?? [])
-      .map((f, i) => ({ ...f, originalIndex: i }))
-      .filter(f => !f.integrated),
-    [session?.pinnedFindings]
-  )
 
   return (
     <MainLayout>
