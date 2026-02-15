@@ -96,8 +96,22 @@ export function PinnedCard({
       </div>
 
       {/* Content */}
-      <div className="px-3 py-2 max-h-[400px] overflow-y-auto text-sm">
-        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-xs prose-p:my-1 prose-li:text-xs prose-li:my-0.5 prose-headings:text-sm prose-code:text-xs">
+      <div className="px-3 py-2 max-h-[400px] overflow-y-auto">
+        <div className="text-[13px] leading-normal space-y-1
+          [&_p]:my-0.5
+          [&_ul]:my-1 [&_ul]:pl-4 [&_ol]:my-1 [&_ol]:pl-4
+          [&_li]:my-0
+          [&_h3]:font-semibold [&_h3]:text-[13px] [&_h3]:mt-2 [&_h3]:mb-0.5
+          [&_h2]:font-semibold [&_h2]:text-sm [&_h2]:mt-2 [&_h2]:mb-0.5
+          [&_h1]:font-bold [&_h1]:text-sm [&_h1]:mt-2 [&_h1]:mb-0.5
+          [&_pre]:my-1.5 [&_pre]:p-2 [&_pre]:text-xs [&_pre]:rounded [&_pre]:bg-muted [&_pre]:overflow-x-auto
+          [&_code]:text-xs [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded-sm
+          [&_pre_code]:bg-transparent [&_pre_code]:p-0
+          [&_blockquote]:my-1 [&_blockquote]:pl-2.5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:text-muted-foreground
+          [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2
+          [&_strong]:font-semibold
+          [&_hr]:my-2 [&_hr]:border-border
+          [&_table]:text-xs [&_table]:my-1">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {finding.messageContent}
           </ReactMarkdown>
