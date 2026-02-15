@@ -163,7 +163,7 @@ func NewRouterWithDB(cfg *config.Config, db *gorm.DB, keyProvider *service.KeyPr
 			research.POST("/sessions/:id/cancel", server.researchHandler.CancelSession)
 			research.POST("/sessions/:id/pin", server.researchHandler.PinFinding)
 			research.DELETE("/sessions/:id/pin/:index", server.researchHandler.RemovePin)
-			research.PUT("/sessions/:id/pin/:index/position", server.researchHandler.SetPinPosition)
+			research.PUT("/sessions/:id/pin-position/:index", server.researchHandler.SetPinPosition)
 			research.POST("/sessions/:id/integrate", server.researchHandler.IntegrateFindings)
 			research.DELETE("/sessions/:id", server.researchHandler.DeleteSession)
 		}
